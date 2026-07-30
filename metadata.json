@@ -1,0 +1,6 @@
+{
+  "name": "SIGH - Sistema Inteligente de Gestão de Histórico Disciplinar",
+  "description": "Fundação do projeto SIGH - Sistema Inteligente de Gestão de Histórico Disciplinar (.NET 9, React 19, TypeScript, Clean Architecture, Material UI e Docker)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

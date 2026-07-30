@@ -1,0 +1,71 @@
+name: SIGH Backend CI
+
+on:
+  push:
+    branches: [ main, master, release/*, develop ]
+    paths:
+      - 'SIGH/backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - 'SIGH/backend/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & Test Backend (.NET 9)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: 'SIGH/backend/global.json'
+
+      - name: Restore Dependencies
+        run: dotnet restore SIGH/backend/SIGH.sln
+
+      - name: Build Solution (Release)
+        run: dotnet build SIGH/backend/SIGH.sln --configuration Release --no-restore
+
+      - name: Run Unit Tests
+        run: |
+          dotnet test SIGH/backend/tests/SIGH.UnitTests/SIGH.UnitTests.csproj \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=unit-tests.trx" \
+            --results-directory SIGH/backend/TestResults \
+            --collect:"XPlat Code Coverage"
+
+      - name: Run Integration Tests
+        run: |
+          dotnet test SIGH/backend/tests/SIGH.IntegrationTests/SIGH.IntegrationTests.csproj \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=integration-tests.trx" \
+            --results-directory SIGH/backend/TestResults \
+            --collect:"XPlat Code Coverage"
+
+      - name: Upload Test Results (TRX)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: SIGH/backend/TestResults/*.trx
+          retention-days: 14
+
+      - name: Upload Coverage Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: SIGH/backend/TestResults/**/coverage.cobertura.xml
+          retention-days: 14

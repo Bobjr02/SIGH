@@ -1,0 +1,9 @@
+global using System;
+global using System.Collections.Generic;
+global using SIGH.Domain.Common;
+global using SIGH.Domain.Entities;
+global using SIGH.Domain.Enums;
+global using SIGH.Domain.Exceptions;
+global using SIGH.Domain.Employees.Entities;
+global using SIGH.Domain.Employees.Enums;
+global using SIGH.Domain.Employees.Helpers;
