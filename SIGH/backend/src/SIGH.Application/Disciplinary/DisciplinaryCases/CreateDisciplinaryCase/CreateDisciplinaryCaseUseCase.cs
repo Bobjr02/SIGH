@@ -5,6 +5,7 @@ using SIGH.Application.Disciplinary.Common;
 using SIGH.Application.Interfaces;
 using SIGH.Application.Interfaces.Repositories.Disciplinary;
 using SIGH.Domain.Disciplinary.Entities;
+using SIGH.Domain.Disciplinary.Enums;
 
 namespace SIGH.Application.Disciplinary.DisciplinaryCases.CreateDisciplinaryCase;
 
@@ -48,14 +49,16 @@ public class CreateDisciplinaryCaseUseCase : ICreateDisciplinaryCaseUseCase
         var now = _dateTimeProvider.UtcNow;
 
         var disciplinaryCase = DisciplinaryCase.Create(
-            request.CaseNumber,
-            request.CompanyId,
-            request.Title,
-            request.Description,
-            request.CreatedByUserId,
-            now,
-            request.Priority,
-            request.ConfidentialityLevel);
+            caseNumber: request.CaseNumber,
+            companyId: request.CompanyId,
+            title: request.Title,
+            description: request.Description,
+            openedAt: now,
+            openedByUserId: request.CreatedByUserId,
+            priority: request.Priority,
+            responsibleEmployeeId: request.ResponsibleEmployeeId,
+            dueDate: request.DueDate,
+            initialStatus: DisciplinaryCaseStatus.Draft);
 
         await _caseRepository.AddAsync(disciplinaryCase, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
@@ -67,8 +70,10 @@ public class CreateDisciplinaryCaseUseCase : ICreateDisciplinaryCaseUseCase
             disciplinaryCase.Title,
             disciplinaryCase.Status,
             disciplinaryCase.Priority,
-            disciplinaryCase.ConfidentialityLevel,
-            disciplinaryCase.OpenedAt);
+            disciplinaryCase.OpenedAt,
+            disciplinaryCase.OpenedByUserId,
+            disciplinaryCase.ResponsibleEmployeeId,
+            disciplinaryCase.DueDate);
 
         return Result<CreateDisciplinaryCaseResponse>.Ok(response, "Processo disciplinar criado com sucesso.");
     }

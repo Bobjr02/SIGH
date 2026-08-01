@@ -74,7 +74,9 @@ public class DisciplinaryCasesControllerTests
         var request = new CreateDisciplinaryCaseRequest(
             CaseNumber: "PROC-2026-001",
             CompanyId: Guid.NewGuid(),
-            Title: "Insubordinação grave");
+            Title: "Insubordinação grave",
+            Description: "Descrição do processo disciplinar.",
+            CreatedByUserId: Guid.NewGuid());
 
         var response = new CreateDisciplinaryCaseResponse(
             Id: Guid.NewGuid(),
@@ -83,7 +85,10 @@ public class DisciplinaryCasesControllerTests
             Title: request.Title,
             Status: DisciplinaryCaseStatus.Draft,
             Priority: CasePriority.Medium,
-            OpenedAt: DateTimeOffset.UtcNow);
+            OpenedAt: DateTimeOffset.UtcNow,
+            OpenedByUserId: request.CreatedByUserId,
+            ResponsibleEmployeeId: null,
+            DueDate: null);
 
         _createUseCaseMock
             .Setup(x => x.ExecuteAsync(request, It.IsAny<CancellationToken>()))

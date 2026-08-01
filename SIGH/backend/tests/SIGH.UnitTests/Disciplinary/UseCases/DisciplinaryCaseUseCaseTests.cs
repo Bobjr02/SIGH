@@ -46,7 +46,17 @@ public class DisciplinaryCaseUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var request = new CreateDisciplinaryCaseRequest("PROC-2026-001", companyId, "Processo Disciplinar Atraso", "Descrição do caso", userId);
+        var responsibleEmployeeId = Guid.NewGuid();
+        var dueDate = _now.AddDays(10);
+        var request = new CreateDisciplinaryCaseRequest(
+            "PROC-2026-001",
+            companyId,
+            "Processo Disciplinar Atraso",
+            "Descrição do caso",
+            userId,
+            DisciplinaryCasePriority.High,
+            responsibleEmployeeId,
+            dueDate);
 
         _caseRepositoryMock.Setup(r => r.ExistsByCaseNumberAsync(companyId, request.CaseNumber, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
@@ -58,8 +68,21 @@ public class DisciplinaryCaseUseCaseTests
         result.Data.Should().NotBeNull();
         result.Data!.CaseNumber.Should().Be("PROC-2026-001");
         result.Data.Status.Should().Be(DisciplinaryCaseStatus.Draft);
+        result.Data.Priority.Should().Be(DisciplinaryCasePriority.High);
+        result.Data.OpenedAt.Should().Be(_now);
+        result.Data.OpenedByUserId.Should().Be(userId);
+        result.Data.ResponsibleEmployeeId.Should().Be(responsibleEmployeeId);
+        result.Data.DueDate.Should().Be(dueDate);
 
-        _caseRepositoryMock.Verify(r => r.AddAsync(It.IsAny<DisciplinaryCase>(), It.IsAny<CancellationToken>()), Times.Once);
+        _caseRepositoryMock.Verify(r => r.AddAsync(
+            It.Is<DisciplinaryCase>(c =>
+                c.OpenedAt == _now &&
+                c.OpenedByUserId == userId &&
+                c.Status == DisciplinaryCaseStatus.Draft &&
+                c.Priority == DisciplinaryCasePriority.High &&
+                c.ResponsibleEmployeeId == responsibleEmployeeId &&
+                c.DueDate == dueDate),
+            It.IsAny<CancellationToken>()), Times.Once);
         _contextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

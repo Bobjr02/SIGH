@@ -9,7 +9,8 @@ public record CreateDisciplinaryCaseRequest(
     string Description,
     Guid CreatedByUserId,
     DisciplinaryCasePriority Priority = DisciplinaryCasePriority.Normal,
-    ConfidentialityLevel ConfidentialityLevel = ConfidentialityLevel.Internal);
+    Guid? ResponsibleEmployeeId = null,
+    DateTimeOffset? DueDate = null);
 
 public record CreateDisciplinaryCaseResponse(
     Guid Id,
@@ -18,5 +19,7 @@ public record CreateDisciplinaryCaseResponse(
     string Title,
     DisciplinaryCaseStatus Status,
     DisciplinaryCasePriority Priority,
-    ConfidentialityLevel ConfidentialityLevel,
-    DateTimeOffset OpenedAt);
+    DateTimeOffset OpenedAt,
+    Guid OpenedByUserId,
+    Guid? ResponsibleEmployeeId,
+    DateTimeOffset? DueDate);

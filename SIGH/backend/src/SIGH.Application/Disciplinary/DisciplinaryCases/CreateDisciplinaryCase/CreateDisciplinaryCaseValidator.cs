@@ -28,7 +28,9 @@ public class CreateDisciplinaryCaseValidator : AbstractValidator<CreateDisciplin
         RuleFor(x => x.Priority)
             .IsInEnum().WithMessage("A prioridade é inválida.");
 
-        RuleFor(x => x.ConfidentialityLevel)
-            .IsInEnum().WithMessage("O nível de confidencialidade é inválido.");
+        RuleFor(x => x.DueDate)
+            .GreaterThan(DateTimeOffset.MinValue)
+            .When(x => x.DueDate.HasValue)
+            .WithMessage("A data de vencimento é inválida.");
     }
 }
