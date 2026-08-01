@@ -4,17 +4,21 @@ namespace SIGH.Application.Disciplinary.DisciplinaryCases.AddEvidence;
 
 public record AddEvidenceRequest(
     Guid DisciplinaryCaseId,
-    EvidenceType Type,
-    string Description,
+    EvidenceType EvidenceType,
+    string Title,
     Guid CollectedByUserId,
     DateTimeOffset CollectedAt,
     Guid? OccurrenceId = null,
-    string? ReferenceCode = null,
-    string? Location = null);
+    string? Description = null,
+    string? StorageReference = null,
+    string? OriginalFileName = null,
+    string? ContentType = null,
+    long? FileSize = null,
+    string? IntegrityHash = null);
 
 public record AddEvidenceResponse(
     Guid Id,
     Guid DisciplinaryCaseId,
-    EvidenceType Type,
+    EvidenceType EvidenceType,
     EvidenceStatus Status,
     DateTimeOffset CollectedAt);

@@ -207,7 +207,16 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         empResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 6. Add Evidence
-        var evRequest = new AddEvidenceRequest(caseId, EvidenceType.Document, "Folha de ponto", Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var evRequest = new AddEvidenceRequest(
+            caseId,
+            EvidenceType.Document,
+            "Folha de ponto",
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            StorageReference: "evidences/folha-ponto.pdf",
+            OriginalFileName: "folha-ponto.pdf",
+            ContentType: "application/pdf",
+            FileSize: 1024);
         var evResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/evidences", evRequest);
         evResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -220,7 +229,12 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         submitResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 9. Record Decision
-        var decRequest = new RecordDecisionRequest(caseId, DecisionType.WrittenWarning, "Decidido advertência escrita", Guid.NewGuid());
+        var decRequest = new RecordDecisionRequest(
+            caseId,
+            DecisionType.FormalWarning,
+            "Advertência por escrito.",
+            "A apuração confirmou a conduta que fundamenta a advertência.",
+            Guid.NewGuid());
         var decResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/decisions", decRequest);
         decResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var decResult = await decResp.Content.ReadFromJsonAsync<Result<RecordDecisionResponse>>();

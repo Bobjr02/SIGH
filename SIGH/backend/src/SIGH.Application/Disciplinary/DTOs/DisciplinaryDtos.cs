@@ -33,19 +33,24 @@ public record CaseEmployeeDto(
 
 public record EvidenceDto(
     Guid Id,
-    EvidenceType Type,
-    string Description,
-    Guid CollectedByUserId,
-    DateTimeOffset CollectedAt,
+    EvidenceType EvidenceType,
+    string Title,
+    string? Description,
+    string? StorageReference,
+    string? OriginalFileName,
+    string? ContentType,
+    long? FileSize,
     Guid? OccurrenceId,
-    string? ReferenceCode,
-    string? Location,
+    DateTimeOffset CollectedAt,
+    Guid CollectedByUserId,
+    string? IntegrityHash,
     EvidenceStatus Status);
 
 public record DecisionDto(
     Guid Id,
-    DecisionType Type,
-    string Justification,
+    DecisionType DecisionType,
+    string Summary,
+    string Reasoning,
     Guid DecidedByUserId,
     DateTimeOffset DecidedAt,
     Guid? ApprovedByUserId,

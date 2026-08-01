@@ -15,6 +15,6 @@ public class ConcludeDisciplinaryCaseValidator : AbstractValidator<ConcludeDisci
 
         RuleFor(x => x.FinalSummary)
             .NotEmpty().WithMessage("O resumo final é obrigatório.")
-            .MaximumLength(DisciplinaryDomainConstants.FinalSummaryMaxLength).WithMessage($"O resumo final deve ter no máximo {DisciplinaryDomainConstants.FinalSummaryMaxLength} caracteres.");
+            .MaximumLength(DisciplinaryDomainConstants.ConclusionSummaryMaxLength).WithMessage($"O resumo final deve ter no máximo {DisciplinaryDomainConstants.ConclusionSummaryMaxLength} caracteres.");
     }
 }

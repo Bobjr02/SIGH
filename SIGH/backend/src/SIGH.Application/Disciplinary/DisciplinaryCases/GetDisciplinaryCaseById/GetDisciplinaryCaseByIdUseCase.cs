@@ -41,19 +41,24 @@ public class GetDisciplinaryCaseByIdUseCase : IGetDisciplinaryCaseByIdUseCase
 
         var evidences = item.Evidences.Select(e => new EvidenceDto(
             e.Id,
-            e.Type,
+            e.EvidenceType,
+            e.Title,
             e.Description,
-            e.CollectedByUserId,
-            e.CollectedAt,
+            e.StorageReference,
+            e.OriginalFileName,
+            e.ContentType,
+            e.FileSize,
             e.DisciplinaryOccurrenceId,
-            e.ReferenceCode,
-            e.Location,
+            e.CollectedAt,
+            e.CollectedByUserId,
+            e.IntegrityHash,
             e.Status)).ToList();
 
         var decisions = item.Decisions.Select(d => new DecisionDto(
             d.Id,
-            d.Type,
-            d.Justification,
+            d.DecisionType,
+            d.Summary,
+            d.Reasoning,
             d.DecidedByUserId,
             d.DecidedAt,
             d.ApprovedByUserId,

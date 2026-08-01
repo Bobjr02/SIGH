@@ -4,6 +4,7 @@ using SIGH.Application.Disciplinary.Common;
 using SIGH.Application.Interfaces;
 using SIGH.Application.Interfaces.Repositories.Disciplinary;
 using SIGH.Domain.Disciplinary.Entities;
+using SIGH.Domain.Disciplinary.Enums;
 
 namespace SIGH.Application.Disciplinary.DisciplinaryCases.RecordDecision;
 
@@ -35,23 +36,28 @@ public class RecordDecisionUseCase : IRecordDecisionUseCase
 
         var decision = DisciplinaryDecision.Create(
             caseObj.Id,
-            request.Type,
-            request.Justification,
-            request.DecidedByUserId,
+            request.DecisionType,
+            request.Summary,
+            request.Reasoning,
             now,
-            request.ApprovedByUserId,
-            request.ApprovedAt);
+            request.DecidedByUserId,
+            DecisionStatus.Draft);
 
-        caseObj.RecordDecision(decision);
+        caseObj.RegisterDecision(decision);
 
         await _context.SaveChangesAsync(cancellationToken);
 
         var response = new RecordDecisionResponse(
             decision.Id,
             caseObj.Id,
-            decision.Type,
+            decision.DecisionType,
+            decision.Summary,
+            decision.Reasoning,
             decision.Status,
-            decision.DecidedAt);
+            decision.DecidedAt,
+            decision.DecidedByUserId,
+            decision.ApprovedByUserId,
+            decision.ApprovedAt);
 
         return Result<RecordDecisionResponse>.Ok(response, "Decisão registrada com sucesso.");
     }

@@ -249,7 +249,17 @@ public class DisciplinaryPersistenceTests : IDisposable
         
         var occurrence = DisciplinaryOccurrence.Create(caseObj.Id, now, now, "Ocorrência 1", userId, infraction.Id, InfractionSeverity.High);
         var caseEmp = DisciplinaryCaseEmployee.Create(caseObj.Id, employeeId, CaseEmployeeRole.Accused, true);
-        var evidence = DisciplinaryEvidence.Create(caseObj.Id, EvidenceType.Document, "Documento 1", userId, now, occurrenceId: occurrence.Id);
+        var evidence = DisciplinaryEvidence.CreateFileEvidence(
+            caseObj.Id,
+            EvidenceType.Document,
+            "Documento 1",
+            "evidences/documento-1.pdf",
+            "documento-1.pdf",
+            "application/pdf",
+            1024,
+            now,
+            userId,
+            disciplinaryOccurrenceId: occurrence.Id);
 
         caseObj.AddOccurrence(occurrence);
         caseObj.AddEmployee(caseEmp);

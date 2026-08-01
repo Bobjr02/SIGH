@@ -110,7 +110,16 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
-        var request = new AddEvidenceRequest(caseObj.Id, EvidenceType.Document, "E-mail impresso", userId, _now);
+        var request = new AddEvidenceRequest(
+            caseObj.Id,
+            EvidenceType.Document,
+            "E-mail impresso",
+            userId,
+            _now,
+            StorageReference: "evidences/email-impresso.pdf",
+            OriginalFileName: "email-impresso.pdf",
+            ContentType: "application/pdf",
+            FileSize: 1024);
 
         // Act
         var result = await _addEvidenceUseCase.ExecuteAsync(request);
@@ -131,7 +140,12 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
 
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
-        var request = new RecordDecisionRequest(caseObj.Id, DecisionType.WrittenWarning, "Procedente com advertência por escrito.", userId);
+        var request = new RecordDecisionRequest(
+            caseObj.Id,
+            DecisionType.FormalWarning,
+            "Advertência por escrito.",
+            "A apuração confirmou a conduta e fundamentou a aplicação da advertência.",
+            userId);
 
         // Act
         var result = await _recordDecisionUseCase.ExecuteAsync(request);

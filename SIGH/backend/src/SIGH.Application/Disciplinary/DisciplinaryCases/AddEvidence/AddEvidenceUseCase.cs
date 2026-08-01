@@ -3,6 +3,7 @@ using SIGH.Application.Common.Models;
 using SIGH.Application.Disciplinary.Common;
 using SIGH.Application.Interfaces.Repositories.Disciplinary;
 using SIGH.Domain.Disciplinary.Entities;
+using SIGH.Domain.Disciplinary.Enums;
 
 namespace SIGH.Application.Disciplinary.DisciplinaryCases.AddEvidence;
 
@@ -36,15 +37,27 @@ public class AddEvidenceUseCase : IAddEvidenceUseCase
             }
         }
 
-        var evidence = DisciplinaryEvidence.Create(
-            caseObj.Id,
-            request.Type,
-            request.Description,
-            request.CollectedByUserId,
-            request.CollectedAt,
-            request.OccurrenceId,
-            request.ReferenceCode,
-            request.Location);
+        var evidence = request.EvidenceType == EvidenceType.Text
+            ? DisciplinaryEvidence.CreateTextEvidence(
+                caseObj.Id,
+                request.Title,
+                request.Description!,
+                request.CollectedAt,
+                request.CollectedByUserId,
+                request.OccurrenceId)
+            : DisciplinaryEvidence.CreateFileEvidence(
+                caseObj.Id,
+                request.EvidenceType,
+                request.Title,
+                request.StorageReference!,
+                request.OriginalFileName!,
+                request.ContentType!,
+                request.FileSize!.Value,
+                request.CollectedAt,
+                request.CollectedByUserId,
+                request.IntegrityHash,
+                request.OccurrenceId,
+                request.Description);
 
         caseObj.AddEvidence(evidence);
 
@@ -53,7 +66,7 @@ public class AddEvidenceUseCase : IAddEvidenceUseCase
         var response = new AddEvidenceResponse(
             evidence.Id,
             caseObj.Id,
-            evidence.Type,
+            evidence.EvidenceType,
             evidence.Status,
             evidence.CollectedAt);
 

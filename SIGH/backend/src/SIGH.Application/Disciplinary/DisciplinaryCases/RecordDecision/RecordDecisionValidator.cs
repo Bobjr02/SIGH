@@ -10,12 +10,16 @@ public class RecordDecisionValidator : AbstractValidator<RecordDecisionRequest>
         RuleFor(x => x.DisciplinaryCaseId)
             .NotEmpty().WithMessage("O processo disciplinar é obrigatório.");
 
-        RuleFor(x => x.Type)
+        RuleFor(x => x.DecisionType)
             .IsInEnum().WithMessage("O tipo de decisão informado é inválido.");
 
-        RuleFor(x => x.Justification)
-            .NotEmpty().WithMessage("A justificativa é obrigatória.")
-            .MaximumLength(DisciplinaryDomainConstants.JustificationMaxLength).WithMessage($"A justificativa deve ter no máximo {DisciplinaryDomainConstants.JustificationMaxLength} caracteres.");
+        RuleFor(x => x.Summary)
+            .NotEmpty().WithMessage("O resumo da decisão é obrigatório.")
+            .MaximumLength(DisciplinaryDomainConstants.SummaryMaxLength).WithMessage($"O resumo da decisão deve ter no máximo {DisciplinaryDomainConstants.SummaryMaxLength} caracteres.");
+
+        RuleFor(x => x.Reasoning)
+            .NotEmpty().WithMessage("A fundamentação da decisão é obrigatória.")
+            .MaximumLength(DisciplinaryDomainConstants.ReasoningMaxLength).WithMessage($"A fundamentação da decisão deve ter no máximo {DisciplinaryDomainConstants.ReasoningMaxLength} caracteres.");
 
         RuleFor(x => x.DecidedByUserId)
             .NotEmpty().WithMessage("O usuário decisor é obrigatório.");

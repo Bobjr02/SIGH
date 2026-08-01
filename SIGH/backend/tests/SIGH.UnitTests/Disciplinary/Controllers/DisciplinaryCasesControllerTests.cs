@@ -303,8 +303,17 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new AddEvidenceRequest(caseId, EvidenceType.Document, "Relatório de catraca", Guid.NewGuid(), DateTimeOffset.UtcNow);
-        var response = new AddEvidenceResponse(Guid.NewGuid(), caseId, request.Type, EvidenceStatus.Valid, request.CollectedAt);
+        var request = new AddEvidenceRequest(
+            caseId,
+            EvidenceType.Document,
+            "Relatório de catraca",
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            StorageReference: "evidences/relatorio-catraca.pdf",
+            OriginalFileName: "relatorio-catraca.pdf",
+            ContentType: "application/pdf",
+            FileSize: 1024);
+        var response = new AddEvidenceResponse(Guid.NewGuid(), caseId, request.EvidenceType, EvidenceStatus.PendingVerification, request.CollectedAt);
 
         _addEvidenceUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<AddEvidenceRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
@@ -323,8 +332,23 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new RecordDecisionRequest(caseId, DecisionType.Suspension, "Aplicação de suspensão por 3 dias", Guid.NewGuid());
-        var response = new RecordDecisionResponse(Guid.NewGuid(), caseId, request.Type, DecisionStatus.PendingApproval, DateTimeOffset.UtcNow);
+        var request = new RecordDecisionRequest(
+            caseId,
+            DecisionType.Suspension,
+            "Suspensão por três dias.",
+            "A apuração confirmou os fatos que fundamentam a suspensão.",
+            Guid.NewGuid());
+        var response = new RecordDecisionResponse(
+            Guid.NewGuid(),
+            caseId,
+            request.DecisionType,
+            request.Summary,
+            request.Reasoning,
+            DecisionStatus.Draft,
+            DateTimeOffset.UtcNow,
+            request.DecidedByUserId,
+            null,
+            null);
 
         _recordDecisionUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<RecordDecisionRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
