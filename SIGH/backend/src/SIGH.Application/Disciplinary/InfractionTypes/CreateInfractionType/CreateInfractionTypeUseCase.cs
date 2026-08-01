@@ -42,11 +42,13 @@ public class CreateInfractionTypeUseCase : ICreateInfractionTypeUseCase
         }
 
         var infractionType = InfractionType.Create(
-            request.Code,
-            request.Name,
-            request.DefaultSeverity,
-            request.Description,
-            request.LegalReference);
+            code: request.Code,
+            name: request.Name,
+            defaultSeverity: request.DefaultSeverity,
+            requiresFormalInvestigation: false,
+            allowsTerminationRecommendation: false,
+            description: request.Description,
+            legalReference: request.LegalReference);
 
         await _repository.AddAsync(infractionType, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
