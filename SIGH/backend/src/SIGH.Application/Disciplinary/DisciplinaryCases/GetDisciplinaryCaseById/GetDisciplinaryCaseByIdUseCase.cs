@@ -69,13 +69,14 @@ public class GetDisciplinaryCaseByIdUseCase : IGetDisciplinaryCaseByIdUseCase
             m.Id,
             m.DisciplinaryDecisionId,
             m.EmployeeId,
-            m.Type,
-            m.Description,
+            m.MeasureType,
+            m.Reason,
             m.EffectiveFrom,
             m.EffectiveUntil,
             m.AppliedByUserId,
             m.AppliedAt,
-            m.Status)).ToList();
+            m.Status,
+            m.Notes)).ToList();
 
         var response = new GetDisciplinaryCaseByIdResponse(
             item.Id,

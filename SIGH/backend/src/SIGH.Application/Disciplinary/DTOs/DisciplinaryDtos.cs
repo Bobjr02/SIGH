@@ -59,15 +59,16 @@ public record DecisionDto(
 
 public record MeasureDto(
     Guid Id,
-    Guid DecisionId,
+    Guid DisciplinaryDecisionId,
     Guid EmployeeId,
-    DisciplinaryMeasureType Type,
-    string Description,
+    DisciplinaryMeasureType MeasureType,
+    string Reason,
     DateTimeOffset EffectiveFrom,
     DateTimeOffset? EffectiveUntil,
-    Guid AppliedByUserId,
-    DateTimeOffset AppliedAt,
-    DisciplinaryMeasureStatus Status);
+    Guid? AppliedByUserId,
+    DateTimeOffset? AppliedAt,
+    DisciplinaryMeasureStatus Status,
+    string? Notes);
 
 public record DisciplinaryCaseSummaryDto(
     Guid Id,

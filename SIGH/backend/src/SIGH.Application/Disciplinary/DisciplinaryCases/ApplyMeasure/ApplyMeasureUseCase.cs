@@ -35,7 +35,7 @@ public class ApplyMeasureUseCase : IApplyMeasureUseCase
             return Result<ApplyMeasureResponse>.Failure("Processo disciplinar não encontrado.", DisciplinaryErrors.DisciplinaryCaseNotFound);
         }
 
-        var decisionExists = caseObj.Decisions.Any(d => d.Id == request.DecisionId);
+        var decisionExists = caseObj.Decisions.Any(d => d.Id == request.DisciplinaryDecisionId);
         if (!decisionExists)
         {
             return Result<ApplyMeasureResponse>.Failure("Decisão não encontrada para este processo disciplinar.", DisciplinaryErrors.DecisionNotFound);
@@ -50,28 +50,36 @@ public class ApplyMeasureUseCase : IApplyMeasureUseCase
         var now = _dateTimeProvider.UtcNow;
 
         var measure = DisciplinaryMeasure.Create(
-            caseObj.Id,
-            request.DecisionId,
-            employee.Id,
-            request.Type,
-            request.Description,
-            request.EffectiveFrom,
-            request.AppliedByUserId,
-            now,
-            request.EffectiveUntil);
+            disciplinaryCaseId: caseObj.Id,
+            disciplinaryDecisionId: request.DisciplinaryDecisionId,
+            employeeId: employee.Id,
+            measureType: request.MeasureType,
+            reason: request.Reason,
+            effectiveFrom: request.EffectiveFrom,
+            effectiveUntil: request.EffectiveUntil,
+            notes: request.Notes);
 
-        caseObj.ApplyMeasure(measure);
+        caseObj.AddMeasure(measure);
+        caseObj.ApplyMeasure(
+            measure.Id,
+            now,
+            request.AppliedByUserId);
 
         await _context.SaveChangesAsync(cancellationToken);
 
         var response = new ApplyMeasureResponse(
             measure.Id,
             caseObj.Id,
-            request.DecisionId,
+            measure.DisciplinaryDecisionId,
             employee.Id,
-            measure.Type,
+            measure.MeasureType,
+            measure.Reason,
+            measure.EffectiveFrom,
+            measure.EffectiveUntil,
+            measure.AppliedByUserId,
+            measure.AppliedAt,
             measure.Status,
-            measure.AppliedAt);
+            measure.Notes);
 
         return Result<ApplyMeasureResponse>.Ok(response, "Medida disciplinar aplicada com sucesso.");
     }

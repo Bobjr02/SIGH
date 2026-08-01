@@ -4,19 +4,25 @@ namespace SIGH.Application.Disciplinary.DisciplinaryCases.ApplyMeasure;
 
 public record ApplyMeasureRequest(
     Guid DisciplinaryCaseId,
-    Guid DecisionId,
+    Guid DisciplinaryDecisionId,
     Guid EmployeeId,
-    DisciplinaryMeasureType Type,
-    string Description,
+    DisciplinaryMeasureType MeasureType,
+    string Reason,
     DateTimeOffset EffectiveFrom,
     Guid AppliedByUserId,
-    DateTimeOffset? EffectiveUntil = null);
+    DateTimeOffset? EffectiveUntil = null,
+    string? Notes = null);
 
 public record ApplyMeasureResponse(
     Guid MeasureId,
     Guid DisciplinaryCaseId,
-    Guid DecisionId,
+    Guid DisciplinaryDecisionId,
     Guid EmployeeId,
-    DisciplinaryMeasureType Type,
+    DisciplinaryMeasureType MeasureType,
+    string Reason,
+    DateTimeOffset EffectiveFrom,
+    DateTimeOffset? EffectiveUntil,
+    Guid? AppliedByUserId,
+    DateTimeOffset? AppliedAt,
     DisciplinaryMeasureStatus Status,
-    DateTimeOffset AppliedAt);
+    string? Notes);

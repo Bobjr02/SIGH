@@ -368,7 +368,19 @@ public class DisciplinaryCasesControllerTests
         // Arrange
         var caseId = Guid.NewGuid();
         var request = new ApplyMeasureRequest(caseId, Guid.NewGuid(), Guid.NewGuid(), DisciplinaryMeasureType.Suspension, "Suspenso por 3 dias", DateTimeOffset.UtcNow, Guid.NewGuid());
-        var response = new ApplyMeasureResponse(Guid.NewGuid(), caseId, request.DecisionId, request.EmployeeId, request.Type, DisciplinaryMeasureStatus.Applied, DateTimeOffset.UtcNow);
+        var response = new ApplyMeasureResponse(
+            Guid.NewGuid(),
+            caseId,
+            request.DisciplinaryDecisionId,
+            request.EmployeeId,
+            request.MeasureType,
+            request.Reason,
+            request.EffectiveFrom,
+            request.EffectiveUntil,
+            request.AppliedByUserId,
+            DateTimeOffset.UtcNow,
+            DisciplinaryMeasureStatus.Applied,
+            request.Notes);
 
         _applyMeasureUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<ApplyMeasureRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
