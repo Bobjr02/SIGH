@@ -6,6 +6,7 @@ using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
 using SIGH.Domain.Repositories;
+using RefreshTokenEntity = SIGH.Domain.Entities.RefreshToken;
 
 namespace SIGH.Application.Authentication.Login;
 
@@ -130,7 +131,7 @@ public class LoginService : ILoginService
         var rawRefreshToken = _refreshTokenGenerator.GenerateRefreshToken();
         var tokenHash = _tokenHasher.HashToken(rawRefreshToken);
 
-        var refreshTokenEntity = new RefreshToken
+        var refreshTokenEntity = new RefreshTokenEntity
         {
             UserId = user.Id,
             TokenHash = tokenHash,

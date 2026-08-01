@@ -28,7 +28,7 @@ public class ApproveDecisionUseCase : IApproveDecisionUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<ApproveDecisionResponse>.Failure(errors);
+            return Result<ApproveDecisionResponse>.Failure(string.Join("; ", errors));
         }
 
         var disciplinaryCase = await _caseRepository.GetByIdWithDetailsAsync(request.DisciplinaryCaseId, cancellationToken);

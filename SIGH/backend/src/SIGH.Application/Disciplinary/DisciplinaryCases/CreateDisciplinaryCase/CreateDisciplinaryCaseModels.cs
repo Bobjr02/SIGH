@@ -8,7 +8,7 @@ public record CreateDisciplinaryCaseRequest(
     string Title,
     string Description,
     Guid CreatedByUserId,
-    DisciplinaryCasePriority Priority = DisciplinaryCasePriority.Medium,
+    DisciplinaryCasePriority Priority = DisciplinaryCasePriority.Normal,
     ConfidentialityLevel ConfidentialityLevel = ConfidentialityLevel.Internal);
 
 public record CreateDisciplinaryCaseResponse(

@@ -1,3 +1,4 @@
+using SIGH.Application.Common.Interfaces;
 namespace SIGH.Application.Notifications.UseCases;
 
 using System.Diagnostics;
@@ -15,7 +16,7 @@ public class ProcessDeadlineEscalationsUseCase : IProcessDeadlineEscalationsUseC
     private readonly IDeadlineMonitoringQueryRepository _queryRepository;
     private readonly INotificationRepository _notificationRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IApplicationDbContext _context;
     private readonly NotificationReminderOptions _reminderOptions;
     private readonly ILogger<ProcessDeadlineEscalationsUseCase> _logger;
 
@@ -23,14 +24,14 @@ public class ProcessDeadlineEscalationsUseCase : IProcessDeadlineEscalationsUseC
         IDeadlineMonitoringQueryRepository queryRepository,
         INotificationRepository notificationRepository,
         IDateTimeProvider dateTimeProvider,
-        IUnitOfWork unitOfWork,
+        IApplicationDbContext context,
         IOptions<NotificationReminderOptions> reminderOptions,
         ILogger<ProcessDeadlineEscalationsUseCase> logger)
     {
         _queryRepository = queryRepository;
         _notificationRepository = notificationRepository;
         _dateTimeProvider = dateTimeProvider;
-        _unitOfWork = unitOfWork;
+        _context = context;
         _reminderOptions = reminderOptions.Value;
         _logger = logger;
     }
@@ -148,7 +149,7 @@ public class ProcessDeadlineEscalationsUseCase : IProcessDeadlineEscalationsUseC
                         await _notificationRepository.AddLogAsync(newLog, cancellationToken);
                     }
 
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    await _context.SaveChangesAsync(cancellationToken);
 
                     result.EscalationsExecuted++;
                     result.ExecutionLogs.Add($"[Escalonamento Nível {nextLevel}] Item {item.ReferenceNumber} -> Usuário {recipientUserId}");

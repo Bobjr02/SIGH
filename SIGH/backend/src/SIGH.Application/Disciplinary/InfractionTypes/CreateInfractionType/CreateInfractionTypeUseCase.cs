@@ -31,7 +31,7 @@ public class CreateInfractionTypeUseCase : ICreateInfractionTypeUseCase
             if (!validationResult.IsValid)
             {
                 var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-                return Result<CreateInfractionTypeResponse>.Failure(errors, "ValidationError");
+                return Result<CreateInfractionTypeResponse>.Failure(string.Join("; ", errors), "ValidationError");
             }
         }
 

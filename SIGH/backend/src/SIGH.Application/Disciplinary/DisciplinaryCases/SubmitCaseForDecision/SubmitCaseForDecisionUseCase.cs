@@ -28,7 +28,7 @@ public class SubmitCaseForDecisionUseCase : ISubmitCaseForDecisionUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<SubmitCaseForDecisionResponse>.Failure(errors);
+            return Result<SubmitCaseForDecisionResponse>.Failure(string.Join("; ", errors));
         }
 
         var disciplinaryCase = await _caseRepository.GetByIdWithDetailsAsync(request.DisciplinaryCaseId, cancellationToken);

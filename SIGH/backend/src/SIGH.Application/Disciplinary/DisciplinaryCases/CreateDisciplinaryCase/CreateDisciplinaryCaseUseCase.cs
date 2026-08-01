@@ -35,7 +35,7 @@ public class CreateDisciplinaryCaseUseCase : ICreateDisciplinaryCaseUseCase
             if (!validationResult.IsValid)
             {
                 var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-                return Result<CreateDisciplinaryCaseResponse>.Failure(errors, "ValidationError");
+                return Result<CreateDisciplinaryCaseResponse>.Failure(string.Join("; ", errors), "ValidationError");
             }
         }
 

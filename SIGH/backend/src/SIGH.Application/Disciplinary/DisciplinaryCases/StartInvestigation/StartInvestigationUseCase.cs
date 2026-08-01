@@ -28,7 +28,7 @@ public class StartInvestigationUseCase : IStartInvestigationUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<StartInvestigationResponse>.Failure(errors);
+            return Result<StartInvestigationResponse>.Failure(string.Join("; ", errors));
         }
 
         var disciplinaryCase = await _caseRepository.GetByIdWithDetailsAsync(request.DisciplinaryCaseId, cancellationToken);

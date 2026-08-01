@@ -28,7 +28,7 @@ public class UpdateInfractionTypeUseCase : IUpdateInfractionTypeUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<UpdateInfractionTypeResponse>.Failure(errors);
+            return Result<UpdateInfractionTypeResponse>.Failure(string.Join("; ", errors));
         }
 
         var infractionType = await _infractionTypeRepository.GetByIdAsync(request.Id, cancellationToken);

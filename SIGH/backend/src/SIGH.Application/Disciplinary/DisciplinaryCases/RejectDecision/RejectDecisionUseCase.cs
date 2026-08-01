@@ -28,7 +28,7 @@ public class RejectDecisionUseCase : IRejectDecisionUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<RejectDecisionResponse>.Failure(errors);
+            return Result<RejectDecisionResponse>.Failure(string.Join("; ", errors));
         }
 
         var disciplinaryCase = await _caseRepository.GetByIdWithDetailsAsync(request.DisciplinaryCaseId, cancellationToken);

@@ -1,3 +1,4 @@
+using SIGH.Domain.Entities;
 namespace SIGH.Application.Interfaces;
 
 public interface IJwtTokenGenerator

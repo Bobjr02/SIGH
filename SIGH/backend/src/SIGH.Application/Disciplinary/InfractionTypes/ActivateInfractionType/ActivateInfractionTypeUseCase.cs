@@ -28,7 +28,7 @@ public class ActivateInfractionTypeUseCase : IActivateInfractionTypeUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<ActivateInfractionTypeResponse>.Failure(errors);
+            return Result<ActivateInfractionTypeResponse>.Failure(string.Join("; ", errors));
         }
 
         var infractionType = await _infractionTypeRepository.GetByIdAsync(request.Id, cancellationToken);

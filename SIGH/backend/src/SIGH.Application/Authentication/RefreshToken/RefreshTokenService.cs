@@ -6,6 +6,7 @@ using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
 using SIGH.Domain.Repositories;
+using RefreshTokenEntity = SIGH.Domain.Entities.RefreshToken;
 
 namespace SIGH.Application.Authentication.RefreshToken;
 
@@ -113,7 +114,7 @@ public class RefreshTokenService : IRefreshTokenService
         tokenEntity.ReasonRevoked = "Rotacionado";
         tokenEntity.ReplacedByTokenHash = newTokenHash;
 
-        var newTokenEntity = new RefreshToken
+        var newTokenEntity = new RefreshTokenEntity
         {
             UserId = user.Id,
             TokenHash = newTokenHash,
