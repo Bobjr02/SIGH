@@ -6,12 +6,11 @@ public record AddEmployeeToCaseRequest(
     Guid DisciplinaryCaseId,
     Guid EmployeeId,
     CaseEmployeeRole Role,
-    bool IsPrimaryAccused = false,
-    string? Notes = null);
+    bool IsPrimarySubject = false);
 
 public record AddEmployeeToCaseResponse(
     Guid Id,
     Guid DisciplinaryCaseId,
     Guid EmployeeId,
     CaseEmployeeRole Role,
-    bool IsPrimaryAccused);
+    bool IsPrimarySubject);

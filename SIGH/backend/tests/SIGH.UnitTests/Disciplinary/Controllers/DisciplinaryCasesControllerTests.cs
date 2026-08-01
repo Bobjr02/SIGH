@@ -289,7 +289,7 @@ public class DisciplinaryCasesControllerTests
         // Arrange
         var caseId = Guid.NewGuid();
         var request = new AddEmployeeToCaseRequest(caseId, Guid.NewGuid(), CaseEmployeeRole.Accused, true);
-        var response = new AddEmployeeToCaseResponse(Guid.NewGuid(), caseId, request.EmployeeId, request.Role, request.IsPrimaryAccused);
+        var response = new AddEmployeeToCaseResponse(Guid.NewGuid(), caseId, request.EmployeeId, request.Role, request.IsPrimarySubject);
 
         _addEmployeeToCaseUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<AddEmployeeToCaseRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))

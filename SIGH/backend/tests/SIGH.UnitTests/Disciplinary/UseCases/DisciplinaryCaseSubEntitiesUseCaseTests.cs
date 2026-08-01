@@ -97,6 +97,10 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Assert
         result.Success.Should().BeTrue();
         caseObj.Employees.Should().HaveCount(1);
+        caseObj.Employees.Single().Role.Should().Be(CaseEmployeeRole.Accused);
+        caseObj.Employees.Single().IsPrimarySubject.Should().BeTrue();
+        caseObj.Employees.Single().Statement.Should().BeNull();
+        caseObj.Employees.Single().StatementRecordedAt.Should().BeNull();
         _contextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

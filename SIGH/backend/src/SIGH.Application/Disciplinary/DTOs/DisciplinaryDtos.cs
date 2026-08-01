@@ -28,8 +28,7 @@ public record CaseEmployeeDto(
     Guid Id,
     Guid EmployeeId,
     CaseEmployeeRole Role,
-    bool IsPrimaryAccused,
-    string? Notes);
+    bool IsPrimarySubject);
 
 public record EvidenceDto(
     Guid Id,

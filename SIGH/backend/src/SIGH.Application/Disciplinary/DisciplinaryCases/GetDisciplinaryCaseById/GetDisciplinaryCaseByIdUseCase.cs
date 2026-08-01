@@ -36,8 +36,7 @@ public class GetDisciplinaryCaseByIdUseCase : IGetDisciplinaryCaseByIdUseCase
             e.Id,
             e.EmployeeId,
             e.Role,
-            e.IsPrimaryAccused,
-            e.Notes)).ToList();
+            e.IsPrimarySubject)).ToList();
 
         var evidences = item.Evidences.Select(e => new EvidenceDto(
             e.Id,

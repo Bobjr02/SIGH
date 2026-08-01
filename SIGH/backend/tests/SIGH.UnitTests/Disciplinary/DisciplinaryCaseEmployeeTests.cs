@@ -30,6 +30,7 @@ public class DisciplinaryCaseEmployeeTests
         caseEmployee.Role.Should().Be(CaseEmployeeRole.Accused);
         caseEmployee.IsPrimarySubject.Should().BeTrue();
         caseEmployee.Statement.Should().BeNull();
+        caseEmployee.StatementRecordedAt.Should().BeNull();
     }
 
     [Theory]
