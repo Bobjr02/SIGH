@@ -48,18 +48,25 @@ public class AuthController : BaseController
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
         var userAgent = Request.Headers.UserAgent.ToString();
 
-        var result = await _loginService.LoginAsync(request, ipAddress, userAgent, cancellationToken);
+        var updatedRequest = request with
+        {
+            IpAddress = ipAddress,
+            UserAgent = userAgent
+        };
+
+        var result = await _loginService.LoginAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Autenticação realizada com sucesso.");
     }
 
     [HttpPost("logout")]
     [Authorize]
-    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<LogoutResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<Result<bool>>> Logout([FromBody] LogoutRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<LogoutResponse>>> Logout([FromBody] LogoutRequest request, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
-        var result = await _logoutService.LogoutAsync(userId, request, cancellationToken);
+        var updatedRequest = request with { UserId = userId };
+        var result = await _logoutService.LogoutAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Logout realizado com sucesso.");
     }
 
@@ -71,7 +78,13 @@ public class AuthController : BaseController
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
         var userAgent = Request.Headers.UserAgent.ToString();
 
-        var result = await _refreshTokenService.RefreshTokenAsync(request, ipAddress, userAgent, cancellationToken);
+        var updatedRequest = request with
+        {
+            IpAddress = ipAddress,
+            UserAgent = userAgent
+        };
+
+        var result = await _refreshTokenService.RefreshTokenAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Token renovado com sucesso.");
     }
 
@@ -94,13 +107,14 @@ public class AuthController : BaseController
 
     [HttpPost("change-password")]
     [Authorize]
-    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<ChangePasswordResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<Result<bool>>> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<ChangePasswordResponse>>> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
-        var result = await _changePasswordService.ChangePasswordAsync(userId, request, cancellationToken);
+        var updatedRequest = request with { UserId = userId };
+        var result = await _changePasswordService.ChangePasswordAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Senha alterada com sucesso.");
     }
 }
