@@ -76,17 +76,17 @@ public class AuthController : BaseController
     }
 
     [HttpPost("forgot-password")]
-    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<Result<bool>>> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(Result<ForgotPasswordResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<Result<ForgotPasswordResponse>>> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
         var result = await _forgotPasswordService.ForgotPasswordAsync(request, cancellationToken);
         return OkResult(result, "Se o e-mail estiver cadastrado, as instruções de recuperação serão enviadas.");
     }
 
     [HttpPost("reset-password")]
-    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<ResetPasswordResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<Result<bool>>> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<ResetPasswordResponse>>> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
     {
         var result = await _resetPasswordService.ResetPasswordAsync(request, cancellationToken);
         return OkResult(result, "Senha redefinida com sucesso.");
