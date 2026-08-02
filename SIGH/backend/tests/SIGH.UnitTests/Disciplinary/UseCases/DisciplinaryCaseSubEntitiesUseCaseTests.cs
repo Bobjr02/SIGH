@@ -61,7 +61,7 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
         _infractionTypeRepositoryMock.Setup(r => r.GetByIdAsync(infraction.Id, It.IsAny<CancellationToken>())).ReturnsAsync(infraction);
 
-        var request = new AddOccurrenceRequest(caseObj.Id, _now, "Descrição da ocorrência", userId, infraction.Id, InfractionSeverity.Medium);
+        var request = new AddOccurrenceRequest(caseObj.Id, _now, "Descrição da ocorrência", userId, infraction.Id, InfractionSeverity.Moderate);
 
         // Act
         var result = await _addOccurrenceUseCase.ExecuteAsync(request);
@@ -168,7 +168,7 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         var userId = Guid.NewGuid();
         var caseObj = DisciplinaryCase.Create("PROC-MEA-01", companyId, "Título", "Descrição", userId, _now);
 
-        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.WrittenWarning, "Justificativa", userId, _now);
+        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.FormalWarning, "Justificativa", userId, _now);
         caseObj.RecordDecision(decision);
 
         var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");

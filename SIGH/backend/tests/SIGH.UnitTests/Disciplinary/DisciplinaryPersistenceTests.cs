@@ -211,7 +211,7 @@ public class DisciplinaryPersistenceTests : IDisposable
     [Fact]
     public async Task SoftDelete_GlobalFilter_ShouldHideDeletedEntities()
     {
-        var infraction = InfractionType.Create("INF-DEL", "Infração Deletada", InfractionSeverity.Medium, "Descrição");
+        var infraction = InfractionType.Create("INF-DEL", "Infração Deletada", InfractionSeverity.Moderate, "Descrição");
 
         using (var context = CreateDbContext())
         {

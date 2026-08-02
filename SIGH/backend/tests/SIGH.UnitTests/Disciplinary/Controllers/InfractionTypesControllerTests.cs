@@ -47,7 +47,7 @@ public class InfractionTypesControllerTests
         var request = new CreateInfractionTypeRequest(
             Code: "INF-010",
             Name: "Atraso Reincidente",
-            DefaultSeverity: InfractionSeverity.Medium);
+            DefaultSeverity: InfractionSeverity.Moderate);
 
         var response = new CreateInfractionTypeResponse(
             Id: Guid.NewGuid(),

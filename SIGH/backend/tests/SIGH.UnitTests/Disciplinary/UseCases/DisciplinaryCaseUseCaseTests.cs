@@ -205,7 +205,7 @@ public class DisciplinaryCaseUseCaseTests
             "Ocorrência apurada",
             userId,
             Guid.NewGuid(),
-            InfractionSeverity.Medium);
+            InfractionSeverity.Moderate);
         caseObj.AddOccurrence(occurrence);
         caseObj.StartInvestigation();
         caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(

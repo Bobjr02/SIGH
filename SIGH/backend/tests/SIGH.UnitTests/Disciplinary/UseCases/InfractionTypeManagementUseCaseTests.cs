@@ -59,7 +59,7 @@ public class InfractionTypeManagementUseCaseTests
     public async Task ActivateInfractionType_WhenInactive_ShouldActivate()
     {
         // Arrange
-        var entity = InfractionType.Create("INF-002", "Infração Teste", InfractionSeverity.Medium);
+        var entity = InfractionType.Create("INF-002", "Infração Teste", InfractionSeverity.Moderate);
         entity.Deactivate();
 
         _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);

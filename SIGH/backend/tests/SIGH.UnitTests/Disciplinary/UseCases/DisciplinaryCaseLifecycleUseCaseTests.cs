@@ -54,7 +54,7 @@ public class DisciplinaryCaseLifecycleUseCaseTests
         // Arrange
         var caseObj = DisciplinaryCase.Create("PROC-101", Guid.NewGuid(), "Título", "Descrição", DateTimeOffset.UtcNow, Guid.NewGuid());
         caseObj.Open();
-        var occurrence = DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Falta injustificada", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Medium);
+        var occurrence = DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Falta injustificada", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Moderate);
         caseObj.AddOccurrence(occurrence);
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
@@ -108,12 +108,12 @@ public class DisciplinaryCaseLifecycleUseCaseTests
         // Arrange
         var caseObj = DisciplinaryCase.Create("PROC-103", Guid.NewGuid(), "Título", "Descrição", DateTimeOffset.UtcNow, Guid.NewGuid());
         caseObj.Open();
-        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Descrição", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Medium));
+        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Descrição", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Moderate));
         caseObj.StartInvestigation();
         caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, Guid.NewGuid(), CaseEmployeeRole.Accused, true));
         caseObj.SubmitForDecision();
 
-        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.WrittenWarning, "Justificativa da advertência", Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.FormalWarning, "Justificativa da advertência", Guid.NewGuid(), DateTimeOffset.UtcNow);
         caseObj.RegisterDecision(decision);
         caseObj.SubmitDecisionForApproval();
 
@@ -140,7 +140,7 @@ public class DisciplinaryCaseLifecycleUseCaseTests
         // Arrange
         var caseObj = DisciplinaryCase.Create("PROC-104", Guid.NewGuid(), "Título", "Descrição", DateTimeOffset.UtcNow, Guid.NewGuid());
         caseObj.Open();
-        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Descrição", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Medium));
+        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Descrição", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Moderate));
         caseObj.StartInvestigation();
         caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, Guid.NewGuid(), CaseEmployeeRole.Accused, true));
         caseObj.SubmitForDecision();

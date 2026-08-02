@@ -84,7 +84,7 @@ public class DisciplinaryCasesControllerTests
             CompanyId: request.CompanyId,
             Title: request.Title,
             Status: DisciplinaryCaseStatus.Draft,
-            Priority: CasePriority.Medium,
+            Priority: DisciplinaryCasePriority.Normal,
             OpenedAt: DateTimeOffset.UtcNow,
             OpenedByUserId: request.CreatedByUserId,
             ResponsibleEmployeeId: null,
@@ -119,7 +119,7 @@ public class DisciplinaryCasesControllerTests
             Title: "Título",
             Description: null,
             Status: DisciplinaryCaseStatus.Open,
-            Priority: CasePriority.Medium,
+            Priority: DisciplinaryCasePriority.Normal,
             OpenedAt: DateTimeOffset.UtcNow,
             OpenedByUserId: null,
             ResponsibleEmployeeId: null,
@@ -268,7 +268,7 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new AddOccurrenceRequest(caseId, DateTimeOffset.UtcNow, "Falta não justificada", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Medium);
+        var request = new AddOccurrenceRequest(caseId, DateTimeOffset.UtcNow, "Falta não justificada", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Moderate);
         var response = new AddOccurrenceResponse(Guid.NewGuid(), caseId, request.InfractionTypeId, request.Severity, OccurrenceStatus.Reported);
 
         _addOccurrenceUseCaseMock
