@@ -4,6 +4,7 @@ using SIGH.Application.Common.Models;
 using SIGH.Application.Disciplinary.Reports.DTOs;
 using SIGH.Application.Disciplinary.Reports.Queries;
 using SIGH.Application.Disciplinary.Reports.UseCases;
+using SIGH.Application.Disciplinary.Reports.Utils;
 using SIGH.Application.Interfaces.Repositories.Disciplinary;
 using Xunit;
 
@@ -111,11 +112,11 @@ public class DisciplinaryReportUseCasesTests
     public async Task ExportDisciplinaryCaseReportCsv_ShouldSanitizeCsvInjection()
     {
         // Test sanitization helper
-        Assert.Equal("\"' =1+1\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField(" =1+1"));
-        Assert.Equal("\"'+cmd.exe\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField("+cmd.exe"));
-        Assert.Equal("\"'-SUM(A1:A10)\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField("-SUM(A1:A10)"));
-        Assert.Equal("\"'@eval()\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField("@eval()"));
-        Assert.Equal("\"Texto \"\"Normal\"\"\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField("Texto \"Normal\""));
+        Assert.Equal("\"' =1+1\"", CsvSanitizer.SanitizeField(" =1+1"));
+        Assert.Equal("\"'+cmd.exe\"", CsvSanitizer.SanitizeField("+cmd.exe"));
+        Assert.Equal("\"'-SUM(A1:A10)\"", CsvSanitizer.SanitizeField("-SUM(A1:A10)"));
+        Assert.Equal("\"'@eval()\"", CsvSanitizer.SanitizeField("@eval()"));
+        Assert.Equal("\"Texto \"\"Normal\"\"\"", CsvSanitizer.SanitizeField("Texto \"Normal\""));
     }
 
     [Fact]
