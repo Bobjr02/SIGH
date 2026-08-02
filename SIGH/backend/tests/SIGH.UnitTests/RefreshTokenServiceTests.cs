@@ -33,9 +33,8 @@ public class RefreshTokenServiceTests
     public async Task RefreshTokenAsync_WithValidActiveToken_ShouldRotateToken()
     {
         using var context = CreateDbContext();
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Inspetor Souza",
             Email = "inspetor.souza@policiacivil.sp.gov.br",
             Cpf = "44455566677",
@@ -105,9 +104,8 @@ public class RefreshTokenServiceTests
     public async Task RefreshTokenAsync_WithReusedToken_ShouldRevokeAllUserTokensAndSessions()
     {
         using var context = CreateDbContext();
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Perito Lima",
             Email = "perito.lima@policiacivil.sp.gov.br",
             Cpf = "55566677788",
