@@ -49,23 +49,30 @@ public class UsersController : BaseController
 
     [HttpPatch("{id:guid}/status")]
     [Permission("Users.ChangeStatus")]
-    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<ChangeUserStatusResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Result<bool>>> ChangeStatus([FromRoute] Guid id, [FromBody] ChangeUserStatusRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<ChangeUserStatusResponse>>> ChangeStatus([FromRoute] Guid id, [FromBody] ChangeUserStatusRequest request, CancellationToken cancellationToken)
     {
-        var result = await _changeUserStatusService.ChangeStatusAsync(id, request, cancellationToken);
+        var updatedRequest = request with { UserId = id };
+        var result = await _changeUserStatusService.ChangeUserStatusAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Status do usuário alterado com sucesso.");
     }
 
     [HttpPost("{id:guid}/unlock")]
     [Permission("Users.Unlock")]
-    [ProducesResponseType(typeof(Result<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<UnlockUserResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Result<bool>>> UnlockUser([FromRoute] Guid id, [FromBody] UnlockUserRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<UnlockUserResponse>>> UnlockUser([FromRoute] Guid id, [FromBody] UnlockUserRequest request, CancellationToken cancellationToken)
     {
-        var result = await _unlockUserService.UnlockUserAsync(id, request, cancellationToken);
+        var authenticatedUserId = GetUserId();
+        var updatedRequest = request with
+        {
+            UserId = id,
+            UnlockedByUserId = authenticatedUserId
+        };
+        var result = await _unlockUserService.UnlockUserAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Usuário desbloqueado com sucesso.");
     }
 
