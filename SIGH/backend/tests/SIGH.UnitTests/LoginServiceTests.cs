@@ -35,9 +35,8 @@ public class LoginServiceTests
     {
         using var context = CreateDbContext();
         var rawPassword = "Password123!";
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Delegado Silva",
             Email = "delegado.silva@policiacivil.sp.gov.br",
             Cpf = "11122233344",
@@ -46,7 +45,7 @@ public class LoginServiceTests
             MustChangePassword = false
         };
 
-        var role = new Role { Id = Guid.NewGuid(), Name = "Delegado", Code = "ROLE_DELEGADO", Description = "Delegado" };
+        var role = new Role(Guid.NewGuid()) { Name = "Delegado", Code = "ROLE_DELEGADO", Description = "Delegado" };
         user.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id, Role = role });
 
         await context.Users.AddAsync(user);
@@ -102,9 +101,8 @@ public class LoginServiceTests
     public async Task LoginAsync_WithInvalidPassword_ShouldIncrementFailedAttempts()
     {
         using var context = CreateDbContext();
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Agente Santos",
             Email = "agente.santos@policiacivil.sp.gov.br",
             Cpf = "22233344455",
@@ -152,9 +150,8 @@ public class LoginServiceTests
     public async Task LoginAsync_WhenExceedingMaxFailedAttempts_ShouldLockAccount()
     {
         using var context = CreateDbContext();
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Escrivao Oliveira",
             Email = "escrivao.oliveira@policiacivil.sp.gov.br",
             Cpf = "33344455566",
