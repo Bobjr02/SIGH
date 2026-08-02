@@ -96,7 +96,15 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");
         var unit = ManagementUnit.Create(company.Id, "Unidade 1", "UG-01");
         var jobTitle = JobTitle.Create(company.Id, "Desenvolvedor", "DEV");
-        var employee = Employee.Create("João Silva", "12345678909", "joao@empresa.com", "EMP-001", company.Id, unit.Id, jobTitle.Id, new DateOnly(2025, 1, 1));
+        var employee = Employee.Create(
+            companyId: company.Id,
+            employeeNumber: "EMP-001",
+            fullName: "João Silva",
+            cpf: "12345678909",
+            admissionDate: new DateOnly(2025, 1, 1),
+            jobTitleId: jobTitle.Id,
+            managementUnitId: unit.Id,
+            corporateEmail: "joao@empresa.com");
 
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
         _employeeRepositoryMock.Setup(r => r.GetByIdAsync(employee.Id, It.IsAny<CancellationToken>())).ReturnsAsync(employee);
@@ -204,7 +212,15 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");
         var unit = ManagementUnit.Create(company.Id, "Unidade 1", "UG-01");
         var jobTitle = JobTitle.Create(company.Id, "Desenvolvedor", "DEV");
-        var employee = Employee.Create("Maria Souza", "98765432100", "maria@empresa.com", "EMP-002", company.Id, unit.Id, jobTitle.Id, new DateOnly(2025, 1, 1));
+        var employee = Employee.Create(
+            companyId: company.Id,
+            employeeNumber: "EMP-002",
+            fullName: "Maria Souza",
+            cpf: "98765432100",
+            admissionDate: new DateOnly(2025, 1, 1),
+            jobTitleId: jobTitle.Id,
+            managementUnitId: unit.Id,
+            corporateEmail: "maria@empresa.com");
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
         _employeeRepositoryMock.Setup(r => r.GetByIdAsync(employee.Id, It.IsAny<CancellationToken>())).ReturnsAsync(employee);
