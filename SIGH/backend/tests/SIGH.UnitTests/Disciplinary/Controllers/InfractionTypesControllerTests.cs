@@ -54,10 +54,6 @@ public class InfractionTypesControllerTests
             Code: request.Code,
             Name: request.Name,
             DefaultSeverity: request.DefaultSeverity,
-            RequiresFormalInvestigation: false,
-            RequiresSuspension: false,
-            Description: null,
-            LegalBasis: null,
             IsActive: true);
 
         _createUseCaseMock
@@ -100,11 +96,18 @@ public class InfractionTypesControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var dto = new InfractionTypeDto(id, "INF-001", "Insubordinação", InfractionSeverity.High, true, true, "Descrição", "Art 482", true);
+        var response = new GetInfractionTypeByIdResponse(
+            Id: id,
+            Code: "INF-001",
+            Name: "Insubordinação",
+            DefaultSeverity: InfractionSeverity.High,
+            Description: "Descrição",
+            LegalReference: "Art 482",
+            IsActive: true);
 
         _getByIdUseCaseMock
             .Setup(x => x.ExecuteAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<InfractionTypeDto>.Ok(dto));
+            .ReturnsAsync(Result<GetInfractionTypeByIdResponse>.Ok(response));
 
         // Act
         var actionResult = await _controller.GetById(id, CancellationToken.None);
@@ -121,7 +124,7 @@ public class InfractionTypesControllerTests
         var id = Guid.NewGuid();
         _getByIdUseCaseMock
             .Setup(x => x.ExecuteAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<InfractionTypeDto>.Failure("Tipo de infração não encontrado.", "NotFound"));
+            .ReturnsAsync(Result<GetInfractionTypeByIdResponse>.Failure("Tipo de infração não encontrado.", "NotFound"));
 
         // Act
         var actionResult = await _controller.GetById(id, CancellationToken.None);
@@ -155,7 +158,14 @@ public class InfractionTypesControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var request = new UpdateInfractionTypeRequest(id, "Nome Novo", InfractionSeverity.High, true, false, "Desc", "Art");
+        var request = new UpdateInfractionTypeRequest(
+            Id: id,
+            Name: "Nome Novo",
+            DefaultSeverity: InfractionSeverity.High,
+            RequiresFormalInvestigation: true,
+            AllowsTerminationRecommendation: false,
+            Description: "Desc",
+            LegalReference: "Art");
         var response = new UpdateInfractionTypeResponse(id, "INF-001", "Nome Novo", InfractionSeverity.High, true, false, "Desc", "Art", true);
 
         _updateUseCaseMock
