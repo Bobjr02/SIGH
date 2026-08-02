@@ -72,6 +72,6 @@ public class InfractionTypeRepository : IInfractionTypeRepository
                 i.IsActive))
             .ToListAsync(cancellationToken);
 
-        return PagedResult<InfractionTypeDto>.Create(items, totalItems, page, pageSize);
+        return new PagedResult<InfractionTypeDto>(items, page, pageSize, totalItems);
     }
 }

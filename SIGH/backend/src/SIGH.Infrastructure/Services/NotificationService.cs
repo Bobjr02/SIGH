@@ -139,7 +139,7 @@ public class NotificationService : INotificationService
     {
         if (_repository == null)
         {
-            var empty = PagedResult<NotificationDto>.Create(new List<NotificationDto>(), 0, query.PageNumber, query.PageSize);
+            var empty = new PagedResult<NotificationDto>(new List<NotificationDto>(), query.PageNumber, query.PageSize, 0);
             return Result<PagedResult<NotificationDto>>.Ok(empty);
         }
 
