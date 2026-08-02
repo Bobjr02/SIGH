@@ -178,7 +178,7 @@ public class DisciplinaryCaseLifecycleUseCaseTests
                 DisciplinaryCaseStatus.Open, DisciplinaryCasePriority.Normal,
                 DateTimeOffset.UtcNow, Guid.NewGuid(), null, null, null, 1, 1)
         };
-        var paged = PagedResult<DisciplinaryCaseSummaryDto>.Create(items, 1, 1, 10);
+        var paged = new PagedResult<DisciplinaryCaseSummaryDto>(items, 1, 10, 1);
 
         _caseRepositoryMock.Setup(r => r.GetPagedAsync(query, It.IsAny<CancellationToken>())).ReturnsAsync(paged);
 

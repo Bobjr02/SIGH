@@ -235,10 +235,10 @@ public class EmployeesControllerTests
         // Arrange
         var query = new GetEmployeesQuery(PageNumber: 1, PageSize: 10);
         var pagedResult = new PagedResult<EmployeeListItemResponse>(
-            Items: new List<EmployeeListItemResponse>(),
-            TotalCount: 0,
-            PageNumber: 1,
-            PageSize: 10
+            items: new List<EmployeeListItemResponse>(),
+            pageNumber: 1,
+            pageSize: 10,
+            totalCount: 0
         );
 
         _getEmployeesUseCaseMock

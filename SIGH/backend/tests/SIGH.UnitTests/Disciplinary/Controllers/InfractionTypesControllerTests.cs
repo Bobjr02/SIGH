@@ -136,7 +136,7 @@ public class InfractionTypesControllerTests
     {
         // Arrange
         var query = new GetInfractionTypesQuery(PageNumber: 1, PageSize: 10);
-        var pagedResult = PagedResult<InfractionTypeDto>.Create(new List<InfractionTypeDto>(), 0, 1, 10);
+        var pagedResult = new PagedResult<InfractionTypeDto>(new List<InfractionTypeDto>(), 1, 10, 0);
 
         _getTypesUseCaseMock
             .Setup(x => x.ExecuteAsync(query, It.IsAny<CancellationToken>()))

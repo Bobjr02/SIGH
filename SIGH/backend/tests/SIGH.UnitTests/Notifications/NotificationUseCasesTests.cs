@@ -49,7 +49,7 @@ public class NotificationUseCasesTests
             PageSize = 10
         };
 
-        var expectedResult = PagedResult<NotificationDto>.Create(new List<NotificationDto>(), 0, 1, 10);
+        var expectedResult = new PagedResult<NotificationDto>(new List<NotificationDto>(), 1, 10, 0);
         _notificationServiceMock
             .Setup(s => s.GetUserNotificationsAsync(query, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<PagedResult<NotificationDto>>.Ok(expectedResult));
