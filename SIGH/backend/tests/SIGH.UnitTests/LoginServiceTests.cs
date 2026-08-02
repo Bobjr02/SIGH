@@ -45,7 +45,7 @@ public class LoginServiceTests
             MustChangePassword = false
         };
 
-        var role = new Role(Guid.NewGuid()) { Name = "Delegado", Code = "ROLE_DELEGADO", Description = "Delegado" };
+        var role = new Role(Guid.NewGuid()) { Name = "Delegado", Description = "Delegado" };
         user.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id, Role = role });
 
         await context.Users.AddAsync(user);
