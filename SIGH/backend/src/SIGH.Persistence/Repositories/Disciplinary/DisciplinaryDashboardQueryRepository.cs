@@ -64,14 +64,14 @@ public class DisciplinaryDashboardQueryRepository : IDisciplinaryDashboardQueryR
         }
 
         int draftCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Draft);
-        int openCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Opened);
+        int openCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Open);
         int underInvestigationCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.UnderInvestigation);
         int awaitingDecisionCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.AwaitingDecision);
         int decidedCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Decided);
-        int concludedCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Concluded);
+        int concludedCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Completed);
         int cancelledCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Cancelled);
 
-        var concludedItems = caseList.Where(c => c.Status == DisciplinaryCaseStatus.Concluded && c.ClosedAt.HasValue).ToList();
+        var concludedItems = caseList.Where(c => c.Status == DisciplinaryCaseStatus.Completed && c.ClosedAt.HasValue).ToList();
         double avgResolutionDays = 0;
         if (concludedItems.Count > 0)
         {
