@@ -21,74 +21,89 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
         Guid authorizedCompanyId,
         CancellationToken cancellationToken = default)
     {
-        var dbQuery = _context.DisciplinaryMeasures
-            .AsNoTracking()
-            .Include(m => m.DisciplinaryCase)
-            .Where(m => !m.IsDeleted && m.DisciplinaryCase != null && !m.DisciplinaryCase.IsDeleted && m.DisciplinaryCase.CompanyId == authorizedCompanyId);
+        var dbQuery =
+            from m in _context.DisciplinaryMeasures.AsNoTracking()
+            join c in _context.DisciplinaryCases.AsNoTracking()
+                on m.DisciplinaryCaseId equals c.Id
+            where !m.IsDeleted &&
+                  !c.IsDeleted &&
+                  c.CompanyId == authorizedCompanyId
+            select new { Measure = m, DisciplinaryCase = c };
 
         if (query.EmployeeId.HasValue)
         {
-            dbQuery = dbQuery.Where(m => m.EmployeeId == query.EmployeeId.Value);
+            dbQuery = dbQuery.Where(x => x.Measure.EmployeeId == query.EmployeeId.Value);
         }
 
         if (query.CaseId.HasValue)
         {
-            dbQuery = dbQuery.Where(m => m.DisciplinaryCaseId == query.CaseId.Value);
+            dbQuery = dbQuery.Where(x => x.Measure.DisciplinaryCaseId == query.CaseId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(query.MeasureType))
         {
             var mType = query.MeasureType.Trim();
-            dbQuery = dbQuery.Where(m => m.MeasureType.ToString() == mType);
+            dbQuery = dbQuery.Where(x => x.Measure.MeasureType.ToString() == mType);
         }
 
         if (query.AppliedFrom.HasValue)
         {
-            dbQuery = dbQuery.Where(m => m.AppliedAt >= query.AppliedFrom.Value);
+            dbQuery = dbQuery.Where(x => x.Measure.AppliedAt >= query.AppliedFrom.Value);
         }
 
         if (query.AppliedTo.HasValue)
         {
-            dbQuery = dbQuery.Where(m => m.AppliedAt <= query.AppliedTo.Value);
+            dbQuery = dbQuery.Where(x => x.Measure.AppliedAt <= query.AppliedTo.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
             var term = query.SearchTerm.Trim().ToLower();
-            dbQuery = dbQuery.Where(m => m.Description.ToLower().Contains(term) || m.DisciplinaryCase.CaseNumber.ToLower().Contains(term));
+            dbQuery = dbQuery.Where(x => x.Measure.Reason.ToLower().Contains(term) || x.DisciplinaryCase.CaseNumber.ToLower().Contains(term));
         }
 
         var totalCount = await dbQuery.CountAsync(cancellationToken);
 
-        var employeeIds = await dbQuery.Select(m => m.EmployeeId).Distinct().ToListAsync(cancellationToken);
-        var appliedByIds = await dbQuery.Select(m => m.AppliedByEmployeeId).Distinct().ToListAsync(cancellationToken);
-        var allEmpIds = employeeIds.Union(appliedByIds).ToList();
+        var employeeIds = await dbQuery.Select(x => x.Measure.EmployeeId).Distinct().ToListAsync(cancellationToken);
+        var appliedByUserIds = await dbQuery
+            .Where(x => x.Measure.AppliedByUserId.HasValue)
+            .Select(x => x.Measure.AppliedByUserId!.Value)
+            .Distinct()
+            .ToListAsync(cancellationToken);
 
         var employeesMap = await _context.Employees
             .AsNoTracking()
-            .Where(e => allEmpIds.Contains(e.Id) && !e.IsDeleted)
+            .Where(e => employeeIds.Contains(e.Id) && !e.IsDeleted)
             .ToDictionaryAsync(e => e.Id, e => e.FullName, cancellationToken);
 
+        var appliedByUsersMap = await _context.Users
+            .AsNoTracking()
+            .Where(u => appliedByUserIds.Contains(u.Id) && !u.IsDeleted)
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+
         var items = await dbQuery
-            .OrderByDescending(m => m.AppliedAt)
+            .OrderByDescending(x => x.Measure.AppliedAt)
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToListAsync(cancellationToken);
 
-        var resultDtos = items.Select(m => new DisciplinaryMeasureSummaryDto
+        var resultDtos = items.Select(x => new DisciplinaryMeasureSummaryDto
         {
-            MeasureId = m.Id,
-            CaseId = m.DisciplinaryCaseId,
-            CaseNumber = m.DisciplinaryCase.CaseNumber,
-            EmployeeId = m.EmployeeId,
-            EmployeeName = employeesMap.TryGetValue(m.EmployeeId, out var empName) ? empName : "Funcionário",
-            MeasureType = m.MeasureType.ToString(),
-            Description = m.Description,
-            AppliedAt = m.AppliedAt,
-            EffectiveFrom = m.EffectiveFrom,
-            EffectiveTo = m.EffectiveTo,
-            AppliedByEmployeeId = m.AppliedByEmployeeId,
-            AppliedByEmployeeName = employeesMap.TryGetValue(m.AppliedByEmployeeId, out var appName) ? appName : "Responsável"
+            MeasureId = x.Measure.Id,
+            CaseId = x.Measure.DisciplinaryCaseId,
+            CaseNumber = x.DisciplinaryCase.CaseNumber,
+            EmployeeId = x.Measure.EmployeeId,
+            EmployeeName = employeesMap.TryGetValue(x.Measure.EmployeeId, out var empName) ? empName : "Funcionário",
+            MeasureType = x.Measure.MeasureType.ToString(),
+            Description = x.Measure.Reason,
+            AppliedAt = x.Measure.AppliedAt,
+            EffectiveFrom = x.Measure.EffectiveFrom,
+            EffectiveTo = x.Measure.EffectiveUntil,
+            AppliedByUserId = x.Measure.AppliedByUserId,
+            AppliedByUserName = x.Measure.AppliedByUserId.HasValue &&
+                                appliedByUsersMap.TryGetValue(x.Measure.AppliedByUserId.Value, out var appName)
+                ? appName
+                : null
         }).ToList();
 
         return new PagedResult<DisciplinaryMeasureSummaryDto>(resultDtos, query.PageNumber, query.PageSize, totalCount);

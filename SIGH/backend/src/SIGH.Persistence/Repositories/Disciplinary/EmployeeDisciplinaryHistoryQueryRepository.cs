@@ -31,35 +31,39 @@ public class EmployeeDisciplinaryHistoryQueryRepository : IEmployeeDisciplinaryH
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == authorizedCompanyId && !c.IsDeleted, cancellationToken);
 
-        var caseEmployeesQuery = _context.DisciplinaryCaseEmployees
+        var casesQuery = _context.DisciplinaryCases
             .AsNoTracking()
-            .Include(ce => ce.DisciplinaryCase)
-                .ThenInclude(c => c.Occurrences.Where(o => !o.IsDeleted))
-            .Include(ce => ce.DisciplinaryCase)
-                .ThenInclude(c => c.Decisions.Where(d => !d.IsDeleted))
-            .Include(ce => ce.DisciplinaryCase)
-                .ThenInclude(c => c.Measures.Where(m => !m.IsDeleted))
-            .Where(ce => ce.EmployeeId == query.EmployeeId && !ce.IsDeleted && ce.DisciplinaryCase != null && !ce.DisciplinaryCase.IsDeleted && ce.DisciplinaryCase.CompanyId == authorizedCompanyId);
+            .Include(c => c.Occurrences.Where(o => !o.IsDeleted))
+            .Include(c => c.Decisions.Where(d => !d.IsDeleted))
+            .Include(c => c.Measures.Where(m => !m.IsDeleted));
+
+        var caseEmployeesQuery =
+            from ce in _context.DisciplinaryCaseEmployees.AsNoTracking()
+            join c in casesQuery on ce.DisciplinaryCaseId equals c.Id
+            where ce.EmployeeId == query.EmployeeId &&
+                  !ce.IsDeleted &&
+                  !c.IsDeleted &&
+                  c.CompanyId == authorizedCompanyId
+            select c;
 
         if (query.DateFrom.HasValue)
         {
-            caseEmployeesQuery = caseEmployeesQuery.Where(ce => ce.DisciplinaryCase.OpenedAt >= query.DateFrom.Value);
+            caseEmployeesQuery = caseEmployeesQuery.Where(c => c.OpenedAt >= query.DateFrom.Value);
         }
 
         if (query.DateTo.HasValue)
         {
-            caseEmployeesQuery = caseEmployeesQuery.Where(ce => ce.DisciplinaryCase.OpenedAt <= query.DateTo.Value);
+            caseEmployeesQuery = caseEmployeesQuery.Where(c => c.OpenedAt <= query.DateTo.Value);
         }
 
         if (query.Status.HasValue)
         {
-            caseEmployeesQuery = caseEmployeesQuery.Where(ce => ce.DisciplinaryCase.Status == query.Status.Value);
+            caseEmployeesQuery = caseEmployeesQuery.Where(c => c.Status == query.Status.Value);
         }
 
         var caseEmployeesList = await caseEmployeesQuery.ToListAsync(cancellationToken);
 
-        var casesList = caseEmployeesList.Select(ce => {
-            var c = ce.DisciplinaryCase;
+        var casesList = caseEmployeesList.Select(c => {
             return new EmployeeDisciplinaryCaseSummaryDto
             {
                 CaseId = c.Id,
