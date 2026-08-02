@@ -424,8 +424,8 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new ConcludeDisciplinaryCaseRequest(caseId, Guid.NewGuid(), "Processo concluído com cumprimento da penalidade.");
-        var response = new ConcludeDisciplinaryCaseResponse(caseId, DisciplinaryCaseStatus.Concluded, DateTimeOffset.UtcNow, request.FinalSummary);
+        var request = new ConcludeDisciplinaryCaseRequest(caseId, "Processo concluído com cumprimento da penalidade.");
+        var response = new ConcludeDisciplinaryCaseResponse(caseId, DisciplinaryCaseStatus.Completed, request.ConclusionSummary, DateTimeOffset.UtcNow);
 
         _concludeCaseUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<ConcludeDisciplinaryCaseRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))

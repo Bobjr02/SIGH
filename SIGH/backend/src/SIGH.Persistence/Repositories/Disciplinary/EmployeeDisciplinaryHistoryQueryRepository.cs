@@ -88,7 +88,7 @@ public class EmployeeDisciplinaryHistoryQueryRepository : IEmployeeDisciplinaryH
             EmployeeName = employee.FullName,
             RegistrationNumber = employee.EmployeeNumber,
             CompanyId = authorizedCompanyId,
-            CompanyName = company?.CorporateName ?? company?.TradeName ?? "Empresa",
+            CompanyName = company?.LegalName ?? company?.Name ?? "Empresa",
             TotalCases = totalCases,
             OpenCases = openCases,
             ConcludedCases = concludedCases,

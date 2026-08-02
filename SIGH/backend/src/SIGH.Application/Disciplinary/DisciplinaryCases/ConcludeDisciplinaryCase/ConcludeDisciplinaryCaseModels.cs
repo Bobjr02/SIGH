@@ -4,11 +4,10 @@ namespace SIGH.Application.Disciplinary.DisciplinaryCases.ConcludeDisciplinaryCa
 
 public record ConcludeDisciplinaryCaseRequest(
     Guid DisciplinaryCaseId,
-    Guid ConcludedByUserId,
-    string FinalSummary);
+    string ConclusionSummary);
 
 public record ConcludeDisciplinaryCaseResponse(
     Guid DisciplinaryCaseId,
     DisciplinaryCaseStatus Status,
-    DateTimeOffset ClosedAt,
-    string FinalSummary);
+    string ConclusionSummary,
+    DateTimeOffset ClosedAt);

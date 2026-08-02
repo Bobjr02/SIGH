@@ -218,7 +218,7 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
         var companies = await _context.Companies
             .AsNoTracking()
             .Where(c => companyIds.Contains(c.Id) && !c.IsDeleted)
-            .ToDictionaryAsync(c => c.Id, c => c.CorporateName ?? c.TradeName ?? "Empresa", cancellationToken);
+            .ToDictionaryAsync(c => c.Id, c => c.LegalName ?? c.Name, cancellationToken);
 
         var employeeIds = cases
             .SelectMany(c => c.Employees.Where(e => !e.IsDeleted).Select(e => e.EmployeeId))

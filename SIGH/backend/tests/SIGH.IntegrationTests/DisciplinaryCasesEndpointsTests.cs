@@ -270,7 +270,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         measureResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 12. Conclude Case
-        var concludeRequest = new ConcludeDisciplinaryCaseRequest(caseId, Guid.NewGuid(), "Resumo conclusivo: advertência aplicada.");
+        var concludeRequest = new ConcludeDisciplinaryCaseRequest(caseId, "Resumo conclusivo: advertência aplicada.");
         var concludeResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/conclude", concludeRequest);
         concludeResp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
