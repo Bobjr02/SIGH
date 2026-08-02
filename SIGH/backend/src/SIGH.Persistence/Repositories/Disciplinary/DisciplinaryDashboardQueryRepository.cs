@@ -52,7 +52,6 @@ public class DisciplinaryDashboardQueryRepository : IDisciplinaryDashboardQueryR
 
         var caseList = await casesQuery
             .Include(c => c.Occurrences.Where(o => !o.IsDeleted))
-                .ThenInclude(o => o.InfractionType)
             .Include(c => c.Measures.Where(m => !m.IsDeleted))
             .Include(c => c.Employees.Where(e => !e.IsDeleted))
             .ToListAsync(cancellationToken);
@@ -128,12 +127,25 @@ public class DisciplinaryDashboardQueryRepository : IDisciplinaryDashboardQueryR
         // 4. CasesByInfractionType
         var infractionOccurrences = caseList
             .SelectMany(c => c.Occurrences)
-            .Where(o => o.InfractionType != null && !o.InfractionType.IsDeleted)
+            .ToList();
+
+        var infractionTypeIds = infractionOccurrences
+            .Select(o => o.InfractionTypeId)
+            .Distinct()
+            .ToList();
+
+        var infractionTypes = await _context.InfractionTypes
+            .AsNoTracking()
+            .Where(i => infractionTypeIds.Contains(i.Id) && !i.IsDeleted)
+            .ToDictionaryAsync(i => i.Id, i => i.Name, cancellationToken);
+
+        infractionOccurrences = infractionOccurrences
+            .Where(o => infractionTypes.ContainsKey(o.InfractionTypeId))
             .ToList();
 
         int totalInfractions = infractionOccurrences.Count;
         var casesByInfractionType = infractionOccurrences
-            .GroupBy(o => new { o.InfractionTypeId, Name = o.InfractionType?.Name ?? "Outro" })
+            .GroupBy(o => new { o.InfractionTypeId, Name = infractionTypes[o.InfractionTypeId] })
             .Select(g => new DashboardDistributionItemDto
             {
                 Id = g.Key.InfractionTypeId.ToString(),
