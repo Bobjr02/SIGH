@@ -38,9 +38,8 @@ public class PasswordHistoryTests
         var pwd3 = "Password789!";
         var currentPwd = "CurrentPassword123!";
 
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Detetive Ferreira",
             Email = "detetive.ferreira@policiacivil.sp.gov.br",
             Cpf = "66677788899",
@@ -95,9 +94,8 @@ public class PasswordHistoryTests
         var currentPwd = "CurrentPassword123!";
         var newPwd = "BrandNewPassword2026!";
 
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Investigador Costa",
             Email = "investigador.costa@policiacivil.sp.gov.br",
             Cpf = "77788899900",
