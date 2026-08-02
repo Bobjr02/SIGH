@@ -131,11 +131,17 @@ public class DisciplinaryCaseUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-CANCEL", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-CANCEL",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
 
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
-        var request = new CancelDisciplinaryCaseRequest(caseObj.Id, userId, "Abertura por engano");
+        var request = new CancelDisciplinaryCaseRequest(caseObj.Id, "Abertura por engano");
 
         // Act
         var result = await _cancelUseCase.ExecuteAsync(request);
@@ -143,9 +149,39 @@ public class DisciplinaryCaseUseCaseTests
         // Assert
         result.Success.Should().BeTrue();
         result.Data!.Status.Should().Be(DisciplinaryCaseStatus.Cancelled);
-        result.Data.Reason.Should().Be("Abertura por engano");
+        result.Data.CancellationReason.Should().Be("Abertura por engano");
+        result.Data.CancelledAt.Should().Be(_now);
+        caseObj.CancellationReason.Should().Be("Abertura por engano");
+        caseObj.CancelledAt.Should().Be(_now);
 
         _contextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelDisciplinaryCase_WhenDomainRuleIsViolated_ShouldReturnFailure()
+    {
+        // Arrange
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-ALREADY-CANCELLED",
+            companyId: Guid.NewGuid(),
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: Guid.NewGuid());
+        caseObj.Cancel("Primeiro cancelamento", _now);
+
+        _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
+
+        var request = new CancelDisciplinaryCaseRequest(caseObj.Id, "Segundo cancelamento");
+
+        // Act
+        var result = await _cancelUseCase.ExecuteAsync(request);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(DisciplinaryErrors.InvalidStatusTransition);
+        result.Message.Should().Be("O processo disciplinar já está cancelado.");
+        _contextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -402,8 +402,7 @@ public class DisciplinaryCasesController : BaseController
         [FromBody] CancelDisciplinaryCaseRequest request,
         CancellationToken cancellationToken)
     {
-        var userId = request.CancelledByUserId != Guid.Empty ? request.CancelledByUserId : GetUserId();
-        var updatedRequest = request with { DisciplinaryCaseId = id, CancelledByUserId = userId };
+        var updatedRequest = request with { DisciplinaryCaseId = id };
         var result = await _cancelDisciplinaryCaseUseCase.ExecuteAsync(updatedRequest, cancellationToken);
         return ToActionResult(result);
     }

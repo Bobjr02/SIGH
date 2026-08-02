@@ -404,8 +404,8 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new CancelDisciplinaryCaseRequest(caseId, Guid.NewGuid(), "Aviso prévio já cumprido.");
-        var response = new CancelDisciplinaryCaseResponse(caseId, DisciplinaryCaseStatus.Cancelled, DateTimeOffset.UtcNow, request.Reason);
+        var request = new CancelDisciplinaryCaseRequest(caseId, "Aviso prévio já cumprido.");
+        var response = new CancelDisciplinaryCaseResponse(caseId, DisciplinaryCaseStatus.Cancelled, DateTimeOffset.UtcNow, request.CancellationReason);
 
         _cancelCaseUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<CancelDisciplinaryCaseRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))

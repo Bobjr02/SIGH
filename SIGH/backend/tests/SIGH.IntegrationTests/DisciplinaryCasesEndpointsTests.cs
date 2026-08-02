@@ -291,7 +291,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         var createResult = await createResp.Content.ReadFromJsonAsync<Result<CreateDisciplinaryCaseResponse>>();
         var caseId = createResult!.Data!.Id;
 
-        var cancelRequest = new CancelDisciplinaryCaseRequest(caseId, Guid.NewGuid(), "Cancelado por inconsistência nos fatos.");
+        var cancelRequest = new CancelDisciplinaryCaseRequest(caseId, "Cancelado por inconsistência nos fatos.");
 
         // Act
         var response = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/cancel", cancelRequest);
