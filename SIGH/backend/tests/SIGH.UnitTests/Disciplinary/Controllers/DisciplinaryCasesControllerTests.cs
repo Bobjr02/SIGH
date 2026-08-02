@@ -117,21 +117,22 @@ public class DisciplinaryCasesControllerTests
             CaseNumber: "PROC-001",
             CompanyId: Guid.NewGuid(),
             Title: "Título",
-            Description: null,
+            Description: "Descrição",
             Status: DisciplinaryCaseStatus.Open,
             Priority: DisciplinaryCasePriority.Normal,
             OpenedAt: DateTimeOffset.UtcNow,
-            OpenedByUserId: null,
+            OpenedByUserId: Guid.NewGuid(),
             ResponsibleEmployeeId: null,
             DueDate: null,
             ClosedAt: null,
-            ConcludedByUserId: null,
-            FinalSummary: null,
-            Occurrences: new List<DisciplinaryOccurrenceDto>(),
+            CancelledAt: null,
+            CancellationReason: null,
+            ConclusionSummary: null,
+            Occurrences: new List<OccurrenceDto>(),
             Employees: new List<CaseEmployeeDto>(),
             Evidences: new List<EvidenceDto>(),
-            Decisions: new List<DisciplinaryDecisionDto>(),
-            Measures: new List<DisciplinaryMeasureDto>());
+            Decisions: new List<DecisionDto>(),
+            Measures: new List<MeasureDto>());
 
         _getByIdUseCaseMock
             .Setup(x => x.ExecuteAsync(id, It.IsAny<CancellationToken>()))
