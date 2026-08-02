@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using SIGH.Application.Common.Interfaces;
 using SIGH.Application.Interfaces;
 using SIGH.Application.Interfaces.Repositories;
 using SIGH.Application.Notifications.DTOs;
@@ -17,7 +18,7 @@ public class DeadlineEscalationUseCaseTests
     private readonly Mock<IDeadlineMonitoringQueryRepository> _queryRepoMock;
     private readonly Mock<INotificationRepository> _notificationRepoMock;
     private readonly Mock<IDateTimeProvider> _dateTimeProviderMock;
-    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IApplicationDbContext> _contextMock;
     private readonly IOptions<NotificationReminderOptions> _options;
     private readonly Mock<ILogger<ProcessDeadlineEscalationsUseCase>> _loggerMock;
     private readonly ProcessDeadlineEscalationsUseCase _useCase;
@@ -28,7 +29,7 @@ public class DeadlineEscalationUseCaseTests
         _queryRepoMock = new Mock<IDeadlineMonitoringQueryRepository>();
         _notificationRepoMock = new Mock<INotificationRepository>();
         _dateTimeProviderMock = new Mock<IDateTimeProvider>();
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _contextMock = new Mock<IApplicationDbContext>();
         _loggerMock = new Mock<ILogger<ProcessDeadlineEscalationsUseCase>>();
 
         _now = new DateTimeOffset(2026, 7, 28, 12, 0, 0, TimeSpan.Zero);
@@ -47,7 +48,7 @@ public class DeadlineEscalationUseCaseTests
             _queryRepoMock.Object,
             _notificationRepoMock.Object,
             _dateTimeProviderMock.Object,
-            _unitOfWorkMock.Object,
+            _contextMock.Object,
             _options,
             _loggerMock.Object);
     }
@@ -81,7 +82,7 @@ public class DeadlineEscalationUseCaseTests
         result.Data!.EscalationsExecuted.Should().Be(1);
         _notificationRepoMock.Verify(n => n.AddAsync(It.Is<Notification>(notif => notif.Priority == "High"), It.IsAny<CancellationToken>()), Times.Once);
         _notificationRepoMock.Verify(n => n.AddLogAsync(It.Is<NotificationLog>(log => log.EscalationLevel == 1), It.IsAny<CancellationToken>()), Times.Once);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _contextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
