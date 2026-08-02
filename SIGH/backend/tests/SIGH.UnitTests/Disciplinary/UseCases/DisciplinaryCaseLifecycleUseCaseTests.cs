@@ -113,7 +113,13 @@ public class DisciplinaryCaseLifecycleUseCaseTests
         caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, Guid.NewGuid(), CaseEmployeeRole.Accused, true));
         caseObj.SubmitForDecision();
 
-        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.FormalWarning, "Justificativa da advertência", Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var decision = DisciplinaryDecision.Create(
+            disciplinaryCaseId: caseObj.Id,
+            decisionType: DecisionType.FormalWarning,
+            summary: "Advertência formal aplicada.",
+            reasoning: "Justificativa da advertência",
+            decidedAt: DateTimeOffset.UtcNow,
+            decidedByUserId: Guid.NewGuid());
         caseObj.RegisterDecision(decision);
         caseObj.SubmitDecisionForApproval();
 
@@ -145,7 +151,13 @@ public class DisciplinaryCaseLifecycleUseCaseTests
         caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, Guid.NewGuid(), CaseEmployeeRole.Accused, true));
         caseObj.SubmitForDecision();
 
-        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.Suspension, "Suspender 3 dias", Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var decision = DisciplinaryDecision.Create(
+            disciplinaryCaseId: caseObj.Id,
+            decisionType: DecisionType.Suspension,
+            summary: "Suspender 3 dias",
+            reasoning: "A suspensão é fundamentada pelos elementos registrados no processo.",
+            decidedAt: DateTimeOffset.UtcNow,
+            decidedByUserId: Guid.NewGuid());
         caseObj.RegisterDecision(decision);
         caseObj.SubmitDecisionForApproval();
 

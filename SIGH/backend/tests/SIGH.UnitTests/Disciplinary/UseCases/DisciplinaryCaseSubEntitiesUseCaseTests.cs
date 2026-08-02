@@ -206,8 +206,14 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
             openedAt: _now,
             openedByUserId: userId);
 
-        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.FormalWarning, "Justificativa", userId, _now);
-        caseObj.RecordDecision(decision);
+        var decision = DisciplinaryDecision.Create(
+            disciplinaryCaseId: caseObj.Id,
+            decisionType: DecisionType.FormalWarning,
+            summary: "Advertência formal aplicada.",
+            reasoning: "A aplicação da advertência é fundamentada pela decisão registrada no processo.",
+            decidedAt: _now,
+            decidedByUserId: userId);
+        caseObj.RegisterDecision(decision);
 
         var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");
         var unit = ManagementUnit.Create(company.Id, "Unidade 1", "UG-01");
