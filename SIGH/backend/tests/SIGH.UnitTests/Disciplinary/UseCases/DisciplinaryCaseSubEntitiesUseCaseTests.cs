@@ -55,7 +55,13 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-OCC-01", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-OCC-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
         var infraction = InfractionType.Create("INF-01", "Atraso", InfractionSeverity.Low);
 
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
@@ -79,7 +85,13 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-EMP-01", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-EMP-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
 
         var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");
         var unit = ManagementUnit.Create(company.Id, "Unidade 1", "UG-01");
@@ -110,7 +122,13 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-EVI-01", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-EVI-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
@@ -140,7 +158,13 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-DEC-01", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-DEC-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
 
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
@@ -166,7 +190,13 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-MEA-01", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-MEA-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
 
         var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.FormalWarning, "Justificativa", userId, _now);
         caseObj.RecordDecision(decision);

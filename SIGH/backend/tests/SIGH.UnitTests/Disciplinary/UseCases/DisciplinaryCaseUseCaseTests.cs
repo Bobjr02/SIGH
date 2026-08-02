@@ -112,7 +112,13 @@ public class DisciplinaryCaseUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-001", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-001",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 

@@ -133,7 +133,13 @@ public class DisciplinaryPersistenceTests : IDisposable
         var userId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
-        var caseObj = DisciplinaryCase.Create("PROC-2026-001", companyId, "Título do Processo", "Descrição detalhada do caso", userId, now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-2026-001",
+            companyId: companyId,
+            title: "Título do Processo",
+            description: "Descrição detalhada do caso",
+            openedAt: now,
+            openedByUserId: userId);
 
         using (var context = CreateDbContext())
         {
@@ -163,8 +169,20 @@ public class DisciplinaryPersistenceTests : IDisposable
         var userId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
-        var case1 = DisciplinaryCase.Create("PROC-DUP-01", company1, "Caso Empresa 1", "Descrição 1", userId, now);
-        var case2 = DisciplinaryCase.Create("PROC-DUP-01", company2, "Caso Empresa 2", "Descrição 2", userId, now);
+        var case1 = DisciplinaryCase.Create(
+            caseNumber: "PROC-DUP-01",
+            companyId: company1,
+            title: "Caso Empresa 1",
+            description: "Descrição 1",
+            openedAt: now,
+            openedByUserId: userId);
+        var case2 = DisciplinaryCase.Create(
+            caseNumber: "PROC-DUP-01",
+            companyId: company2,
+            title: "Caso Empresa 2",
+            description: "Descrição 2",
+            openedAt: now,
+            openedByUserId: userId);
 
         using (var context = CreateDbContext())
         {
@@ -244,7 +262,13 @@ public class DisciplinaryPersistenceTests : IDisposable
         var employeeId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
-        var caseObj = DisciplinaryCase.Create("PROC-DET-01", companyId, "Processo Detalhado", "Descrição completa", userId, now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-DET-01",
+            companyId: companyId,
+            title: "Processo Detalhado",
+            description: "Descrição completa",
+            openedAt: now,
+            openedByUserId: userId);
         var infraction = InfractionType.Create("INF-DET", "Infração Exemplo", InfractionSeverity.High, "Infração");
         
         var occurrence = DisciplinaryOccurrence.Create(caseObj.Id, now, now, "Ocorrência 1", userId, infraction.Id, InfractionSeverity.High);
@@ -295,7 +319,13 @@ public class DisciplinaryPersistenceTests : IDisposable
         var userId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
-        var caseObj = DisciplinaryCase.Create(expectedNumber, companyId, "Título", "Descrição", userId, now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: expectedNumber,
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: now,
+            openedByUserId: userId);
 
         using (var context = CreateDbContext())
         {
