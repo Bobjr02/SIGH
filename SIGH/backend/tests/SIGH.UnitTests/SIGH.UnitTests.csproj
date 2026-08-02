@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\SIGH.Api\SIGH.Api.csproj" />
     <ProjectReference Include="..\..\src\SIGH.Application\SIGH.Application.csproj" />
     <ProjectReference Include="..\..\src\SIGH.Domain\SIGH.Domain.csproj" />
     <ProjectReference Include="..\..\src\SIGH.Infrastructure\SIGH.Infrastructure.csproj" />
