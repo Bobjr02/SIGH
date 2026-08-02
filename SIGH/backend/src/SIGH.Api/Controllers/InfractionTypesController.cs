@@ -69,11 +69,11 @@ public class InfractionTypesController : BaseController
     [HttpGet("{id:guid}", Name = nameof(GetById))]
     [Permission("Disciplinary.InfractionTypes.View")]
     [Produces("application/json")]
-    [ProducesResponseType(typeof(Result<InfractionTypeDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(Result<InfractionTypeDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result<GetInfractionTypeByIdResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<GetInfractionTypeByIdResponse>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<Result<InfractionTypeDto>>> GetById(
+    public async Task<ActionResult<Result<GetInfractionTypeByIdResponse>>> GetById(
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
