@@ -106,11 +106,11 @@ public class DisciplinaryPersistenceTests : IDisposable
         using var context = CreateDbContext();
         var entityType = context.Model.FindEntityType(typeof(DisciplinaryCase))!;
 
-        entityType.FindNavigation(nameof(DisciplinaryCase.Occurrences))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
-        entityType.FindNavigation(nameof(DisciplinaryCase.Employees))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
-        entityType.FindNavigation(nameof(DisciplinaryCase.Evidences))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
-        entityType.FindNavigation(nameof(DisciplinaryCase.Decisions))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
-        entityType.FindNavigation(nameof(DisciplinaryCase.Measures))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Occurrences))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Employees))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Evidences))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Decisions))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Measures))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
     }
 
     [Fact]
