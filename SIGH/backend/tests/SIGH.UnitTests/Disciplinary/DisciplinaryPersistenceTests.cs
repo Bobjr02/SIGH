@@ -206,7 +206,13 @@ public class DisciplinaryPersistenceTests : IDisposable
     [Fact]
     public async Task InfractionType_ShouldPersistAndQueryByCodeNormalized()
     {
-        var infraction = InfractionType.Create("INF-101", "Atraso Injustificado", InfractionSeverity.Low, "Atraso sem justificativa médica");
+        var infraction = InfractionType.Create(
+            code: "INF-101",
+            name: "Atraso Injustificado",
+            defaultSeverity: InfractionSeverity.Low,
+            requiresFormalInvestigation: false,
+            allowsTerminationRecommendation: false,
+            description: "Atraso sem justificativa médica");
 
         using (var context = CreateDbContext())
         {
@@ -229,7 +235,13 @@ public class DisciplinaryPersistenceTests : IDisposable
     [Fact]
     public async Task SoftDelete_GlobalFilter_ShouldHideDeletedEntities()
     {
-        var infraction = InfractionType.Create("INF-DEL", "Infração Deletada", InfractionSeverity.Moderate, "Descrição");
+        var infraction = InfractionType.Create(
+            code: "INF-DEL",
+            name: "Infração Deletada",
+            defaultSeverity: InfractionSeverity.Moderate,
+            requiresFormalInvestigation: false,
+            allowsTerminationRecommendation: false,
+            description: "Descrição");
 
         using (var context = CreateDbContext())
         {
@@ -269,7 +281,13 @@ public class DisciplinaryPersistenceTests : IDisposable
             description: "Descrição completa",
             openedAt: now,
             openedByUserId: userId);
-        var infraction = InfractionType.Create("INF-DET", "Infração Exemplo", InfractionSeverity.High, "Infração");
+        var infraction = InfractionType.Create(
+            code: "INF-DET",
+            name: "Infração Exemplo",
+            defaultSeverity: InfractionSeverity.High,
+            requiresFormalInvestigation: false,
+            allowsTerminationRecommendation: false,
+            description: "Infração");
         
         var occurrence = DisciplinaryOccurrence.Create(caseObj.Id, now, now, "Ocorrência 1", userId, infraction.Id, InfractionSeverity.High);
         var caseEmp = DisciplinaryCaseEmployee.Create(caseObj.Id, employeeId, CaseEmployeeRole.Accused, true);
