@@ -252,7 +252,7 @@ public class DisciplinaryPersistenceTests : IDisposable
         using (var context = CreateDbContext())
         {
             var item = await context.InfractionTypes.FindAsync(infraction.Id);
-            item!.MarkAsDeleted(Guid.NewGuid());
+            context.InfractionTypes.Remove(item!);
             await context.SaveChangesAsync();
         }
 
