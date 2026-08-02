@@ -8,6 +8,7 @@ using SIGH.Application.Options;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
+using SIGH.Domain.Repositories;
 using SIGH.Infrastructure.Authentication;
 using SIGH.Persistence.Context;
 using Xunit;
@@ -61,9 +62,21 @@ public class RefreshTokenServiceTests
 
         var mockDateTime = new Mock<IDateTimeProvider>();
         mockDateTime.Setup(d => d.UtcNow).Returns(DateTimeOffset.UtcNow);
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetRefreshTokenByHashAsync(tokenHash, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(refreshToken);
+        userRepositoryMock
+            .Setup(r => r.GetByIdWithRolesAndPermissionsAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        userRepositoryMock
+            .Setup(r => r.AddRefreshTokenAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+            .Callback<RefreshToken, CancellationToken>((token, _) => context.RefreshTokens.Add(token))
+            .Returns(Task.CompletedTask);
 
         var service = new RefreshTokenService(
             context,
+            userRepositoryMock.Object,
             mockJwtGenerator.Object,
             _refreshTokenGenerator,
             _tokenHasher,
@@ -139,9 +152,20 @@ public class RefreshTokenServiceTests
         var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
         var mockDateTime = new Mock<IDateTimeProvider>();
         mockDateTime.Setup(d => d.UtcNow).Returns(DateTimeOffset.UtcNow);
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetRefreshTokenByHashAsync(reusedHash, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(revokedToken);
+        userRepositoryMock
+            .Setup(r => r.GetActiveRefreshTokensByUserIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<RefreshToken> { activeToken });
+        userRepositoryMock
+            .Setup(r => r.GetActiveUserSessionsByUserIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserSession> { activeSession });
 
         var service = new RefreshTokenService(
             context,
+            userRepositoryMock.Object,
             mockJwtGenerator.Object,
             _refreshTokenGenerator,
             _tokenHasher,

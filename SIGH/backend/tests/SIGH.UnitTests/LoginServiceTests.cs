@@ -8,6 +8,7 @@ using SIGH.Application.Options;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
+using SIGH.Domain.Repositories;
 using SIGH.Infrastructure.Authentication;
 using SIGH.Persistence.Context;
 using Xunit;
@@ -57,9 +58,22 @@ public class LoginServiceTests
 
         var mockDateTime = new Mock<IDateTimeProvider>();
         mockDateTime.Setup(d => d.UtcNow).Returns(DateTimeOffset.UtcNow);
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetByEmailWithRolesAndPermissionsAsync(user.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        userRepositoryMock
+            .Setup(r => r.AddRefreshTokenAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+            .Callback<RefreshToken, CancellationToken>((token, _) => context.RefreshTokens.Add(token))
+            .Returns(Task.CompletedTask);
+        userRepositoryMock
+            .Setup(r => r.AddUserSessionAsync(It.IsAny<UserSession>(), It.IsAny<CancellationToken>()))
+            .Callback<UserSession, CancellationToken>((session, _) => context.UserSessions.Add(session))
+            .Returns(Task.CompletedTask);
 
         var loginService = new LoginService(
             context,
+            userRepositoryMock.Object,
             _passwordHasher,
             mockJwtGenerator.Object,
             _refreshTokenGenerator,
@@ -105,9 +119,14 @@ public class LoginServiceTests
         var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
         var mockDateTime = new Mock<IDateTimeProvider>();
         mockDateTime.Setup(d => d.UtcNow).Returns(DateTimeOffset.UtcNow);
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetByEmailWithRolesAndPermissionsAsync(user.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
 
         var loginService = new LoginService(
             context,
+            userRepositoryMock.Object,
             _passwordHasher,
             mockJwtGenerator.Object,
             _refreshTokenGenerator,
@@ -150,9 +169,14 @@ public class LoginServiceTests
         var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
         var mockDateTime = new Mock<IDateTimeProvider>();
         mockDateTime.Setup(d => d.UtcNow).Returns(DateTimeOffset.UtcNow);
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetByEmailWithRolesAndPermissionsAsync(user.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
 
         var loginService = new LoginService(
             context,
+            userRepositoryMock.Object,
             _passwordHasher,
             mockJwtGenerator.Object,
             _refreshTokenGenerator,
