@@ -26,9 +26,8 @@ public class JwtTokenGeneratorTests
 
         var generator = new JwtTokenGenerator(jwtOptions);
 
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Carlos Silva",
             Email = "carlos.silva@policiacivil.sp.gov.br",
             Cpf = "12345678901",
