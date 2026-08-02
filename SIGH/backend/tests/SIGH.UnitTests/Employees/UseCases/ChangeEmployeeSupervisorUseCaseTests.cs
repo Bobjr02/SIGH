@@ -33,7 +33,7 @@ public class ChangeEmployeeSupervisorUseCaseTests
         var supervisor = Employee.Create(companyId, "EMP-001", "Gestor Santos", "52998224725", new DateOnly(2020, 1, 1), Guid.NewGuid(), Guid.NewGuid());
         typeof(Employee).GetProperty(nameof(Employee.Id))!.SetValue(supervisor, supervisorId);
 
-        var subordinate = Employee.Create(companyId, "EMP-002", "Subordinado Lima", "11122233344", new DateOnly(2025, 1, 1), Guid.NewGuid(), Guid.NewGuid());
+        var subordinate = Employee.Create(companyId, "EMP-002", "Subordinado Lima", "11144477735", new DateOnly(2025, 1, 1), Guid.NewGuid(), Guid.NewGuid());
         typeof(Employee).GetProperty(nameof(Employee.Id))!.SetValue(subordinate, subordinateId);
 
         _employeeRepositoryMock.Setup(r => r.GetByIdAsync(subordinateId, It.IsAny<CancellationToken>())).ReturnsAsync(subordinate);
@@ -63,7 +63,7 @@ public class ChangeEmployeeSupervisorUseCaseTests
         var emp1 = Employee.Create(companyId1, "EMP-001", "Func 1", "52998224725", new DateOnly(2025, 1, 1), Guid.NewGuid(), Guid.NewGuid());
         typeof(Employee).GetProperty(nameof(Employee.Id))!.SetValue(emp1, emp1Id);
 
-        var emp2 = Employee.Create(companyId2, "EMP-002", "Func 2", "11122233344", new DateOnly(2025, 1, 1), Guid.NewGuid(), Guid.NewGuid());
+        var emp2 = Employee.Create(companyId2, "EMP-002", "Func 2", "11144477735", new DateOnly(2025, 1, 1), Guid.NewGuid(), Guid.NewGuid());
         typeof(Employee).GetProperty(nameof(Employee.Id))!.SetValue(emp2, emp2Id);
 
         _employeeRepositoryMock.Setup(r => r.GetByIdAsync(emp1Id, It.IsAny<CancellationToken>())).ReturnsAsync(emp1);

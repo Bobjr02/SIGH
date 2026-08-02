@@ -354,7 +354,7 @@ public class CreateEmployeeUseCaseTests
             companyId: otherCompanyId,
             employeeNumber: "SUP-001",
             fullName: "Gestor Outra Empresa",
-            cpf: "11122233344",
+            cpf: "11144477735",
             admissionDate: new DateOnly(2020, 1, 1),
             jobTitleId: jobTitleId,
             managementUnitId: unitId
