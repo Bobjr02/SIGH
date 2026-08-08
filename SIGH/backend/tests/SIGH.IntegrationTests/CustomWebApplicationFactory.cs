@@ -46,40 +46,32 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         if (db.Users.Any()) return;
 
         // Seeds
-        var createPerm = new Permission
+        var createPerm = new Permission(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             Code = "Users.Create",
             Name = "Criar Usuário",
-            Description = "Permite criar novos usuários",
-            Category = "Users"
+            Description = "Permite criar novos usuários"
         };
 
-        var statusPerm = new Permission
+        var statusPerm = new Permission(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             Code = "Users.ChangeStatus",
             Name = "Alterar Status do Usuário",
-            Description = "Permite alterar status do usuário",
-            Category = "Users"
+            Description = "Permite alterar status do usuário"
         };
 
-        var unlockPerm = new Permission
+        var unlockPerm = new Permission(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             Code = "Users.Unlock",
             Name = "Desbloquear Usuário",
-            Description = "Permite desbloquear usuário",
-            Category = "Users"
+            Description = "Permite desbloquear usuário"
         };
 
-        var viewPerm = new Permission
+        var viewPerm = new Permission(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             Code = "Users.View",
             Name = "Visualizar Usuários",
-            Description = "Permite visualizar usuários",
-            Category = "Users"
+            Description = "Permite visualizar usuários"
         };
 
         var discPerms = new[]
@@ -103,21 +95,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             "Disciplinary.Cases.ApplyMeasure",
             "Disciplinary.Cases.Cancel",
             "Disciplinary.Cases.Conclude"
-        }.Select(code => new Permission
+        }.Select(code => new Permission(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             Code = code,
             Name = code,
-            Description = code,
-            Category = "Disciplinary"
+            Description = code
         }).ToList();
 
         db.Permissions.AddRange(createPerm, statusPerm, unlockPerm, viewPerm);
         db.Permissions.AddRange(discPerms);
 
-        var adminRole = new Role
+        var adminRole = new Role(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             Name = "Admin",
             Description = "Administrador do Sistema"
         };
@@ -125,25 +114,23 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         db.Roles.Add(adminRole);
 
         db.RolePermissions.AddRange(
-            new RolePermission { Id = Guid.NewGuid(), RoleId = adminRole.Id, PermissionId = createPerm.Id },
-            new RolePermission { Id = Guid.NewGuid(), RoleId = adminRole.Id, PermissionId = statusPerm.Id },
-            new RolePermission { Id = Guid.NewGuid(), RoleId = adminRole.Id, PermissionId = unlockPerm.Id },
-            new RolePermission { Id = Guid.NewGuid(), RoleId = adminRole.Id, PermissionId = viewPerm.Id }
+            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = createPerm.Id },
+            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = statusPerm.Id },
+            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = unlockPerm.Id },
+            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = viewPerm.Id }
         );
 
         foreach (var p in discPerms)
         {
-            db.RolePermissions.Add(new RolePermission { Id = Guid.NewGuid(), RoleId = adminRole.Id, PermissionId = p.Id });
+            db.RolePermissions.Add(new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = p.Id });
         }
 
         var passwordHash = passwordHasher.HashPassword("Admin@123456");
 
-        var adminUser = new User
+        var adminUser = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Administrador do Sistema",
             Email = "admin@sigh.com",
-            NormalizedEmail = "ADMIN@SIGH.COM",
             Cpf = "12345678901",
             PasswordHash = passwordHash,
             Status = UserStatus.Active,
@@ -154,19 +141,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         db.Users.Add(adminUser);
 
-        db.UserRoles.Add(new UserRole
+        db.UserRoles.Add(new UserRole(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             UserId = adminUser.Id,
             RoleId = adminRole.Id
         });
 
-        var lockedUser = new User
+        var lockedUser = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Usuário Bloqueado",
             Email = "locked@sigh.com",
-            NormalizedEmail = "LOCKED@SIGH.COM",
             Cpf = "98765432100",
             PasswordHash = passwordHash,
             Status = UserStatus.Locked,
@@ -176,12 +160,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        var unprivilegedUser = new User
+        var unprivilegedUser = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Usuário Sem Permissao",
             Email = "unprivileged@sigh.com",
-            NormalizedEmail = "UNPRIVILEGED@SIGH.COM",
             Cpf = "11122233344",
             PasswordHash = passwordHash,
             Status = UserStatus.Active,
