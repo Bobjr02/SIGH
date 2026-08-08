@@ -41,7 +41,7 @@ public class InfractionTypesEndpointsTests : IClassFixture<CustomWebApplicationF
         var request = new CreateInfractionTypeRequest(
             Code: $"INF-{Guid.NewGuid():N}"[..10],
             Name: "Desídia nas funções",
-            DefaultSeverity: InfractionSeverity.Medium,
+            DefaultSeverity: InfractionSeverity.Moderate,
             RequiresFormalInvestigation: false,
             RequiresSuspension: false,
             Description: "Atrasos e faltas sistemáticas sem justificativa.",

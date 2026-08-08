@@ -54,7 +54,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
             Title: "Insubordinação grave no setor de TI",
             Description: "Funcionário recusou-se a executar diretrizes de segurança.",
             CreatedByUserId: Guid.NewGuid(),
-            Priority: CasePriority.High);
+            Priority: DisciplinaryCasePriority.High);
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/disciplinary-cases", request);
@@ -196,7 +196,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         var infTypeRequest = new CreateInfractionTypeRequest(
             Code: $"INF-{Guid.NewGuid():N}"[..10],
             Name: "Falta não justificada",
-            DefaultSeverity: InfractionSeverity.Medium);
+            DefaultSeverity: InfractionSeverity.Moderate);
         var infTypeResp = await _client.PostAsJsonAsync("/api/v1/infraction-types", infTypeRequest);
         var infTypeResult = await infTypeResp.Content.ReadFromJsonAsync<Result<CreateInfractionTypeResponse>>();
         var infTypeId = infTypeResult!.Data!.Id;
@@ -217,7 +217,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         openResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 4. Add Occurrence
-        var occurrenceRequest = new AddOccurrenceRequest(caseId, DateTimeOffset.UtcNow, "Ocorrência registrada", Guid.NewGuid(), infTypeId, InfractionSeverity.Medium);
+        var occurrenceRequest = new AddOccurrenceRequest(caseId, DateTimeOffset.UtcNow, "Ocorrência registrada", Guid.NewGuid(), infTypeId, InfractionSeverity.Moderate);
         var occResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/occurrences", occurrenceRequest);
         occResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
