@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using SIGH.Application.Authentication.Login;
 using SIGH.Application.Common.Models;
 using SIGH.Application.Disciplinary.DisciplinaryCases.AddEmployee;
@@ -20,6 +21,9 @@ using SIGH.Application.Disciplinary.DisciplinaryCases.SubmitCaseForDecision;
 using SIGH.Application.Disciplinary.DTOs;
 using SIGH.Application.Disciplinary.InfractionTypes.CreateInfractionType;
 using SIGH.Domain.Disciplinary.Enums;
+using SIGH.Domain.Employees.Entities;
+using SIGH.Domain.Employees.Enums;
+using SIGH.Persistence.Context;
 using Xunit;
 
 namespace SIGH.IntegrationTests;
@@ -27,9 +31,11 @@ namespace SIGH.IntegrationTests;
 public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly HttpClient _client;
+    private readonly CustomWebApplicationFactory _factory;
 
     public DisciplinaryCasesEndpointsTests(CustomWebApplicationFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -192,6 +198,34 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         // Arrange
         await AuthenticateAsync();
 
+        // Fixture local (somente deste teste): Company + ManagementUnit + JobTitle + Employee reais,
+        // persistidos no mesmo banco InMemory da factory, para uso na etapa Add Employee.
+        Employee employee;
+        Company company;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<SighDbContext>();
+
+            company = Company.Create("Empresa Fluxo de Vida");
+            var managementUnit = ManagementUnit.Create(company.Id, "Unidade Fluxo de Vida");
+            var jobTitle = JobTitle.Create(company.Id, "Cargo Fluxo de Vida");
+            employee = Employee.Create(
+                companyId: company.Id,
+                employeeNumber: "EMP-LIFECYCLE-01",
+                fullName: "Funcionário Fluxo de Vida",
+                cpf: "52998224725",
+                admissionDate: DateOnly.FromDateTime(DateTime.UtcNow),
+                jobTitleId: jobTitle.Id,
+                managementUnitId: managementUnit.Id,
+                initialStatus: EmployeeStatus.Active);
+
+            context.Companies.Add(company);
+            context.ManagementUnits.Add(managementUnit);
+            context.JobTitles.Add(jobTitle);
+            context.Employees.Add(employee);
+            await context.SaveChangesAsync();
+        }
+
         // 1. Create InfractionType
         var infTypeRequest = new CreateInfractionTypeRequest(
             Code: $"INF-{Guid.NewGuid():N}"[..10],
@@ -204,7 +238,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         // 2. Create DisciplinaryCase
         var createRequest = new CreateDisciplinaryCaseRequest(
             CaseNumber: $"PROC-{Guid.NewGuid():N}"[..12],
-            CompanyId: Guid.NewGuid(),
+            CompanyId: company.Id,
             Title: "Fluxo de vida do processo",
             Description: "Descrição do fluxo de vida do processo.",
             CreatedByUserId: Guid.NewGuid());
@@ -222,7 +256,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         occResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 5. Add Employee
-        var empRequest = new AddEmployeeToCaseRequest(caseId, Guid.NewGuid(), CaseEmployeeRole.Accused, true);
+        var empRequest = new AddEmployeeToCaseRequest(caseId, employee.Id, CaseEmployeeRole.Accused, true);
         var empResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/employees", empRequest);
         empResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
