@@ -383,4 +383,65 @@ public class DisciplinaryPersistenceTests : IDisposable
             exists.Should().BeTrue();
         }
     }
+
+    [Fact]
+    public async Task DisciplinaryCase_AddOccurrenceToAlreadyPersistedCase_ShouldTrackAsAddedAndPersist()
+    {
+        var companyId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-REGR-01",
+            companyId: companyId,
+            title: "Processo Regressão",
+            description: "Descrição do processo de regressão.",
+            openedAt: now,
+            openedByUserId: userId);
+
+        var infraction = InfractionType.Create(
+            code: "INF-REGR",
+            name: "Infração Regressão",
+            defaultSeverity: InfractionSeverity.Moderate);
+
+        // Primeiro DbContext: persiste o case e o tipo de infração (simula a request de Create)
+        using (var context = CreateDbContext())
+        {
+            context.InfractionTypes.Add(infraction);
+            var repo = new DisciplinaryCaseRepository(context);
+            await repo.AddAsync(caseObj);
+            await context.SaveChangesAsync();
+        }
+
+        Guid occurrenceId;
+
+        // Segundo DbContext: carrega o case já persistido (mesmo caminho de GetByIdAsync
+        // usado por AddOccurrenceUseCase em produção) e anexa uma nova Occurrence
+        using (var context = CreateDbContext())
+        {
+            var repo = new DisciplinaryCaseRepository(context);
+            var loadedCase = await repo.GetByIdAsync(caseObj.Id);
+            loadedCase.Should().NotBeNull();
+
+            var occurrence = DisciplinaryOccurrence.Create(
+                loadedCase!.Id, now, now, "Ocorrência de regressão", userId, infraction.Id, InfractionSeverity.Moderate);
+            occurrenceId = occurrence.Id;
+
+            loadedCase.AddOccurrence(occurrence);
+
+            context.ChangeTracker.DetectChanges();
+            context.Entry(occurrence).State.Should().Be(EntityState.Added,
+                "o EF Core deve reconhecer a nova Occurrence anexada via navegação a partir de um agregado já persistido como Added, não Modified");
+
+            await context.SaveChangesAsync();
+        }
+
+        // Terceiro DbContext: confirma que a Occurrence foi realmente persistida
+        using (var context = CreateDbContext())
+        {
+            var persisted = await context.DisciplinaryOccurrences.FindAsync(occurrenceId);
+            persisted.Should().NotBeNull();
+            persisted!.DisciplinaryCaseId.Should().Be(caseObj.Id);
+        }
+    }
 }
