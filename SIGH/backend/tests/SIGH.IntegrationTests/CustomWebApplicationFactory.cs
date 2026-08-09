@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using SIGH.Application.Interfaces;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
@@ -17,13 +19,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.ConfigureServices(services =>
         {
-            var descriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<SighDbContext>));
-
-            if (descriptor != null)
-            {
-                services.Remove(descriptor);
-            }
+            services.RemoveAll<DbContextOptions<SighDbContext>>();
+            services.RemoveAll<IDbContextOptionsConfiguration<SighDbContext>>();
 
             services.AddDbContext<SighDbContext>(options =>
             {
