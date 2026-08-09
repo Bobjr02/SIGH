@@ -84,7 +84,7 @@ public class EmployeesController : BaseController
     /// Obter funcionário por ID
     /// </summary>
     /// <description>Retorna os detalhes completos de um funcionário a partir do seu identificador único (ID).</description>
-    [HttpGet("{id:guid}", Name = nameof(GetById))]
+    [HttpGet("{id:guid}", Name = "GetEmployeeById")]
     [Permission("Employees.View")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<GetEmployeeByIdResponse>), StatusCodes.Status200OK)]

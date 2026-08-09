@@ -102,7 +102,8 @@ public class DisciplinaryCasesController : BaseController
     /// Obter processo disciplinar por ID
     /// </summary>
     /// <description>Obtém os detalhes completos do processo disciplinar, incluindo ocorrências, envolvidos, evidências, decisões e medidas.</description>
-    [HttpGet("{id:guid}", Name = nameof(GetById))]
+    [HttpGet("/api/v1/DisciplinaryCases/{id:guid}", Name = "GetDisciplinaryCaseById")]
+    [HttpGet("/api/v1/disciplinary-cases/{id:guid}")]
     [Permission("Disciplinary.Cases.View")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<GetDisciplinaryCaseByIdResponse>), StatusCodes.Status200OK)]

@@ -66,7 +66,8 @@ public class InfractionTypesController : BaseController
     /// Obter tipo de infração por ID
     /// </summary>
     /// <description>Retorna os detalhes de um tipo de infração disciplinar por seu identificador único.</description>
-    [HttpGet("{id:guid}", Name = nameof(GetById))]
+    [HttpGet("/api/v1/InfractionTypes/{id:guid}", Name = "GetInfractionTypeById")]
+    [HttpGet("/api/v1/infraction-types/{id:guid}")]
     [Permission("Disciplinary.InfractionTypes.View")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<GetInfractionTypeByIdResponse>), StatusCodes.Status200OK)]
