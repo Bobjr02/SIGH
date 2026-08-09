@@ -41,7 +41,6 @@ public class UsersEndpointsTests : IClassFixture<CustomWebApplicationFactory>
             Email: $"novo.usuario.{Guid.NewGuid():N}@sigh.com",
             Cpf: "11122233344",
             InitialPassword: "User@123456",
-            MustChangePassword: true,
             RoleIds: new List<Guid>()
         );
 
@@ -70,7 +69,9 @@ public class UsersEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 
         lockedUser.Should().NotBeNull();
 
-        var unlockRequest = new UnlockUserRequest(Reason: "Desbloqueio efetuado para testes de integração.");
+        var unlockRequest = new UnlockUserRequest(
+            UserId: Guid.NewGuid(),
+            UnlockedByUserId: Guid.NewGuid());
 
         // Act
         var response = await _client.PostAsJsonAsync($"/api/v1/users/{lockedUser!.Id}/unlock", unlockRequest);
@@ -97,6 +98,7 @@ public class UsersEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         adminUser.Should().NotBeNull();
 
         var statusRequest = new ChangeUserStatusRequest(
+            UserId: Guid.NewGuid(),
             NewStatus: UserStatus.Inactive,
             Reason: "Inativação solicitada para teste de integração."
         );
