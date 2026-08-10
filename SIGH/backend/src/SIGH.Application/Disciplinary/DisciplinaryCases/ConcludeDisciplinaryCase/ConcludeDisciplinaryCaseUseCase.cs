@@ -25,7 +25,7 @@ public class ConcludeDisciplinaryCaseUseCase : IConcludeDisciplinaryCaseUseCase
 
     public async Task<Result<ConcludeDisciplinaryCaseResponse>> ExecuteAsync(ConcludeDisciplinaryCaseRequest request, CancellationToken cancellationToken = default)
     {
-        var caseObj = await _caseRepository.GetByIdAsync(request.DisciplinaryCaseId, cancellationToken);
+        var caseObj = await _caseRepository.GetByIdWithDetailsAsync(request.DisciplinaryCaseId, cancellationToken);
         if (caseObj == null)
         {
             return Result<ConcludeDisciplinaryCaseResponse>.Failure("Processo disciplinar não encontrado.", DisciplinaryErrors.DisciplinaryCaseNotFound);

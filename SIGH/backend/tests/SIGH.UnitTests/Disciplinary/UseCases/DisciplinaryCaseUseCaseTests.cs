@@ -231,7 +231,7 @@ public class DisciplinaryCaseUseCaseTests
         caseObj.SubmitDecisionForApproval();
         caseObj.ApproveDecision(userId, _now);
 
-        _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
+        _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
         var request = new ConcludeDisciplinaryCaseRequest(caseObj.Id, "Resumo da conclusão do processo.");
 
@@ -261,7 +261,7 @@ public class DisciplinaryCaseUseCaseTests
             openedAt: _now,
             openedByUserId: Guid.NewGuid());
 
-        _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
+        _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
         var request = new ConcludeDisciplinaryCaseRequest(caseObj.Id, "Resumo da conclusão.");
 
