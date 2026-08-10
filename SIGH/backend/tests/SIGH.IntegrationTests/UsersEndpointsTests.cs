@@ -39,7 +39,7 @@ public class UsersEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         var request = new CreateUserRequest(
             FullName: "Novo Usuario Teste",
             Email: $"novo.usuario.{Guid.NewGuid():N}@sigh.com",
-            Cpf: "11122233344",
+            Cpf: "99988877766",
             InitialPassword: "User@123456",
             RoleIds: new List<Guid>()
         );
@@ -79,10 +79,10 @@ public class UsersEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var result = await response.Content.ReadFromJsonAsync<Result<bool>>();
+        var result = await response.Content.ReadFromJsonAsync<Result<UnlockUserResponse>>();
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
-        result.Data.Should().BeTrue();
+        result.Data!.Success.Should().BeTrue();
     }
 
     [Fact]
@@ -109,9 +109,9 @@ public class UsersEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var result = await response.Content.ReadFromJsonAsync<Result<bool>>();
+        var result = await response.Content.ReadFromJsonAsync<Result<ChangeUserStatusResponse>>();
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
-        result.Data.Should().BeTrue();
+        result.Data!.Success.Should().BeTrue();
     }
 }
