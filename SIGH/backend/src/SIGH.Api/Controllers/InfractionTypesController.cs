@@ -54,6 +54,7 @@ public class InfractionTypesController : BaseController
     [ProducesResponseType(typeof(Result<CreateInfractionTypeResponse>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result<CreateInfractionTypeResponse>), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<Result<CreateInfractionTypeResponse>>> Create(
         [FromBody] CreateInfractionTypeRequest request,
         CancellationToken cancellationToken)
@@ -190,6 +191,11 @@ public class InfractionTypesController : BaseController
         if (IsNotFoundResult(result.ErrorCode, result.Message))
         {
             return NotFound(result);
+        }
+
+        if (IsConflictErrorCode(result.ErrorCode))
+        {
+            return ConflictResult(result);
         }
 
         return BadRequest(result);

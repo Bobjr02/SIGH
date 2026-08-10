@@ -38,6 +38,17 @@ public abstract class BaseController : ControllerBase
         return NotFound(Result<T>.Failure(message, errorCode));
     }
 
+    protected ActionResult<Result<T>> ConflictResult<T>(Result<T> result)
+    {
+        return Conflict(result);
+    }
+
+    protected static bool IsConflictErrorCode(string? errorCode)
+    {
+        return !string.IsNullOrWhiteSpace(errorCode)
+            && errorCode.Contains("DUPLICATE", StringComparison.OrdinalIgnoreCase);
+    }
+
     protected ActionResult<Result<T>> UnauthorizedResult<T>(string message = "Acesso não autorizado.", string? errorCode = null)
     {
         return StatusCode(401, Result<T>.Failure(message, errorCode));

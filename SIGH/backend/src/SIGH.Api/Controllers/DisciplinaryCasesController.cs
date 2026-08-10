@@ -90,6 +90,7 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(Result<CreateDisciplinaryCaseResponse>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result<CreateDisciplinaryCaseResponse>), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<Result<CreateDisciplinaryCaseResponse>>> Create(
         [FromBody] CreateDisciplinaryCaseRequest request,
         CancellationToken cancellationToken)
@@ -456,6 +457,11 @@ public class DisciplinaryCasesController : BaseController
         if (IsNotFoundResult(result.ErrorCode, result.Message))
         {
             return NotFound(result);
+        }
+
+        if (IsConflictErrorCode(result.ErrorCode))
+        {
+            return ConflictResult(result);
         }
 
         return BadRequest(result);
