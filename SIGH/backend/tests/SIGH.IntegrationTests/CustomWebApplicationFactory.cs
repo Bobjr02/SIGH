@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using SIGH.Application.Interfaces;
+using SIGH.Application.Notifications.Common;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Persistence.Context;
@@ -78,6 +79,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             Description = "Permite visualizar usuários"
         };
 
+        var notificationsViewPerm = new Permission(Guid.NewGuid())
+        {
+            Code = NotificationPermissions.View,
+            Name = "Visualizar Notificações",
+            Description = "Permite visualizar notificações"
+        };
+
         var discPerms = new[]
         {
             "Disciplinary.InfractionTypes.Create",
@@ -106,7 +114,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             Description = code
         }).ToList();
 
-        db.Permissions.AddRange(createPerm, statusPerm, unlockPerm, viewPerm);
+        db.Permissions.AddRange(createPerm, statusPerm, unlockPerm, viewPerm, notificationsViewPerm);
         db.Permissions.AddRange(discPerms);
 
         var adminRole = new Role(Guid.NewGuid())
@@ -121,7 +129,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = createPerm.Id },
             new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = statusPerm.Id },
             new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = unlockPerm.Id },
-            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = viewPerm.Id }
+            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = viewPerm.Id },
+            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = notificationsViewPerm.Id }
         );
 
         foreach (var p in discPerms)
