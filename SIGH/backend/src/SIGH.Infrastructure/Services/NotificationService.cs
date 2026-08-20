@@ -192,7 +192,13 @@ public class NotificationService : INotificationService
             Metadata = request.Metadata != null ? string.Join(";", request.Metadata.Select(kv => $"{kv.Key}={kv.Value}")) : null
         };
 
-        return await CreateNotificationAsync(createReq, cancellationToken);
+        var result = await CreateNotificationAsync(createReq, cancellationToken);
+        if (result.Success && result.Data != null)
+        {
+            result.Data.RecipientEmail = request.RecipientEmail;
+        }
+
+        return result;
     }
 
     public async Task<Result<int>> SendBatchNotificationsAsync(IEnumerable<SendNotificationRequestDto> requests, CancellationToken cancellationToken = default)

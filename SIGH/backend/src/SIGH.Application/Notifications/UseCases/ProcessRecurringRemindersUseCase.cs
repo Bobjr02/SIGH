@@ -48,6 +48,8 @@ public class ProcessRecurringRemindersUseCase : IProcessRecurringRemindersUseCas
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var items = await _queryRepository.GetActiveItemsWithDeadlinesAsync(companyId, cancellationToken);
             var alertThreshold = now.AddDays(_reminderOptions.FirstAlertDaysBeforeDue);
 
