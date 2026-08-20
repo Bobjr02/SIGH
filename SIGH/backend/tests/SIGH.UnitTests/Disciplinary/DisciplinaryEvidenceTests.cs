@@ -83,7 +83,7 @@ public class DisciplinaryEvidenceTests
 
         // Assert
         act.Should().Throw<BusinessRuleValidationException>()
-            .WithMessage("A data de coleta é inválida.");
+            .WithMessage("A data de coleta da evidência é inválida.");
     }
 
     [Theory]

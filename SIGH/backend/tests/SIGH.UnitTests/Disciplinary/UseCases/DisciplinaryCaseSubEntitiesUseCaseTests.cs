@@ -173,6 +173,11 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
             description: "Descrição",
             openedAt: _now,
             openedByUserId: userId);
+        caseObj.Open();
+        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, _now, _now, "Descrição", userId, Guid.NewGuid(), InfractionSeverity.Moderate));
+        caseObj.StartInvestigation();
+        caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, Guid.NewGuid(), CaseEmployeeRole.Accused, true));
+        caseObj.SubmitForDecision();
 
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
@@ -205,16 +210,6 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
             description: "Descrição",
             openedAt: _now,
             openedByUserId: userId);
-
-        var decision = DisciplinaryDecision.Create(
-            disciplinaryCaseId: caseObj.Id,
-            decisionType: DecisionType.FormalWarning,
-            summary: "Advertência formal aplicada.",
-            reasoning: "A aplicação da advertência é fundamentada pela decisão registrada no processo.",
-            decidedAt: _now,
-            decidedByUserId: userId);
-        caseObj.RegisterDecision(decision);
-
         var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");
         var unit = ManagementUnit.Create(company.Id, "Unidade 1", "UG-01");
         var jobTitle = JobTitle.Create(company.Id, "Desenvolvedor", "DEV");
@@ -227,6 +222,22 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
             jobTitleId: jobTitle.Id,
             managementUnitId: unit.Id,
             corporateEmail: "maria@empresa.com");
+
+        caseObj.Open();
+        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, _now, _now, "Descrição", userId, Guid.NewGuid(), InfractionSeverity.Moderate));
+        caseObj.StartInvestigation();
+        caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, employee.Id, CaseEmployeeRole.Accused, true));
+        caseObj.SubmitForDecision();
+
+        var decision = DisciplinaryDecision.Create(
+            disciplinaryCaseId: caseObj.Id,
+            decisionType: DecisionType.FormalWarning,
+            summary: "Advertência formal aplicada.",
+            reasoning: "A aplicação da advertência é fundamentada pela decisão registrada no processo.",
+            decidedAt: _now,
+            decidedByUserId: userId);
+        caseObj.RegisterDecision(decision);
+        caseObj.ApproveDecision(userId, _now);
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
         _employeeRepositoryMock.Setup(r => r.GetByIdAsync(employee.Id, It.IsAny<CancellationToken>())).ReturnsAsync(employee);

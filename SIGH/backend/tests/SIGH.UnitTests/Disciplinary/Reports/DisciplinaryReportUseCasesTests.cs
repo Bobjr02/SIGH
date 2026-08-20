@@ -131,7 +131,7 @@ public class DisciplinaryReportUseCasesTests
     public async Task ExportDisciplinaryCaseReportCsv_ShouldSanitizeCsvInjection()
     {
         // Test sanitization helper
-        Assert.Equal("\"' =1+1\"", CsvSanitizer.SanitizeField(" =1+1"));
+        Assert.Equal("\"'=1+1\"", CsvSanitizer.SanitizeField(" =1+1"));
         Assert.Equal("\"'+cmd.exe\"", CsvSanitizer.SanitizeField("+cmd.exe"));
         Assert.Equal("\"'-SUM(A1:A10)\"", CsvSanitizer.SanitizeField("-SUM(A1:A10)"));
         Assert.Equal("\"'@eval()\"", CsvSanitizer.SanitizeField("@eval()"));

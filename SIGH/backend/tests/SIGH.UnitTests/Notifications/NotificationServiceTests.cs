@@ -61,7 +61,7 @@ public class NotificationServiceTests
         var result = await _service.SendNotificationAsync(request);
 
         result.Success.Should().BeFalse();
-        result.Message.Should().Contain("obrigatori");
+        result.Message.Should().Contain("obrigatório");
     }
 
     [Fact]

@@ -6,6 +6,7 @@ using SIGH.Application.Interfaces.Repositories.Disciplinary;
 using SIGH.Domain.Disciplinary.Constants;
 using SIGH.Domain.Disciplinary.Entities;
 using SIGH.Domain.Disciplinary.Enums;
+using SIGH.Domain.Employees.Entities;
 using SIGH.Persistence.Context;
 using SIGH.Persistence.Repositories.Disciplinary;
 using Xunit;
@@ -120,10 +121,10 @@ public class DisciplinaryPersistenceTests : IDisposable
         var caseType = context.Model.FindEntityType(typeof(DisciplinaryCase))!;
 
         var statusProp = caseType.FindProperty(nameof(DisciplinaryCase.Status))!;
-        statusProp.GetValueConverter()!.ProviderClrType.Should().Be(typeof(int));
+        statusProp.GetProviderClrType().Should().Be(typeof(int));
 
         var priorityProp = caseType.FindProperty(nameof(DisciplinaryCase.Priority))!;
-        priorityProp.GetValueConverter()!.ProviderClrType.Should().Be(typeof(int));
+        priorityProp.GetProviderClrType().Should().Be(typeof(int));
     }
 
     [Fact]
@@ -271,7 +272,6 @@ public class DisciplinaryPersistenceTests : IDisposable
     {
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var employeeId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
         var caseObj = DisciplinaryCase.Create(
@@ -288,9 +288,22 @@ public class DisciplinaryPersistenceTests : IDisposable
             requiresFormalInvestigation: false,
             allowsTerminationRecommendation: false,
             description: "Infração");
-        
+
+        var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");
+        var unit = ManagementUnit.Create(company.Id, "Unidade 1", "UG-01");
+        var jobTitle = JobTitle.Create(company.Id, "Desenvolvedor", "DEV");
+        var employee = Employee.Create(
+            companyId: company.Id,
+            employeeNumber: "EMP-DET-01",
+            fullName: "Funcionário Detalhado",
+            cpf: "98765432100",
+            admissionDate: new DateOnly(2025, 1, 1),
+            jobTitleId: jobTitle.Id,
+            managementUnitId: unit.Id,
+            corporateEmail: "funcionario.detalhado@empresa.com");
+
         var occurrence = DisciplinaryOccurrence.Create(caseObj.Id, now, now, "Ocorrência 1", userId, infraction.Id, InfractionSeverity.High);
-        var caseEmp = DisciplinaryCaseEmployee.Create(caseObj.Id, employeeId, CaseEmployeeRole.Accused, true);
+        var caseEmp = DisciplinaryCaseEmployee.Create(caseObj.Id, employee.Id, CaseEmployeeRole.Accused, true);
         var evidence = DisciplinaryEvidence.CreateFileEvidence(
             caseObj.Id,
             EvidenceType.Document,
@@ -310,6 +323,10 @@ public class DisciplinaryPersistenceTests : IDisposable
         using (var context = CreateDbContext())
         {
             context.InfractionTypes.Add(infraction);
+            context.Companies.Add(company);
+            context.ManagementUnits.Add(unit);
+            context.JobTitles.Add(jobTitle);
+            context.Employees.Add(employee);
             var repo = new DisciplinaryCaseRepository(context);
             await repo.AddAsync(caseObj);
             await context.SaveChangesAsync();
