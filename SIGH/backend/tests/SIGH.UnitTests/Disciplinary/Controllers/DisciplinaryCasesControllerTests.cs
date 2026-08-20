@@ -74,7 +74,9 @@ public class DisciplinaryCasesControllerTests
         var request = new CreateDisciplinaryCaseRequest(
             CaseNumber: "PROC-2026-001",
             CompanyId: Guid.NewGuid(),
-            Title: "Insubordinação grave");
+            Title: "Insubordinação grave",
+            Description: "Descrição do processo disciplinar.",
+            CreatedByUserId: Guid.NewGuid());
 
         var response = new CreateDisciplinaryCaseResponse(
             Id: Guid.NewGuid(),
@@ -82,8 +84,11 @@ public class DisciplinaryCasesControllerTests
             CompanyId: request.CompanyId,
             Title: request.Title,
             Status: DisciplinaryCaseStatus.Draft,
-            Priority: CasePriority.Medium,
-            OpenedAt: DateTimeOffset.UtcNow);
+            Priority: DisciplinaryCasePriority.Normal,
+            OpenedAt: DateTimeOffset.UtcNow,
+            OpenedByUserId: request.CreatedByUserId,
+            ResponsibleEmployeeId: null,
+            DueDate: null);
 
         _createUseCaseMock
             .Setup(x => x.ExecuteAsync(request, It.IsAny<CancellationToken>()))
@@ -112,21 +117,22 @@ public class DisciplinaryCasesControllerTests
             CaseNumber: "PROC-001",
             CompanyId: Guid.NewGuid(),
             Title: "Título",
-            Description: null,
+            Description: "Descrição",
             Status: DisciplinaryCaseStatus.Open,
-            Priority: CasePriority.Medium,
+            Priority: DisciplinaryCasePriority.Normal,
             OpenedAt: DateTimeOffset.UtcNow,
-            OpenedByUserId: null,
+            OpenedByUserId: Guid.NewGuid(),
             ResponsibleEmployeeId: null,
             DueDate: null,
             ClosedAt: null,
-            ConcludedByUserId: null,
-            FinalSummary: null,
-            Occurrences: new List<DisciplinaryOccurrenceDto>(),
+            CancelledAt: null,
+            CancellationReason: null,
+            ConclusionSummary: null,
+            Occurrences: new List<OccurrenceDto>(),
             Employees: new List<CaseEmployeeDto>(),
             Evidences: new List<EvidenceDto>(),
-            Decisions: new List<DisciplinaryDecisionDto>(),
-            Measures: new List<DisciplinaryMeasureDto>());
+            Decisions: new List<DecisionDto>(),
+            Measures: new List<MeasureDto>());
 
         _getByIdUseCaseMock
             .Setup(x => x.ExecuteAsync(id, It.IsAny<CancellationToken>()))
@@ -263,7 +269,7 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new AddOccurrenceRequest(caseId, DateTimeOffset.UtcNow, "Falta não justificada", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Medium);
+        var request = new AddOccurrenceRequest(caseId, DateTimeOffset.UtcNow, "Falta não justificada", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Moderate);
         var response = new AddOccurrenceResponse(Guid.NewGuid(), caseId, request.InfractionTypeId, request.Severity, OccurrenceStatus.Reported);
 
         _addOccurrenceUseCaseMock
@@ -284,7 +290,7 @@ public class DisciplinaryCasesControllerTests
         // Arrange
         var caseId = Guid.NewGuid();
         var request = new AddEmployeeToCaseRequest(caseId, Guid.NewGuid(), CaseEmployeeRole.Accused, true);
-        var response = new AddEmployeeToCaseResponse(Guid.NewGuid(), caseId, request.EmployeeId, request.Role, request.IsPrimaryAccused);
+        var response = new AddEmployeeToCaseResponse(Guid.NewGuid(), caseId, request.EmployeeId, request.Role, request.IsPrimarySubject);
 
         _addEmployeeToCaseUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<AddEmployeeToCaseRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
@@ -303,8 +309,17 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new AddEvidenceRequest(caseId, EvidenceType.Document, "Relatório de catraca", Guid.NewGuid(), DateTimeOffset.UtcNow);
-        var response = new AddEvidenceResponse(Guid.NewGuid(), caseId, request.Type, EvidenceStatus.Valid, request.CollectedAt);
+        var request = new AddEvidenceRequest(
+            caseId,
+            EvidenceType.Document,
+            "Relatório de catraca",
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            StorageReference: "evidences/relatorio-catraca.pdf",
+            OriginalFileName: "relatorio-catraca.pdf",
+            ContentType: "application/pdf",
+            FileSize: 1024);
+        var response = new AddEvidenceResponse(Guid.NewGuid(), caseId, request.EvidenceType, EvidenceStatus.PendingVerification, request.CollectedAt);
 
         _addEvidenceUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<AddEvidenceRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
@@ -323,8 +338,23 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new RecordDecisionRequest(caseId, DecisionType.Suspension, "Aplicação de suspensão por 3 dias", Guid.NewGuid());
-        var response = new RecordDecisionResponse(Guid.NewGuid(), caseId, request.Type, DecisionStatus.PendingApproval, DateTimeOffset.UtcNow);
+        var request = new RecordDecisionRequest(
+            caseId,
+            DecisionType.Suspension,
+            "Suspensão por três dias.",
+            "A apuração confirmou os fatos que fundamentam a suspensão.",
+            Guid.NewGuid());
+        var response = new RecordDecisionResponse(
+            Guid.NewGuid(),
+            caseId,
+            request.DecisionType,
+            request.Summary,
+            request.Reasoning,
+            DecisionStatus.Draft,
+            DateTimeOffset.UtcNow,
+            request.DecidedByUserId,
+            null,
+            null);
 
         _recordDecisionUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<RecordDecisionRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
@@ -344,7 +374,19 @@ public class DisciplinaryCasesControllerTests
         // Arrange
         var caseId = Guid.NewGuid();
         var request = new ApplyMeasureRequest(caseId, Guid.NewGuid(), Guid.NewGuid(), DisciplinaryMeasureType.Suspension, "Suspenso por 3 dias", DateTimeOffset.UtcNow, Guid.NewGuid());
-        var response = new ApplyMeasureResponse(Guid.NewGuid(), caseId, request.DecisionId, request.EmployeeId, request.Type, DisciplinaryMeasureStatus.Applied, DateTimeOffset.UtcNow);
+        var response = new ApplyMeasureResponse(
+            Guid.NewGuid(),
+            caseId,
+            request.DisciplinaryDecisionId,
+            request.EmployeeId,
+            request.MeasureType,
+            request.Reason,
+            request.EffectiveFrom,
+            request.EffectiveUntil,
+            request.AppliedByUserId,
+            DateTimeOffset.UtcNow,
+            DisciplinaryMeasureStatus.Applied,
+            request.Notes);
 
         _applyMeasureUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<ApplyMeasureRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
@@ -363,8 +405,8 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new CancelDisciplinaryCaseRequest(caseId, Guid.NewGuid(), "Aviso prévio já cumprido.");
-        var response = new CancelDisciplinaryCaseResponse(caseId, DisciplinaryCaseStatus.Cancelled, DateTimeOffset.UtcNow, request.Reason);
+        var request = new CancelDisciplinaryCaseRequest(caseId, "Aviso prévio já cumprido.");
+        var response = new CancelDisciplinaryCaseResponse(caseId, DisciplinaryCaseStatus.Cancelled, DateTimeOffset.UtcNow, request.CancellationReason);
 
         _cancelCaseUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<CancelDisciplinaryCaseRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
@@ -383,8 +425,8 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new ConcludeDisciplinaryCaseRequest(caseId, Guid.NewGuid(), "Processo concluído com cumprimento da penalidade.");
-        var response = new ConcludeDisciplinaryCaseResponse(caseId, DisciplinaryCaseStatus.Concluded, DateTimeOffset.UtcNow, request.FinalSummary);
+        var request = new ConcludeDisciplinaryCaseRequest(caseId, "Processo concluído com cumprimento da penalidade.");
+        var response = new ConcludeDisciplinaryCaseResponse(caseId, DisciplinaryCaseStatus.Completed, request.ConclusionSummary, DateTimeOffset.UtcNow);
 
         _concludeCaseUseCaseMock
             .Setup(x => x.ExecuteAsync(It.Is<ConcludeDisciplinaryCaseRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))

@@ -54,7 +54,7 @@ public class DisciplinaryCaseLifecycleUseCaseTests
         // Arrange
         var caseObj = DisciplinaryCase.Create("PROC-101", Guid.NewGuid(), "Título", "Descrição", DateTimeOffset.UtcNow, Guid.NewGuid());
         caseObj.Open();
-        var occurrence = DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Falta injustificada", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Medium);
+        var occurrence = DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Falta injustificada", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Moderate);
         caseObj.AddOccurrence(occurrence);
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
@@ -108,12 +108,18 @@ public class DisciplinaryCaseLifecycleUseCaseTests
         // Arrange
         var caseObj = DisciplinaryCase.Create("PROC-103", Guid.NewGuid(), "Título", "Descrição", DateTimeOffset.UtcNow, Guid.NewGuid());
         caseObj.Open();
-        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Descrição", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Medium));
+        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Descrição", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Moderate));
         caseObj.StartInvestigation();
         caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, Guid.NewGuid(), CaseEmployeeRole.Accused, true));
         caseObj.SubmitForDecision();
 
-        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.WrittenWarning, "Justificativa da advertência", Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var decision = DisciplinaryDecision.Create(
+            disciplinaryCaseId: caseObj.Id,
+            decisionType: DecisionType.FormalWarning,
+            summary: "Advertência formal aplicada.",
+            reasoning: "Justificativa da advertência",
+            decidedAt: DateTimeOffset.UtcNow,
+            decidedByUserId: Guid.NewGuid());
         caseObj.RegisterDecision(decision);
         caseObj.SubmitDecisionForApproval();
 
@@ -140,12 +146,18 @@ public class DisciplinaryCaseLifecycleUseCaseTests
         // Arrange
         var caseObj = DisciplinaryCase.Create("PROC-104", Guid.NewGuid(), "Título", "Descrição", DateTimeOffset.UtcNow, Guid.NewGuid());
         caseObj.Open();
-        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Descrição", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Medium));
+        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, "Descrição", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Moderate));
         caseObj.StartInvestigation();
         caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, Guid.NewGuid(), CaseEmployeeRole.Accused, true));
         caseObj.SubmitForDecision();
 
-        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.Suspension, "Suspender 3 dias", Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var decision = DisciplinaryDecision.Create(
+            disciplinaryCaseId: caseObj.Id,
+            decisionType: DecisionType.Suspension,
+            summary: "Suspender 3 dias",
+            reasoning: "A suspensão é fundamentada pelos elementos registrados no processo.",
+            decidedAt: DateTimeOffset.UtcNow,
+            decidedByUserId: Guid.NewGuid());
         caseObj.RegisterDecision(decision);
         caseObj.SubmitDecisionForApproval();
 
@@ -178,7 +190,7 @@ public class DisciplinaryCaseLifecycleUseCaseTests
                 DisciplinaryCaseStatus.Open, DisciplinaryCasePriority.Normal,
                 DateTimeOffset.UtcNow, Guid.NewGuid(), null, null, null, 1, 1)
         };
-        var paged = PagedResult<DisciplinaryCaseSummaryDto>.Create(items, 1, 1, 10);
+        var paged = new PagedResult<DisciplinaryCaseSummaryDto>(items, 1, 10, 1);
 
         _caseRepositoryMock.Setup(r => r.GetPagedAsync(query, It.IsAny<CancellationToken>())).ReturnsAsync(paged);
 

@@ -13,6 +13,9 @@ public class DisciplinaryEvidenceConfiguration : IEntityTypeConfiguration<Discip
 
         builder.HasKey(ev => ev.Id);
 
+        builder.Property(ev => ev.Id)
+            .ValueGeneratedNever();
+
         builder.Property(ev => ev.DisciplinaryCaseId)
             .IsRequired();
 

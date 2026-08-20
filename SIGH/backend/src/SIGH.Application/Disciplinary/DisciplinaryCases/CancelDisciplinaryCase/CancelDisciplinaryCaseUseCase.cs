@@ -31,13 +31,15 @@ public class CancelDisciplinaryCaseUseCase : ICancelDisciplinaryCaseUseCase
             return Result<CancelDisciplinaryCaseResponse>.Failure("Processo disciplinar não encontrado.", DisciplinaryErrors.DisciplinaryCaseNotFound);
         }
 
-        var now = _dateTimeProvider.UtcNow;
+        var cancelledAt = _dateTimeProvider.UtcNow;
 
         try
         {
-            caseObj.Cancel(request.CancelledByUserId, request.Reason, now);
+            caseObj.Cancel(
+                cancellationReason: request.CancellationReason,
+                cancelledAt: cancelledAt);
         }
-        catch (DomainException ex)
+        catch (BusinessRuleValidationException ex)
         {
             return Result<CancelDisciplinaryCaseResponse>.Failure(ex.Message, DisciplinaryErrors.InvalidStatusTransition);
         }

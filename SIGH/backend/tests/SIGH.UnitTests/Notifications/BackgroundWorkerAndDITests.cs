@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SIGH.Application;
 using SIGH.Application.Interfaces;
@@ -28,6 +29,7 @@ public class BackgroundWorkerAndDITests
             .Build();
 
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddApplication(configuration);
         services.AddInfrastructure(configuration);
 

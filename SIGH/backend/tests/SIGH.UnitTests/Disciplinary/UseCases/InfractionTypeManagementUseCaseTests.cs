@@ -59,7 +59,7 @@ public class InfractionTypeManagementUseCaseTests
     public async Task ActivateInfractionType_WhenInactive_ShouldActivate()
     {
         // Arrange
-        var entity = InfractionType.Create("INF-002", "Infração Teste", InfractionSeverity.Medium);
+        var entity = InfractionType.Create("INF-002", "Infração Teste", InfractionSeverity.Moderate);
         entity.Deactivate();
 
         _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
@@ -109,7 +109,7 @@ public class InfractionTypeManagementUseCaseTests
         {
             new InfractionTypeDto(Guid.NewGuid(), "INF-001", "Atraso", InfractionSeverity.Low, false, false, "Desc", "Art", true)
         };
-        var paged = PagedResult<InfractionTypeDto>.Create(items, 1, 1, 10);
+        var paged = new PagedResult<InfractionTypeDto>(items, 1, 10, 1);
 
         _repositoryMock.Setup(r => r.GetPagedAsync(query, It.IsAny<CancellationToken>())).ReturnsAsync(paged);
 

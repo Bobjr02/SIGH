@@ -6,6 +6,7 @@ using SIGH.Application.Interfaces.Repositories.Disciplinary;
 using SIGH.Domain.Disciplinary.Constants;
 using SIGH.Domain.Disciplinary.Entities;
 using SIGH.Domain.Disciplinary.Enums;
+using SIGH.Domain.Employees.Entities;
 using SIGH.Persistence.Context;
 using SIGH.Persistence.Repositories.Disciplinary;
 using Xunit;
@@ -106,11 +107,11 @@ public class DisciplinaryPersistenceTests : IDisposable
         using var context = CreateDbContext();
         var entityType = context.Model.FindEntityType(typeof(DisciplinaryCase))!;
 
-        entityType.FindNavigation(nameof(DisciplinaryCase.Occurrences))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
-        entityType.FindNavigation(nameof(DisciplinaryCase.Employees))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
-        entityType.FindNavigation(nameof(DisciplinaryCase.Evidences))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
-        entityType.FindNavigation(nameof(DisciplinaryCase.Decisions))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
-        entityType.FindNavigation(nameof(DisciplinaryCase.Measures))!.PropertyAccessMode.Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Occurrences))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Employees))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Evidences))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Decisions))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
+        entityType.FindNavigation(nameof(DisciplinaryCase.Measures))!.GetPropertyAccessMode().Should().Be(PropertyAccessMode.Field);
     }
 
     [Fact]
@@ -120,10 +121,10 @@ public class DisciplinaryPersistenceTests : IDisposable
         var caseType = context.Model.FindEntityType(typeof(DisciplinaryCase))!;
 
         var statusProp = caseType.FindProperty(nameof(DisciplinaryCase.Status))!;
-        statusProp.GetValueConverter()!.ProviderClrType.Should().Be(typeof(int));
+        statusProp.GetProviderClrType().Should().Be(typeof(int));
 
         var priorityProp = caseType.FindProperty(nameof(DisciplinaryCase.Priority))!;
-        priorityProp.GetValueConverter()!.ProviderClrType.Should().Be(typeof(int));
+        priorityProp.GetProviderClrType().Should().Be(typeof(int));
     }
 
     [Fact]
@@ -133,7 +134,13 @@ public class DisciplinaryPersistenceTests : IDisposable
         var userId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
-        var caseObj = DisciplinaryCase.Create("PROC-2026-001", companyId, "Título do Processo", "Descrição detalhada do caso", userId, now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-2026-001",
+            companyId: companyId,
+            title: "Título do Processo",
+            description: "Descrição detalhada do caso",
+            openedAt: now,
+            openedByUserId: userId);
 
         using (var context = CreateDbContext())
         {
@@ -163,8 +170,20 @@ public class DisciplinaryPersistenceTests : IDisposable
         var userId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
-        var case1 = DisciplinaryCase.Create("PROC-DUP-01", company1, "Caso Empresa 1", "Descrição 1", userId, now);
-        var case2 = DisciplinaryCase.Create("PROC-DUP-01", company2, "Caso Empresa 2", "Descrição 2", userId, now);
+        var case1 = DisciplinaryCase.Create(
+            caseNumber: "PROC-DUP-01",
+            companyId: company1,
+            title: "Caso Empresa 1",
+            description: "Descrição 1",
+            openedAt: now,
+            openedByUserId: userId);
+        var case2 = DisciplinaryCase.Create(
+            caseNumber: "PROC-DUP-01",
+            companyId: company2,
+            title: "Caso Empresa 2",
+            description: "Descrição 2",
+            openedAt: now,
+            openedByUserId: userId);
 
         using (var context = CreateDbContext())
         {
@@ -188,7 +207,13 @@ public class DisciplinaryPersistenceTests : IDisposable
     [Fact]
     public async Task InfractionType_ShouldPersistAndQueryByCodeNormalized()
     {
-        var infraction = InfractionType.Create("INF-101", "Atraso Injustificado", InfractionSeverity.Low, "Atraso sem justificativa médica");
+        var infraction = InfractionType.Create(
+            code: "INF-101",
+            name: "Atraso Injustificado",
+            defaultSeverity: InfractionSeverity.Low,
+            requiresFormalInvestigation: false,
+            allowsTerminationRecommendation: false,
+            description: "Atraso sem justificativa médica");
 
         using (var context = CreateDbContext())
         {
@@ -211,7 +236,13 @@ public class DisciplinaryPersistenceTests : IDisposable
     [Fact]
     public async Task SoftDelete_GlobalFilter_ShouldHideDeletedEntities()
     {
-        var infraction = InfractionType.Create("INF-DEL", "Infração Deletada", InfractionSeverity.Medium, "Descrição");
+        var infraction = InfractionType.Create(
+            code: "INF-DEL",
+            name: "Infração Deletada",
+            defaultSeverity: InfractionSeverity.Moderate,
+            requiresFormalInvestigation: false,
+            allowsTerminationRecommendation: false,
+            description: "Descrição");
 
         using (var context = CreateDbContext())
         {
@@ -222,7 +253,7 @@ public class DisciplinaryPersistenceTests : IDisposable
         using (var context = CreateDbContext())
         {
             var item = await context.InfractionTypes.FindAsync(infraction.Id);
-            item!.MarkAsDeleted(Guid.NewGuid());
+            context.InfractionTypes.Remove(item!);
             await context.SaveChangesAsync();
         }
 
@@ -241,15 +272,49 @@ public class DisciplinaryPersistenceTests : IDisposable
     {
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var employeeId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
-        var caseObj = DisciplinaryCase.Create("PROC-DET-01", companyId, "Processo Detalhado", "Descrição completa", userId, now);
-        var infraction = InfractionType.Create("INF-DET", "Infração Exemplo", InfractionSeverity.High, "Infração");
-        
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-DET-01",
+            companyId: companyId,
+            title: "Processo Detalhado",
+            description: "Descrição completa",
+            openedAt: now,
+            openedByUserId: userId);
+        var infraction = InfractionType.Create(
+            code: "INF-DET",
+            name: "Infração Exemplo",
+            defaultSeverity: InfractionSeverity.High,
+            requiresFormalInvestigation: false,
+            allowsTerminationRecommendation: false,
+            description: "Infração");
+
+        var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");
+        var unit = ManagementUnit.Create(company.Id, "Unidade 1", "UG-01");
+        var jobTitle = JobTitle.Create(company.Id, "Desenvolvedor", "DEV");
+        var employee = Employee.Create(
+            companyId: company.Id,
+            employeeNumber: "EMP-DET-01",
+            fullName: "Funcionário Detalhado",
+            cpf: "98765432100",
+            admissionDate: new DateOnly(2025, 1, 1),
+            jobTitleId: jobTitle.Id,
+            managementUnitId: unit.Id,
+            corporateEmail: "funcionario.detalhado@empresa.com");
+
         var occurrence = DisciplinaryOccurrence.Create(caseObj.Id, now, now, "Ocorrência 1", userId, infraction.Id, InfractionSeverity.High);
-        var caseEmp = DisciplinaryCaseEmployee.Create(caseObj.Id, employeeId, CaseEmployeeRole.Accused, true);
-        var evidence = DisciplinaryEvidence.Create(caseObj.Id, EvidenceType.Document, "Documento 1", userId, now, occurrenceId: occurrence.Id);
+        var caseEmp = DisciplinaryCaseEmployee.Create(caseObj.Id, employee.Id, CaseEmployeeRole.Accused, true);
+        var evidence = DisciplinaryEvidence.CreateFileEvidence(
+            caseObj.Id,
+            EvidenceType.Document,
+            "Documento 1",
+            "evidences/documento-1.pdf",
+            "documento-1.pdf",
+            "application/pdf",
+            1024,
+            now,
+            userId,
+            disciplinaryOccurrenceId: occurrence.Id);
 
         caseObj.AddOccurrence(occurrence);
         caseObj.AddEmployee(caseEmp);
@@ -258,6 +323,10 @@ public class DisciplinaryPersistenceTests : IDisposable
         using (var context = CreateDbContext())
         {
             context.InfractionTypes.Add(infraction);
+            context.Companies.Add(company);
+            context.ManagementUnits.Add(unit);
+            context.JobTitles.Add(jobTitle);
+            context.Employees.Add(employee);
             var repo = new DisciplinaryCaseRepository(context);
             await repo.AddAsync(caseObj);
             await context.SaveChangesAsync();
@@ -285,7 +354,13 @@ public class DisciplinaryPersistenceTests : IDisposable
         var userId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
-        var caseObj = DisciplinaryCase.Create(expectedNumber, companyId, "Título", "Descrição", userId, now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: expectedNumber,
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: now,
+            openedByUserId: userId);
 
         using (var context = CreateDbContext())
         {
@@ -323,6 +398,67 @@ public class DisciplinaryPersistenceTests : IDisposable
             var exists = await repo.ExistsByCodeAsync(inputCode);
 
             exists.Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public async Task DisciplinaryCase_AddOccurrenceToAlreadyPersistedCase_ShouldTrackAsAddedAndPersist()
+    {
+        var companyId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-REGR-01",
+            companyId: companyId,
+            title: "Processo Regressão",
+            description: "Descrição do processo de regressão.",
+            openedAt: now,
+            openedByUserId: userId);
+
+        var infraction = InfractionType.Create(
+            code: "INF-REGR",
+            name: "Infração Regressão",
+            defaultSeverity: InfractionSeverity.Moderate);
+
+        // Primeiro DbContext: persiste o case e o tipo de infração (simula a request de Create)
+        using (var context = CreateDbContext())
+        {
+            context.InfractionTypes.Add(infraction);
+            var repo = new DisciplinaryCaseRepository(context);
+            await repo.AddAsync(caseObj);
+            await context.SaveChangesAsync();
+        }
+
+        Guid occurrenceId;
+
+        // Segundo DbContext: carrega o case já persistido (mesmo caminho de GetByIdAsync
+        // usado por AddOccurrenceUseCase em produção) e anexa uma nova Occurrence
+        using (var context = CreateDbContext())
+        {
+            var repo = new DisciplinaryCaseRepository(context);
+            var loadedCase = await repo.GetByIdAsync(caseObj.Id);
+            loadedCase.Should().NotBeNull();
+
+            var occurrence = DisciplinaryOccurrence.Create(
+                loadedCase!.Id, now, now, "Ocorrência de regressão", userId, infraction.Id, InfractionSeverity.Moderate);
+            occurrenceId = occurrence.Id;
+
+            loadedCase.AddOccurrence(occurrence);
+
+            context.ChangeTracker.DetectChanges();
+            context.Entry(occurrence).State.Should().Be(EntityState.Added,
+                "o EF Core deve reconhecer a nova Occurrence anexada via navegação a partir de um agregado já persistido como Added, não Modified");
+
+            await context.SaveChangesAsync();
+        }
+
+        // Terceiro DbContext: confirma que a Occurrence foi realmente persistida
+        using (var context = CreateDbContext())
+        {
+            var persisted = await context.DisciplinaryOccurrences.FindAsync(occurrenceId);
+            persisted.Should().NotBeNull();
+            persisted!.DisciplinaryCaseId.Should().Be(caseObj.Id);
         }
     }
 }

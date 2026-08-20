@@ -125,7 +125,7 @@ public class NotificationRepository : INotificationRepository
             })
             .ToListAsync(cancellationToken);
 
-        return PagedResult<NotificationDto>.Create(items, totalItems, page, size);
+        return new PagedResult<NotificationDto>(items, page, size, totalItems);
     }
 
     public async Task<IEnumerable<NotificationDto>> GetUnreadUserNotificationsAsync(

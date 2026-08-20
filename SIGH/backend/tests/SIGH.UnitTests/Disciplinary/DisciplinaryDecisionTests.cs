@@ -203,7 +203,7 @@ public class DisciplinaryDecisionTests
 
         // Assert
         act.Should().Throw<BusinessRuleValidationException>()
-            .WithMessage("Apenas decisões no estado Rascunho podem ser submetidas para aprovação.");
+            .WithMessage("A decisão só pode ser submetida para aprovação a partir do estado Rascunho.");
     }
 
     [Fact]
@@ -219,6 +219,6 @@ public class DisciplinaryDecisionTests
 
         // Assert
         act.Should().Throw<BusinessRuleValidationException>()
-            .WithMessage("Apenas decisões pendentes de aprovação podem ser aprovadas.");
+            .WithMessage("A decisão só pode ser aprovada se estiver em rascunho ou pendente de aprovação.");
     }
 }

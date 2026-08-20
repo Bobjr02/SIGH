@@ -39,13 +39,11 @@ public class InfractionTypesEndpointsTests : IClassFixture<CustomWebApplicationF
         await AuthenticateAsync();
 
         var request = new CreateInfractionTypeRequest(
-            Code: $"INF-{Guid.NewGuid():N}"[..10],
+            Code: $"INF-{Guid.NewGuid():N}"[..10].ToUpperInvariant(),
             Name: "Desídia nas funções",
-            DefaultSeverity: InfractionSeverity.Medium,
-            RequiresFormalInvestigation: false,
-            RequiresSuspension: false,
+            DefaultSeverity: InfractionSeverity.Moderate,
             Description: "Atrasos e faltas sistemáticas sem justificativa.",
-            LegalBasis: "Artigo 482 CLT");
+            LegalReference: "Artigo 482 CLT");
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/infraction-types", request);
@@ -180,9 +178,9 @@ public class InfractionTypesEndpointsTests : IClassFixture<CustomWebApplicationF
             Name: "Nome Atualizado",
             DefaultSeverity: InfractionSeverity.High,
             RequiresFormalInvestigation: true,
-            RequiresSuspension: true,
+            AllowsTerminationRecommendation: false,
             Description: "Descrição atualizada",
-            LegalBasis: "CLT Art. 482 h");
+            LegalReference: "CLT Art. 482 h");
 
         // Act
         var response = await _client.PutAsJsonAsync($"/api/v1/infraction-types/{createdId}", updateRequest);

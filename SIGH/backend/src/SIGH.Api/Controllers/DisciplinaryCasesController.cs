@@ -90,6 +90,7 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(Result<CreateDisciplinaryCaseResponse>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result<CreateDisciplinaryCaseResponse>), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<Result<CreateDisciplinaryCaseResponse>>> Create(
         [FromBody] CreateDisciplinaryCaseRequest request,
         CancellationToken cancellationToken)
@@ -102,7 +103,8 @@ public class DisciplinaryCasesController : BaseController
     /// Obter processo disciplinar por ID
     /// </summary>
     /// <description>Obtém os detalhes completos do processo disciplinar, incluindo ocorrências, envolvidos, evidências, decisões e medidas.</description>
-    [HttpGet("{id:guid}", Name = nameof(GetById))]
+    [HttpGet("/api/v1/DisciplinaryCases/{id:guid}", Name = "GetDisciplinaryCaseById")]
+    [HttpGet("/api/v1/disciplinary-cases/{id:guid}")]
     [Permission("Disciplinary.Cases.View")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<GetDisciplinaryCaseByIdResponse>), StatusCodes.Status200OK)]
@@ -402,8 +404,7 @@ public class DisciplinaryCasesController : BaseController
         [FromBody] CancelDisciplinaryCaseRequest request,
         CancellationToken cancellationToken)
     {
-        var userId = request.CancelledByUserId != Guid.Empty ? request.CancelledByUserId : GetUserId();
-        var updatedRequest = request with { DisciplinaryCaseId = id, CancelledByUserId = userId };
+        var updatedRequest = request with { DisciplinaryCaseId = id };
         var result = await _cancelDisciplinaryCaseUseCase.ExecuteAsync(updatedRequest, cancellationToken);
         return ToActionResult(result);
     }
@@ -426,8 +427,7 @@ public class DisciplinaryCasesController : BaseController
         [FromBody] ConcludeDisciplinaryCaseRequest request,
         CancellationToken cancellationToken)
     {
-        var userId = request.ConcludedByUserId != Guid.Empty ? request.ConcludedByUserId : GetUserId();
-        var updatedRequest = request with { DisciplinaryCaseId = id, ConcludedByUserId = userId };
+        var updatedRequest = request with { DisciplinaryCaseId = id };
         var result = await _concludeDisciplinaryCaseUseCase.ExecuteAsync(updatedRequest, cancellationToken);
         return ToActionResult(result);
     }
@@ -457,6 +457,11 @@ public class DisciplinaryCasesController : BaseController
         if (IsNotFoundResult(result.ErrorCode, result.Message))
         {
             return NotFound(result);
+        }
+
+        if (IsConflictErrorCode(result.ErrorCode))
+        {
+            return ConflictResult(result);
         }
 
         return BadRequest(result);

@@ -39,7 +39,7 @@ public class DisciplinaryReportsController : BaseController
     /// Retorna os indicadores e distribuições consolidada do dashboard disciplinar.
     /// </summary>
     [HttpGet("dashboard")]
-    [RequirePermission(DisciplinaryReportPermissions.ViewDashboard)]
+    [Permission(DisciplinaryReportPermissions.ViewDashboard)]
     [ProducesResponseType(typeof(Result<DisciplinaryDashboardDto>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
@@ -68,7 +68,7 @@ public class DisciplinaryReportsController : BaseController
     /// Consulta analítica paginada de processos disciplinares.
     /// </summary>
     [HttpGet("cases")]
-    [RequirePermission(DisciplinaryReportPermissions.ViewCases)]
+    [Permission(DisciplinaryReportPermissions.ViewCases)]
     [ProducesResponseType(typeof(Result<PagedResult<DisciplinaryCaseReportItemDto>>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
@@ -97,7 +97,7 @@ public class DisciplinaryReportsController : BaseController
     /// Exporta o relatório analítico de processos disciplinares em formato CSV UTF-8.
     /// </summary>
     [HttpGet("cases/export")]
-    [RequirePermission(DisciplinaryReportPermissions.Export)]
+    [Permission(DisciplinaryReportPermissions.Export)]
     [ProducesResponseType(typeof(FileResult), 200, "text/csv")]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
@@ -134,7 +134,7 @@ public class DisciplinaryReportsController : BaseController
     /// Consulta paginada de medidas disciplinares aplicadas.
     /// </summary>
     [HttpGet("measures")]
-    [RequirePermission(DisciplinaryReportPermissions.ViewMeasures)]
+    [Permission(DisciplinaryReportPermissions.ViewMeasures)]
     [ProducesResponseType(typeof(Result<PagedResult<DisciplinaryMeasureSummaryDto>>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
@@ -163,7 +163,7 @@ public class DisciplinaryReportsController : BaseController
     /// Consulta o histórico disciplinar consolidado de um funcionário específico.
     /// </summary>
     [HttpGet("employees/{employeeId:guid}/history")]
-    [RequirePermission(DisciplinaryReportPermissions.ViewEmployeeHistory)]
+    [Permission(DisciplinaryReportPermissions.ViewEmployeeHistory)]
     [ProducesResponseType(typeof(Result<EmployeeDisciplinaryHistoryDto>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]

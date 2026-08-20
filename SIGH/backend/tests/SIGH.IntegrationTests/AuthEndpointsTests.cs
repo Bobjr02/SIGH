@@ -58,7 +58,7 @@ public class AuthEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<Result<LoginResponse>>();
 
-        var refreshRequest = new RefreshTokenRequest(loginResult!.Data!.AccessToken, loginResult.Data.RefreshToken);
+        var refreshRequest = new RefreshTokenRequest(loginResult!.Data!.RefreshToken);
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/auth/refresh", refreshRequest);
@@ -70,5 +70,7 @@ public class AuthEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         refreshResult.Should().NotBeNull();
         refreshResult!.Success.Should().BeTrue();
         refreshResult.Data!.AccessToken.Should().NotBeNullOrEmpty();
+        refreshResult.Data.RefreshToken.Should().NotBeNullOrEmpty();
+        refreshResult.Data.RefreshToken.Should().NotBe(loginResult.Data.RefreshToken);
     }
 }

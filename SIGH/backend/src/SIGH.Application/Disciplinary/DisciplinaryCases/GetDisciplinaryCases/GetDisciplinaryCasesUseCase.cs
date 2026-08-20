@@ -24,7 +24,7 @@ public class GetDisciplinaryCasesUseCase : IGetDisciplinaryCasesUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<PagedResult<DisciplinaryCaseSummaryDto>>.Failure(errors);
+            return Result<PagedResult<DisciplinaryCaseSummaryDto>>.Failure(string.Join("; ", errors));
         }
 
         var pagedResult = await _caseRepository.GetPagedAsync(query, cancellationToken);

@@ -24,7 +24,7 @@ public class GetInfractionTypesUseCase : IGetInfractionTypesUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<PagedResult<InfractionTypeDto>>.Failure(errors);
+            return Result<PagedResult<InfractionTypeDto>>.Failure(string.Join("; ", errors));
         }
 
         var pagedResult = await _infractionTypeRepository.GetPagedAsync(query, cancellationToken);

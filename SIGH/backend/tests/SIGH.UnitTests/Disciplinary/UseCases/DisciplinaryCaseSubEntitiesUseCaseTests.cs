@@ -55,13 +55,19 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-OCC-01", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-OCC-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
         var infraction = InfractionType.Create("INF-01", "Atraso", InfractionSeverity.Low);
 
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
         _infractionTypeRepositoryMock.Setup(r => r.GetByIdAsync(infraction.Id, It.IsAny<CancellationToken>())).ReturnsAsync(infraction);
 
-        var request = new AddOccurrenceRequest(caseObj.Id, _now, "Descrição da ocorrência", userId, infraction.Id, InfractionSeverity.Medium);
+        var request = new AddOccurrenceRequest(caseObj.Id, _now, "Descrição da ocorrência", userId, infraction.Id, InfractionSeverity.Moderate);
 
         // Act
         var result = await _addOccurrenceUseCase.ExecuteAsync(request);
@@ -79,12 +85,26 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-EMP-01", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-EMP-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
 
         var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");
         var unit = ManagementUnit.Create(company.Id, "Unidade 1", "UG-01");
         var jobTitle = JobTitle.Create(company.Id, "Desenvolvedor", "DEV");
-        var employee = Employee.Create("João Silva", "12345678909", "joao@empresa.com", "EMP-001", company.Id, unit.Id, jobTitle.Id, new DateOnly(2025, 1, 1));
+        var employee = Employee.Create(
+            companyId: company.Id,
+            employeeNumber: "EMP-001",
+            fullName: "João Silva",
+            cpf: "12345678909",
+            admissionDate: new DateOnly(2025, 1, 1),
+            jobTitleId: jobTitle.Id,
+            managementUnitId: unit.Id,
+            corporateEmail: "joao@empresa.com");
 
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
         _employeeRepositoryMock.Setup(r => r.GetByIdAsync(employee.Id, It.IsAny<CancellationToken>())).ReturnsAsync(employee);
@@ -97,6 +117,10 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Assert
         result.Success.Should().BeTrue();
         caseObj.Employees.Should().HaveCount(1);
+        caseObj.Employees.Single().Role.Should().Be(CaseEmployeeRole.Accused);
+        caseObj.Employees.Single().IsPrimarySubject.Should().BeTrue();
+        caseObj.Employees.Single().Statement.Should().BeNull();
+        caseObj.Employees.Single().StatementRecordedAt.Should().BeNull();
         _contextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -106,11 +130,26 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-EVI-01", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-EVI-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
-        var request = new AddEvidenceRequest(caseObj.Id, EvidenceType.Document, "E-mail impresso", userId, _now);
+        var request = new AddEvidenceRequest(
+            caseObj.Id,
+            EvidenceType.Document,
+            "E-mail impresso",
+            userId,
+            _now,
+            StorageReference: "evidences/email-impresso.pdf",
+            OriginalFileName: "email-impresso.pdf",
+            ContentType: "application/pdf",
+            FileSize: 1024);
 
         // Act
         var result = await _addEvidenceUseCase.ExecuteAsync(request);
@@ -127,11 +166,27 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-DEC-01", companyId, "Título", "Descrição", userId, _now);
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-DEC-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
+        caseObj.Open();
+        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, _now, _now, "Descrição", userId, Guid.NewGuid(), InfractionSeverity.Moderate));
+        caseObj.StartInvestigation();
+        caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, Guid.NewGuid(), CaseEmployeeRole.Accused, true));
+        caseObj.SubmitForDecision();
 
         _caseRepositoryMock.Setup(r => r.GetByIdAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 
-        var request = new RecordDecisionRequest(caseObj.Id, DecisionType.WrittenWarning, "Procedente com advertência por escrito.", userId);
+        var request = new RecordDecisionRequest(
+            caseObj.Id,
+            DecisionType.FormalWarning,
+            "Advertência por escrito.",
+            "A apuração confirmou a conduta e fundamentou a aplicação da advertência.",
+            userId);
 
         // Act
         var result = await _recordDecisionUseCase.ExecuteAsync(request);
@@ -148,15 +203,41 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
         // Arrange
         var companyId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        var caseObj = DisciplinaryCase.Create("PROC-MEA-01", companyId, "Título", "Descrição", userId, _now);
-
-        var decision = DisciplinaryDecision.Create(caseObj.Id, DecisionType.WrittenWarning, "Justificativa", userId, _now);
-        caseObj.RecordDecision(decision);
-
+        var caseObj = DisciplinaryCase.Create(
+            caseNumber: "PROC-MEA-01",
+            companyId: companyId,
+            title: "Título",
+            description: "Descrição",
+            openedAt: _now,
+            openedByUserId: userId);
         var company = Company.Create("Empresa SIGH", "Empresa SIGH LTDA", "12345678000195");
         var unit = ManagementUnit.Create(company.Id, "Unidade 1", "UG-01");
         var jobTitle = JobTitle.Create(company.Id, "Desenvolvedor", "DEV");
-        var employee = Employee.Create("Maria Souza", "98765432100", "maria@empresa.com", "EMP-002", company.Id, unit.Id, jobTitle.Id, new DateOnly(2025, 1, 1));
+        var employee = Employee.Create(
+            companyId: company.Id,
+            employeeNumber: "EMP-002",
+            fullName: "Maria Souza",
+            cpf: "98765432100",
+            admissionDate: new DateOnly(2025, 1, 1),
+            jobTitleId: jobTitle.Id,
+            managementUnitId: unit.Id,
+            corporateEmail: "maria@empresa.com");
+
+        caseObj.Open();
+        caseObj.AddOccurrence(DisciplinaryOccurrence.Create(caseObj.Id, _now, _now, "Descrição", userId, Guid.NewGuid(), InfractionSeverity.Moderate));
+        caseObj.StartInvestigation();
+        caseObj.AddEmployee(DisciplinaryCaseEmployee.Create(caseObj.Id, employee.Id, CaseEmployeeRole.Accused, true));
+        caseObj.SubmitForDecision();
+
+        var decision = DisciplinaryDecision.Create(
+            disciplinaryCaseId: caseObj.Id,
+            decisionType: DecisionType.FormalWarning,
+            summary: "Advertência formal aplicada.",
+            reasoning: "A aplicação da advertência é fundamentada pela decisão registrada no processo.",
+            decidedAt: _now,
+            decidedByUserId: userId);
+        caseObj.RegisterDecision(decision);
+        caseObj.ApproveDecision(userId, _now);
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
         _employeeRepositoryMock.Setup(r => r.GetByIdAsync(employee.Id, It.IsAny<CancellationToken>())).ReturnsAsync(employee);

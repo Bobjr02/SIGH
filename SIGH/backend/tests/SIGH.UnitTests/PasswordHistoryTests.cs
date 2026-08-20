@@ -1,12 +1,14 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Moq;
 using SIGH.Application.Authentication.ChangePassword;
 using SIGH.Application.Authentication.ResetPassword;
 using SIGH.Application.Options;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
+using SIGH.Domain.Repositories;
 using SIGH.Infrastructure.Authentication;
 using SIGH.Persistence.Context;
 using Xunit;
@@ -36,9 +38,8 @@ public class PasswordHistoryTests
         var pwd3 = "Password789!";
         var currentPwd = "CurrentPassword123!";
 
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Detetive Ferreira",
             Email = "detetive.ferreira@policiacivil.sp.gov.br",
             Cpf = "66677788899",
@@ -56,9 +57,22 @@ public class PasswordHistoryTests
         );
 
         await context.SaveChangesAsync();
+        var recentHistories = await context.PasswordHistories
+            .Where(ph => ph.UserId == user.Id)
+            .OrderByDescending(ph => ph.CreatedAt)
+            .Take(3)
+            .ToListAsync();
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        userRepositoryMock
+            .Setup(r => r.GetRecentPasswordHistoriesAsync(user.Id, 3, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(recentHistories);
 
         var service = new ChangePasswordService(
             context,
+            userRepositoryMock.Object,
             _passwordHasher,
             Options.Create(new PasswordOptions { PasswordHistoryLimit = 3 })
         );
@@ -80,9 +94,8 @@ public class PasswordHistoryTests
         var currentPwd = "CurrentPassword123!";
         var newPwd = "BrandNewPassword2026!";
 
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Investigador Costa",
             Email = "investigador.costa@policiacivil.sp.gov.br",
             Cpf = "77788899900",
@@ -92,9 +105,21 @@ public class PasswordHistoryTests
 
         await context.Users.AddAsync(user);
         await context.SaveChangesAsync();
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        userRepositoryMock
+            .Setup(r => r.GetRecentPasswordHistoriesAsync(user.Id, 3, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PasswordHistory>());
+        userRepositoryMock
+            .Setup(r => r.AddPasswordHistoryAsync(It.IsAny<PasswordHistory>(), It.IsAny<CancellationToken>()))
+            .Callback<PasswordHistory, CancellationToken>((history, _) => context.PasswordHistories.Add(history))
+            .Returns(Task.CompletedTask);
 
         var service = new ChangePasswordService(
             context,
+            userRepositoryMock.Object,
             _passwordHasher,
             Options.Create(new PasswordOptions { PasswordHistoryLimit = 3 })
         );

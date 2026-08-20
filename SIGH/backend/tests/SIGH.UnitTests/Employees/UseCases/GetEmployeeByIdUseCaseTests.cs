@@ -23,7 +23,7 @@ public class GetEmployeeByIdUseCaseTests
     {
         // Arrange
         var employeeId = Guid.NewGuid();
-        var details = new EmployeeDetailResponse(
+        var details = new GetEmployeeByIdResponse(
             Id: employeeId,
             CompanyId: Guid.NewGuid(),
             CompanyName: "Empresa SIGH LTDA",
@@ -51,13 +51,11 @@ public class GetEmployeeByIdUseCaseTests
             MobileNumber: null,
             Notes: null,
             CreatedAt: DateTimeOffset.UtcNow,
-            CreatedBy: null,
-            UpdatedAt: null,
-            UpdatedBy: null
+            UpdatedAt: null
         );
 
         _queryServiceMock
-            .Setup(q => q.GetEmployeeByIdAsync(employeeId, It.IsAny<CancellationToken>()))
+            .Setup(q => q.GetByIdAsync(employeeId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(details);
 
         // Act
@@ -80,8 +78,8 @@ public class GetEmployeeByIdUseCaseTests
         // Arrange
         var employeeId = Guid.NewGuid();
         _queryServiceMock
-            .Setup(q => q.GetEmployeeByIdAsync(employeeId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((EmployeeDetailResponse?)null);
+            .Setup(q => q.GetByIdAsync(employeeId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetEmployeeByIdResponse?)null);
 
         // Act
         var result = await _useCase.ExecuteAsync(employeeId);

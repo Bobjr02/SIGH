@@ -13,6 +13,9 @@ public class DisciplinaryOccurrenceConfiguration : IEntityTypeConfiguration<Disc
 
         builder.HasKey(o => o.Id);
 
+        builder.Property(o => o.Id)
+            .ValueGeneratedNever();
+
         builder.Property(o => o.DisciplinaryCaseId)
             .IsRequired();
 

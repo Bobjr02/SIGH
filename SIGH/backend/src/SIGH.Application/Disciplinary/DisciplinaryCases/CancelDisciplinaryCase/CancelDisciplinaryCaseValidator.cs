@@ -10,11 +10,8 @@ public class CancelDisciplinaryCaseValidator : AbstractValidator<CancelDisciplin
         RuleFor(x => x.DisciplinaryCaseId)
             .NotEmpty().WithMessage("O processo disciplinar é obrigatório.");
 
-        RuleFor(x => x.CancelledByUserId)
-            .NotEmpty().WithMessage("O usuário responsável pelo cancelamento é obrigatório.");
-
-        RuleFor(x => x.Reason)
+        RuleFor(x => x.CancellationReason)
             .NotEmpty().WithMessage("O motivo do cancelamento é obrigatório.")
-            .MaximumLength(DisciplinaryDomainConstants.ReasonMaxLength).WithMessage($"O motivo deve ter no máximo {DisciplinaryDomainConstants.ReasonMaxLength} caracteres.");
+            .MaximumLength(DisciplinaryDomainConstants.CancellationReasonMaxLength).WithMessage($"O motivo deve ter no máximo {DisciplinaryDomainConstants.CancellationReasonMaxLength} caracteres.");
     }
 }

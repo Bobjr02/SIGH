@@ -28,24 +28,28 @@ public record CaseEmployeeDto(
     Guid Id,
     Guid EmployeeId,
     CaseEmployeeRole Role,
-    bool IsPrimaryAccused,
-    string? Notes);
+    bool IsPrimarySubject);
 
 public record EvidenceDto(
     Guid Id,
-    EvidenceType Type,
-    string Description,
-    Guid CollectedByUserId,
-    DateTimeOffset CollectedAt,
+    EvidenceType EvidenceType,
+    string Title,
+    string? Description,
+    string? StorageReference,
+    string? OriginalFileName,
+    string? ContentType,
+    long? FileSize,
     Guid? OccurrenceId,
-    string? ReferenceCode,
-    string? Location,
+    DateTimeOffset CollectedAt,
+    Guid CollectedByUserId,
+    string? IntegrityHash,
     EvidenceStatus Status);
 
 public record DecisionDto(
     Guid Id,
-    DecisionType Type,
-    string Justification,
+    DecisionType DecisionType,
+    string Summary,
+    string Reasoning,
     Guid DecidedByUserId,
     DateTimeOffset DecidedAt,
     Guid? ApprovedByUserId,
@@ -54,15 +58,16 @@ public record DecisionDto(
 
 public record MeasureDto(
     Guid Id,
-    Guid DecisionId,
+    Guid DisciplinaryDecisionId,
     Guid EmployeeId,
-    DisciplinaryMeasureType Type,
-    string Description,
+    DisciplinaryMeasureType MeasureType,
+    string Reason,
     DateTimeOffset EffectiveFrom,
     DateTimeOffset? EffectiveUntil,
-    Guid AppliedByUserId,
-    DateTimeOffset AppliedAt,
-    DisciplinaryMeasureStatus Status);
+    Guid? AppliedByUserId,
+    DateTimeOffset? AppliedAt,
+    DisciplinaryMeasureStatus Status,
+    string? Notes);
 
 public record DisciplinaryCaseSummaryDto(
     Guid Id,

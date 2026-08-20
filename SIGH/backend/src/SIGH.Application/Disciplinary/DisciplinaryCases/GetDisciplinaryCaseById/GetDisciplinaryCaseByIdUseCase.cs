@@ -36,24 +36,28 @@ public class GetDisciplinaryCaseByIdUseCase : IGetDisciplinaryCaseByIdUseCase
             e.Id,
             e.EmployeeId,
             e.Role,
-            e.IsPrimaryAccused,
-            e.Notes)).ToList();
+            e.IsPrimarySubject)).ToList();
 
         var evidences = item.Evidences.Select(e => new EvidenceDto(
             e.Id,
-            e.Type,
+            e.EvidenceType,
+            e.Title,
             e.Description,
-            e.CollectedByUserId,
-            e.CollectedAt,
+            e.StorageReference,
+            e.OriginalFileName,
+            e.ContentType,
+            e.FileSize,
             e.DisciplinaryOccurrenceId,
-            e.ReferenceCode,
-            e.Location,
+            e.CollectedAt,
+            e.CollectedByUserId,
+            e.IntegrityHash,
             e.Status)).ToList();
 
         var decisions = item.Decisions.Select(d => new DecisionDto(
             d.Id,
-            d.Type,
-            d.Justification,
+            d.DecisionType,
+            d.Summary,
+            d.Reasoning,
             d.DecidedByUserId,
             d.DecidedAt,
             d.ApprovedByUserId,
@@ -64,13 +68,14 @@ public class GetDisciplinaryCaseByIdUseCase : IGetDisciplinaryCaseByIdUseCase
             m.Id,
             m.DisciplinaryDecisionId,
             m.EmployeeId,
-            m.Type,
-            m.Description,
+            m.MeasureType,
+            m.Reason,
             m.EffectiveFrom,
             m.EffectiveUntil,
             m.AppliedByUserId,
             m.AppliedAt,
-            m.Status)).ToList();
+            m.Status,
+            m.Notes)).ToList();
 
         var response = new GetDisciplinaryCaseByIdResponse(
             item.Id,

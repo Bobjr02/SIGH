@@ -89,7 +89,7 @@ public class NotificationEntityAndRepositoryTests
 
         // Get paged user notifications
         var paged = await repository.GetPagedUserNotificationsAsync(companyId, userId, 1, 10);
-        paged.TotalItems.Should().Be(2);
+        paged.TotalCount.Should().Be(2);
         paged.Items.Should().HaveCount(2);
     }
 }

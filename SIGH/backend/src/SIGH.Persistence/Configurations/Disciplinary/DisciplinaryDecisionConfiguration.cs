@@ -13,6 +13,9 @@ public class DisciplinaryDecisionConfiguration : IEntityTypeConfiguration<Discip
 
         builder.HasKey(d => d.Id);
 
+        builder.Property(d => d.Id)
+            .ValueGeneratedNever();
+
         builder.Property(d => d.DisciplinaryCaseId)
             .IsRequired();
 

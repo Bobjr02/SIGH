@@ -30,6 +30,7 @@ public class DisciplinaryCaseEmployeeTests
         caseEmployee.Role.Should().Be(CaseEmployeeRole.Accused);
         caseEmployee.IsPrimarySubject.Should().BeTrue();
         caseEmployee.Statement.Should().BeNull();
+        caseEmployee.StatementRecordedAt.Should().BeNull();
     }
 
     [Theory]
@@ -46,7 +47,7 @@ public class DisciplinaryCaseEmployeeTests
 
         // Assert
         act.Should().Throw<BusinessRuleValidationException>()
-            .WithMessage("O papel do funcionário no processo disciplinar é inválido.");
+            .WithMessage("O papel do funcionário no processo é inválido.");
     }
 
     [Fact]
@@ -150,6 +151,6 @@ public class DisciplinaryCaseEmployeeTests
 
         // Assert
         act.Should().Throw<BusinessRuleValidationException>()
-            .WithMessage("O papel do funcionário no processo disciplinar é inválido.");
+            .WithMessage("O papel do funcionário no processo é inválido.");
     }
 }

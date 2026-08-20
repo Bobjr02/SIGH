@@ -1,9 +1,13 @@
 using System.Text;
+using Microsoft.Extensions.Options;
 using Moq;
 using SIGH.Application.Common.Models;
 using SIGH.Application.Disciplinary.Reports.DTOs;
+using SIGH.Application.Disciplinary.Reports.Options;
 using SIGH.Application.Disciplinary.Reports.Queries;
 using SIGH.Application.Disciplinary.Reports.UseCases;
+using SIGH.Application.Disciplinary.Reports.Utils;
+using SIGH.Application.Interfaces;
 using SIGH.Application.Interfaces.Repositories.Disciplinary;
 using Xunit;
 
@@ -14,12 +18,16 @@ public class DisciplinaryReportUseCasesTests
     private readonly Mock<IEmployeeDisciplinaryHistoryQueryRepository> _historyRepoMock = new();
     private readonly Mock<IDisciplinaryDashboardQueryRepository> _dashboardRepoMock = new();
     private readonly Mock<IDisciplinaryReportQueryRepository> _reportRepoMock = new();
+    private readonly Mock<IAuthorizedCompanyProvider> _authorizedCompanyProviderMock = new();
 
     [Fact]
     public async Task GetEmployeeDisciplinaryHistory_ShouldFail_WhenEmployeeIdIsEmpty()
     {
-        var useCase = new GetEmployeeDisciplinaryHistoryUseCase(_historyRepoMock.Object);
         var query = new GetEmployeeDisciplinaryHistoryQuery { EmployeeId = Guid.Empty, CompanyId = Guid.NewGuid() };
+        _authorizedCompanyProviderMock
+            .Setup(p => p.GetAuthorizedCompanyIdAsync(query.CompanyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(query.CompanyId);
+        var useCase = new GetEmployeeDisciplinaryHistoryUseCase(_historyRepoMock.Object, _authorizedCompanyProviderMock.Object);
 
         var result = await useCase.ExecuteAsync(query);
 
@@ -41,10 +49,13 @@ public class DisciplinaryReportUseCasesTests
             OpenCases = 1
         };
 
-        _historyRepoMock.Setup(r => r.GetEmployeeHistoryAsync(It.IsAny<GetEmployeeDisciplinaryHistoryQuery>(), It.IsAny<CancellationToken>()))
+        _authorizedCompanyProviderMock
+            .Setup(p => p.GetAuthorizedCompanyIdAsync(compId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(compId);
+        _historyRepoMock.Setup(r => r.GetEmployeeHistoryAsync(It.IsAny<GetEmployeeDisciplinaryHistoryQuery>(), compId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockDto);
 
-        var useCase = new GetEmployeeDisciplinaryHistoryUseCase(_historyRepoMock.Object);
+        var useCase = new GetEmployeeDisciplinaryHistoryUseCase(_historyRepoMock.Object, _authorizedCompanyProviderMock.Object);
         var query = new GetEmployeeDisciplinaryHistoryQuery { EmployeeId = empId, CompanyId = compId };
 
         var result = await useCase.ExecuteAsync(query);
@@ -58,8 +69,11 @@ public class DisciplinaryReportUseCasesTests
     [Fact]
     public async Task GetDisciplinaryDashboard_ShouldFail_WhenCompanyIdIsEmpty()
     {
-        var useCase = new GetDisciplinaryDashboardUseCase(_dashboardRepoMock.Object);
         var query = new GetDisciplinaryDashboardQuery { CompanyId = Guid.Empty };
+        _authorizedCompanyProviderMock
+            .Setup(p => p.GetAuthorizedCompanyIdAsync(query.CompanyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.Empty);
+        var useCase = new GetDisciplinaryDashboardUseCase(_dashboardRepoMock.Object, _authorizedCompanyProviderMock.Object);
 
         var result = await useCase.ExecuteAsync(query);
 
@@ -78,10 +92,13 @@ public class DisciplinaryReportUseCasesTests
             AverageResolutionTimeInDays = 3.5
         };
 
-        _dashboardRepoMock.Setup(r => r.GetDashboardIndicatorsAsync(It.IsAny<GetDisciplinaryDashboardQuery>(), It.IsAny<CancellationToken>()))
+        _authorizedCompanyProviderMock
+            .Setup(p => p.GetAuthorizedCompanyIdAsync(compId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(compId);
+        _dashboardRepoMock.Setup(r => r.GetDashboardAsync(It.IsAny<GetDisciplinaryDashboardQuery>(), compId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockDash);
 
-        var useCase = new GetDisciplinaryDashboardUseCase(_dashboardRepoMock.Object);
+        var useCase = new GetDisciplinaryDashboardUseCase(_dashboardRepoMock.Object, _authorizedCompanyProviderMock.Object);
         var query = new GetDisciplinaryDashboardQuery { CompanyId = compId };
 
         var result = await useCase.ExecuteAsync(query);
@@ -94,12 +111,15 @@ public class DisciplinaryReportUseCasesTests
     [Fact]
     public async Task GetDisciplinaryCaseReport_ShouldReject_InvalidSortField()
     {
-        var useCase = new GetDisciplinaryCaseReportUseCase(_reportRepoMock.Object);
         var query = new GetDisciplinaryCaseReportQuery
         {
             CompanyId = Guid.NewGuid(),
             SortBy = "DROP TABLE DisciplinaryCases;--"
         };
+        _authorizedCompanyProviderMock
+            .Setup(p => p.GetAuthorizedCompanyIdAsync(query.CompanyId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(query.CompanyId);
+        var useCase = new GetDisciplinaryCaseReportUseCase(_reportRepoMock.Object, _authorizedCompanyProviderMock.Object);
 
         var result = await useCase.ExecuteAsync(query);
 
@@ -111,11 +131,11 @@ public class DisciplinaryReportUseCasesTests
     public async Task ExportDisciplinaryCaseReportCsv_ShouldSanitizeCsvInjection()
     {
         // Test sanitization helper
-        Assert.Equal("\"' =1+1\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField(" =1+1"));
-        Assert.Equal("\"'+cmd.exe\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField("+cmd.exe"));
-        Assert.Equal("\"'-SUM(A1:A10)\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField("-SUM(A1:A10)"));
-        Assert.Equal("\"'@eval()\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField("@eval()"));
-        Assert.Equal("\"Texto \"\"Normal\"\"\"", ExportDisciplinaryCaseReportCsvUseCase.SanitizeCsvField("Texto \"Normal\""));
+        Assert.Equal("\"'=1+1\"", CsvSanitizer.SanitizeField(" =1+1"));
+        Assert.Equal("\"'+cmd.exe\"", CsvSanitizer.SanitizeField("+cmd.exe"));
+        Assert.Equal("\"'-SUM(A1:A10)\"", CsvSanitizer.SanitizeField("-SUM(A1:A10)"));
+        Assert.Equal("\"'@eval()\"", CsvSanitizer.SanitizeField("@eval()"));
+        Assert.Equal("\"Texto \"\"Normal\"\"\"", CsvSanitizer.SanitizeField("Texto \"Normal\""));
     }
 
     [Fact]
@@ -135,10 +155,18 @@ public class DisciplinaryReportUseCasesTests
             }
         };
 
-        _reportRepoMock.Setup(r => r.ExportCasesReportAsync(It.IsAny<ExportDisciplinaryCaseReportCsvQuery>(), It.IsAny<CancellationToken>()))
+        _authorizedCompanyProviderMock
+            .Setup(p => p.GetAuthorizedCompanyIdAsync(compId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(compId);
+        _reportRepoMock.Setup(r => r.GetCasesForExportAsync(It.IsAny<ExportDisciplinaryCaseReportCsvQuery>(), compId, 1001, It.IsAny<CancellationToken>()))
             .ReturnsAsync(items);
 
-        var useCase = new ExportDisciplinaryCaseReportCsvUseCase(_reportRepoMock.Object);
+        var options = Options.Create(new DisciplinaryReportOptions
+        {
+            MaximumExportRecords = 1000,
+            CsvSeparator = ";"
+        });
+        var useCase = new ExportDisciplinaryCaseReportCsvUseCase(_reportRepoMock.Object, _authorizedCompanyProviderMock.Object, options);
         var query = new ExportDisciplinaryCaseReportCsvQuery { CompanyId = compId };
 
         var result = await useCase.ExecuteAsync(query);

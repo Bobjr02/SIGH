@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using SIGH.Application.Authentication.Login;
 using SIGH.Application.Common.Models;
 using SIGH.Application.Disciplinary.DisciplinaryCases.AddEmployee;
@@ -20,6 +21,9 @@ using SIGH.Application.Disciplinary.DisciplinaryCases.SubmitCaseForDecision;
 using SIGH.Application.Disciplinary.DTOs;
 using SIGH.Application.Disciplinary.InfractionTypes.CreateInfractionType;
 using SIGH.Domain.Disciplinary.Enums;
+using SIGH.Domain.Employees.Entities;
+using SIGH.Domain.Employees.Enums;
+using SIGH.Persistence.Context;
 using Xunit;
 
 namespace SIGH.IntegrationTests;
@@ -27,9 +31,11 @@ namespace SIGH.IntegrationTests;
 public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly HttpClient _client;
+    private readonly CustomWebApplicationFactory _factory;
 
     public DisciplinaryCasesEndpointsTests(CustomWebApplicationFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -53,7 +59,8 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
             CompanyId: Guid.NewGuid(),
             Title: "Insubordinação grave no setor de TI",
             Description: "Funcionário recusou-se a executar diretrizes de segurança.",
-            Priority: CasePriority.High);
+            CreatedByUserId: Guid.NewGuid(),
+            Priority: DisciplinaryCasePriority.High);
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/disciplinary-cases", request);
@@ -78,10 +85,20 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         var caseNumber = $"PROC-{Guid.NewGuid():N}"[..12];
         var companyId = Guid.NewGuid();
 
-        var request1 = new CreateDisciplinaryCaseRequest(CaseNumber: caseNumber, CompanyId: companyId, Title: "Processo Original");
+        var request1 = new CreateDisciplinaryCaseRequest(
+            CaseNumber: caseNumber,
+            CompanyId: companyId,
+            Title: "Processo Original",
+            Description: "Descrição do processo original.",
+            CreatedByUserId: Guid.NewGuid());
         await _client.PostAsJsonAsync("/api/v1/disciplinary-cases", request1);
 
-        var request2 = new CreateDisciplinaryCaseRequest(CaseNumber: caseNumber, CompanyId: companyId, Title: "Processo Duplicado");
+        var request2 = new CreateDisciplinaryCaseRequest(
+            CaseNumber: caseNumber,
+            CompanyId: companyId,
+            Title: "Processo Duplicado",
+            Description: "Descrição do processo duplicado.",
+            CreatedByUserId: Guid.NewGuid());
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/disciplinary-cases", request2);
@@ -96,7 +113,12 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         // Arrange
         await AuthenticateAsync();
 
-        var request = new CreateDisciplinaryCaseRequest(CaseNumber: "", CompanyId: Guid.Empty, Title: "");
+        var request = new CreateDisciplinaryCaseRequest(
+            CaseNumber: "",
+            CompanyId: Guid.Empty,
+            Title: "",
+            Description: "",
+            CreatedByUserId: Guid.Empty);
 
         // Act
         var response = await _client.PostAsJsonAsync("/api/v1/disciplinary-cases", request);
@@ -114,7 +136,9 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         var createRequest = new CreateDisciplinaryCaseRequest(
             CaseNumber: $"PROC-{Guid.NewGuid():N}"[..12],
             CompanyId: Guid.NewGuid(),
-            Title: "Consulta por ID");
+            Title: "Consulta por ID",
+            Description: "Descrição do processo para consulta.",
+            CreatedByUserId: Guid.NewGuid());
 
         var createResponse = await _client.PostAsJsonAsync("/api/v1/disciplinary-cases", createRequest);
         var createResult = await createResponse.Content.ReadFromJsonAsync<Result<CreateDisciplinaryCaseResponse>>();
@@ -174,11 +198,39 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         // Arrange
         await AuthenticateAsync();
 
+        // Fixture local (somente deste teste): Company + ManagementUnit + JobTitle + Employee reais,
+        // persistidos no mesmo banco InMemory da factory, para uso na etapa Add Employee.
+        Employee employee;
+        Company company;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<SighDbContext>();
+
+            company = Company.Create("Empresa Fluxo de Vida");
+            var managementUnit = ManagementUnit.Create(company.Id, "Unidade Fluxo de Vida");
+            var jobTitle = JobTitle.Create(company.Id, "Cargo Fluxo de Vida");
+            employee = Employee.Create(
+                companyId: company.Id,
+                employeeNumber: "EMP-LIFECYCLE-01",
+                fullName: "Funcionário Fluxo de Vida",
+                cpf: "52998224725",
+                admissionDate: DateOnly.FromDateTime(DateTime.UtcNow),
+                jobTitleId: jobTitle.Id,
+                managementUnitId: managementUnit.Id,
+                initialStatus: EmployeeStatus.Active);
+
+            context.Companies.Add(company);
+            context.ManagementUnits.Add(managementUnit);
+            context.JobTitles.Add(jobTitle);
+            context.Employees.Add(employee);
+            await context.SaveChangesAsync();
+        }
+
         // 1. Create InfractionType
         var infTypeRequest = new CreateInfractionTypeRequest(
             Code: $"INF-{Guid.NewGuid():N}"[..10],
             Name: "Falta não justificada",
-            DefaultSeverity: InfractionSeverity.Medium);
+            DefaultSeverity: InfractionSeverity.Moderate);
         var infTypeResp = await _client.PostAsJsonAsync("/api/v1/infraction-types", infTypeRequest);
         var infTypeResult = await infTypeResp.Content.ReadFromJsonAsync<Result<CreateInfractionTypeResponse>>();
         var infTypeId = infTypeResult!.Data!.Id;
@@ -186,8 +238,10 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         // 2. Create DisciplinaryCase
         var createRequest = new CreateDisciplinaryCaseRequest(
             CaseNumber: $"PROC-{Guid.NewGuid():N}"[..12],
-            CompanyId: Guid.NewGuid(),
-            Title: "Fluxo de vida do processo");
+            CompanyId: company.Id,
+            Title: "Fluxo de vida do processo",
+            Description: "Descrição do fluxo de vida do processo.",
+            CreatedByUserId: Guid.NewGuid());
         var createResp = await _client.PostAsJsonAsync("/api/v1/disciplinary-cases", createRequest);
         var createResult = await createResp.Content.ReadFromJsonAsync<Result<CreateDisciplinaryCaseResponse>>();
         var caseId = createResult!.Data!.Id;
@@ -197,17 +251,26 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         openResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 4. Add Occurrence
-        var occurrenceRequest = new AddOccurrenceRequest(caseId, DateTimeOffset.UtcNow, "Ocorrência registrada", Guid.NewGuid(), infTypeId, InfractionSeverity.Medium);
+        var occurrenceRequest = new AddOccurrenceRequest(caseId, DateTimeOffset.UtcNow, "Ocorrência registrada", Guid.NewGuid(), infTypeId, InfractionSeverity.Moderate);
         var occResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/occurrences", occurrenceRequest);
         occResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 5. Add Employee
-        var empRequest = new AddEmployeeToCaseRequest(caseId, Guid.NewGuid(), CaseEmployeeRole.Accused, true);
+        var empRequest = new AddEmployeeToCaseRequest(caseId, employee.Id, CaseEmployeeRole.Accused, true);
         var empResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/employees", empRequest);
         empResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 6. Add Evidence
-        var evRequest = new AddEvidenceRequest(caseId, EvidenceType.Document, "Folha de ponto", Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var evRequest = new AddEvidenceRequest(
+            caseId,
+            EvidenceType.Document,
+            "Folha de ponto",
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            StorageReference: "evidences/folha-ponto.pdf",
+            OriginalFileName: "folha-ponto.pdf",
+            ContentType: "application/pdf",
+            FileSize: 1024);
         var evResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/evidences", evRequest);
         evResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -220,7 +283,12 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         submitResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 9. Record Decision
-        var decRequest = new RecordDecisionRequest(caseId, DecisionType.WrittenWarning, "Decidido advertência escrita", Guid.NewGuid());
+        var decRequest = new RecordDecisionRequest(
+            caseId,
+            DecisionType.FormalWarning,
+            "Advertência por escrito.",
+            "A apuração confirmou a conduta que fundamenta a advertência.",
+            Guid.NewGuid());
         var decResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/decisions", decRequest);
         decResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var decResult = await decResp.Content.ReadFromJsonAsync<Result<RecordDecisionResponse>>();
@@ -236,7 +304,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         measureResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // 12. Conclude Case
-        var concludeRequest = new ConcludeDisciplinaryCaseRequest(caseId, Guid.NewGuid(), "Resumo conclusivo: advertência aplicada.");
+        var concludeRequest = new ConcludeDisciplinaryCaseRequest(caseId, "Resumo conclusivo: advertência aplicada.");
         var concludeResp = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/conclude", concludeRequest);
         concludeResp.StatusCode.Should().Be(HttpStatusCode.OK);
     }
@@ -250,12 +318,14 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         var createRequest = new CreateDisciplinaryCaseRequest(
             CaseNumber: $"PROC-{Guid.NewGuid():N}"[..12],
             CompanyId: Guid.NewGuid(),
-            Title: "Processo para Cancelamento");
+            Title: "Processo para Cancelamento",
+            Description: "Descrição do processo para cancelamento.",
+            CreatedByUserId: Guid.NewGuid());
         var createResp = await _client.PostAsJsonAsync("/api/v1/disciplinary-cases", createRequest);
         var createResult = await createResp.Content.ReadFromJsonAsync<Result<CreateDisciplinaryCaseResponse>>();
         var caseId = createResult!.Data!.Id;
 
-        var cancelRequest = new CancelDisciplinaryCaseRequest(caseId, Guid.NewGuid(), "Cancelado por inconsistência nos fatos.");
+        var cancelRequest = new CancelDisciplinaryCaseRequest(caseId, "Cancelado por inconsistência nos fatos.");
 
         // Act
         var response = await _client.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/cancel", cancelRequest);
@@ -293,7 +363,12 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         getResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         // Act 2: Create Case
-        var createRequest = new CreateDisciplinaryCaseRequest($"PROC-{Guid.NewGuid():N}"[..12], Guid.NewGuid(), "Sem permissão");
+        var createRequest = new CreateDisciplinaryCaseRequest(
+            $"PROC-{Guid.NewGuid():N}"[..12],
+            Guid.NewGuid(),
+            "Sem permissão",
+            "Descrição do processo sem permissão.",
+            Guid.NewGuid());
         var createResponse = await unprivilegedClient.PostAsJsonAsync("/api/v1/disciplinary-cases", createRequest);
         createResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 

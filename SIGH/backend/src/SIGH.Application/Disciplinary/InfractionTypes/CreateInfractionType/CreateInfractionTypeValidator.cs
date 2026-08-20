@@ -9,11 +9,11 @@ public class CreateInfractionTypeValidator : AbstractValidator<CreateInfractionT
     {
         RuleFor(x => x.Code)
             .NotEmpty().WithMessage("O código do tipo de infração é obrigatório.")
-            .MaximumLength(DisciplinaryDomainConstants.CodeMaxLength).WithMessage($"O código deve ter no máximo {DisciplinaryDomainConstants.CodeMaxLength} caracteres.");
+            .MaximumLength(DisciplinaryDomainConstants.InfractionCodeMaxLength).WithMessage($"O código deve ter no máximo {DisciplinaryDomainConstants.InfractionCodeMaxLength} caracteres.");
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("O nome do tipo de infração é obrigatório.")
-            .MaximumLength(DisciplinaryDomainConstants.NameMaxLength).WithMessage($"O nome deve ter no máximo {DisciplinaryDomainConstants.NameMaxLength} caracteres.");
+            .MaximumLength(DisciplinaryDomainConstants.InfractionNameMaxLength).WithMessage($"O nome deve ter no máximo {DisciplinaryDomainConstants.InfractionNameMaxLength} caracteres.");
 
         RuleFor(x => x.DefaultSeverity)
             .IsInEnum().WithMessage("A gravidade padrão informada é inválida.");

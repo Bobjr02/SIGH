@@ -28,7 +28,7 @@ public class OpenCaseUseCase : IOpenCaseUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<OpenCaseResponse>.Failure(errors);
+            return Result<OpenCaseResponse>.Failure(string.Join("; ", errors));
         }
 
         var disciplinaryCase = await _caseRepository.GetByIdAsync(request.DisciplinaryCaseId, cancellationToken);

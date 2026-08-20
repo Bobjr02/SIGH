@@ -25,19 +25,21 @@ public class ConcludeDisciplinaryCaseUseCase : IConcludeDisciplinaryCaseUseCase
 
     public async Task<Result<ConcludeDisciplinaryCaseResponse>> ExecuteAsync(ConcludeDisciplinaryCaseRequest request, CancellationToken cancellationToken = default)
     {
-        var caseObj = await _caseRepository.GetByIdAsync(request.DisciplinaryCaseId, cancellationToken);
+        var caseObj = await _caseRepository.GetByIdWithDetailsAsync(request.DisciplinaryCaseId, cancellationToken);
         if (caseObj == null)
         {
             return Result<ConcludeDisciplinaryCaseResponse>.Failure("Processo disciplinar não encontrado.", DisciplinaryErrors.DisciplinaryCaseNotFound);
         }
 
-        var now = _dateTimeProvider.UtcNow;
+        var closedAt = _dateTimeProvider.UtcNow;
 
         try
         {
-            caseObj.Conclude(request.ConcludedByUserId, request.FinalSummary, now);
+            caseObj.Complete(
+                conclusionSummary: request.ConclusionSummary,
+                closedAt: closedAt);
         }
-        catch (DomainException ex)
+        catch (BusinessRuleValidationException ex)
         {
             return Result<ConcludeDisciplinaryCaseResponse>.Failure(ex.Message, DisciplinaryErrors.InvalidStatusTransition);
         }
@@ -47,8 +49,8 @@ public class ConcludeDisciplinaryCaseUseCase : IConcludeDisciplinaryCaseUseCase
         var response = new ConcludeDisciplinaryCaseResponse(
             caseObj.Id,
             caseObj.Status,
-            caseObj.ClosedAt!.Value,
-            caseObj.FinalSummary!);
+            caseObj.ConclusionSummary!,
+            caseObj.ClosedAt!.Value);
 
         return Result<ConcludeDisciplinaryCaseResponse>.Ok(response, "Processo disciplinar concluído com sucesso.");
     }

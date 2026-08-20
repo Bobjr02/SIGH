@@ -3,6 +3,7 @@ using SIGH.Application.Common.Models;
 using SIGH.Application.Employees.Common;
 using SIGH.Application.Employees.GetEmployeeById;
 using SIGH.Application.Employees.GetEmployees;
+using SIGH.Domain.Employees.Entities;
 using SIGH.Persistence.Context;
 
 namespace SIGH.Persistence.Repositories;
@@ -34,7 +35,7 @@ public class EmployeeQueryService : IEmployeeQueryService
                               {
                                   e.Id,
                                   e.CompanyId,
-                                  CompanyName = c != null ? c.TradeName : null,
+                                  CompanyName = c != null ? c.Name : null,
                                   e.EmployeeNumber,
                                   e.FullName,
                                   e.SocialName,
@@ -101,26 +102,25 @@ public class EmployeeQueryService : IEmployeeQueryService
 
     public async Task<PagedResult<EmployeeListItemResponse>> SearchAsync(GetEmployeesQuery query, CancellationToken cancellationToken = default)
     {
-        var baseQuery = from e in _context.Employees
-                        join c in _context.Companies on e.CompanyId equals c.Id into compJoin
-                        from c in compJoin.DefaultIfEmpty()
-                        join j in _context.JobTitles on e.JobTitleId equals j.Id into jobJoin
-                        from j in jobJoin.DefaultIfEmpty()
-                        join m in _context.ManagementUnits on e.ManagementUnitId equals m.Id into muJoin
-                        from m in muJoin.DefaultIfEmpty()
-                        join d in _context.Departments on e.DepartmentId equals d.Id into deptJoin
-                        from d in deptJoin.DefaultIfEmpty()
-                        join s in _context.Employees on e.SupervisorId equals s.Id into supJoin
-                        from s in supJoin.DefaultIfEmpty()
-                        select new
-                        {
-                            Employee = e,
-                            CompanyName = c != null ? c.TradeName : null,
-                            JobTitleName = j != null ? j.Name : null,
-                            ManagementUnitName = m != null ? m.Name : null,
-                            DepartmentName = d != null ? d.Name : null,
-                            SupervisorName = s != null ? s.FullName : null
-                        };
+        IQueryable<EmployeeQueryRow> baseQuery =
+            from e in _context.Employees
+            join c in _context.Companies on e.CompanyId equals c.Id into compJoin
+            from c in compJoin.DefaultIfEmpty()
+            join j in _context.JobTitles on e.JobTitleId equals j.Id into jobJoin
+            from j in jobJoin.DefaultIfEmpty()
+            join m in _context.ManagementUnits on e.ManagementUnitId equals m.Id into muJoin
+            from m in muJoin.DefaultIfEmpty()
+            join d in _context.Departments on e.DepartmentId equals d.Id into deptJoin
+            from d in deptJoin.DefaultIfEmpty()
+            join s in _context.Employees on e.SupervisorId equals s.Id into supJoin
+            from s in supJoin.DefaultIfEmpty()
+            select new EmployeeQueryRow(
+                e,
+                c != null ? c.Name : null,
+                j != null ? j.Name : null,
+                m != null ? m.Name : null,
+                d != null ? d.Name : null,
+                s != null ? s.FullName : null);
 
         if (query.CompanyId.HasValue)
             baseQuery = baseQuery.Where(x => x.Employee.CompanyId == query.CompanyId.Value);
@@ -219,4 +219,12 @@ public class EmployeeQueryService : IEmployeeQueryService
 
         return new PagedResult<EmployeeListItemResponse>(items, pageNumber, pageSize, totalCount);
     }
+
+    private sealed record EmployeeQueryRow(
+        Employee Employee,
+        string? CompanyName,
+        string? JobTitleName,
+        string? ManagementUnitName,
+        string? DepartmentName,
+        string? SupervisorName);
 }

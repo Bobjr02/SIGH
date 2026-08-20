@@ -38,11 +38,10 @@ public class AddEmployeeToCaseUseCase : IAddEmployeeToCaseUseCase
         }
 
         var caseEmployee = DisciplinaryCaseEmployee.Create(
-            caseObj.Id,
-            employee.Id,
-            request.Role,
-            request.IsPrimaryAccused,
-            request.Notes);
+            disciplinaryCaseId: caseObj.Id,
+            employeeId: employee.Id,
+            role: request.Role,
+            isPrimarySubject: request.IsPrimarySubject);
 
         caseObj.AddEmployee(caseEmployee);
 
@@ -53,7 +52,7 @@ public class AddEmployeeToCaseUseCase : IAddEmployeeToCaseUseCase
             caseObj.Id,
             employee.Id,
             caseEmployee.Role,
-            caseEmployee.IsPrimaryAccused);
+            caseEmployee.IsPrimarySubject);
 
         return Result<AddEmployeeToCaseResponse>.Ok(response, "Funcionário vinculado ao processo disciplinar com sucesso.");
     }

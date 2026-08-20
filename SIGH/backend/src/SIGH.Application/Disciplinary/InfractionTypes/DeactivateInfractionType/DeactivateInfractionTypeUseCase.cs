@@ -28,7 +28,7 @@ public class DeactivateInfractionTypeUseCase : IDeactivateInfractionTypeUseCase
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
-            return Result<DeactivateInfractionTypeResponse>.Failure(errors);
+            return Result<DeactivateInfractionTypeResponse>.Failure(string.Join("; ", errors));
         }
 
         var infractionType = await _infractionTypeRepository.GetByIdAsync(request.Id, cancellationToken);

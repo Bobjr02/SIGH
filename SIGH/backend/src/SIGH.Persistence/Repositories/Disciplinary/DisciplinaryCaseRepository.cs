@@ -124,6 +124,6 @@ public class DisciplinaryCaseRepository : IDisciplinaryCaseRepository
                 c.Employees.Count))
             .ToListAsync(cancellationToken);
 
-        return PagedResult<DisciplinaryCaseSummaryDto>.Create(items, totalItems, page, pageSize);
+        return new PagedResult<DisciplinaryCaseSummaryDto>(items, page, pageSize, totalItems);
     }
 }

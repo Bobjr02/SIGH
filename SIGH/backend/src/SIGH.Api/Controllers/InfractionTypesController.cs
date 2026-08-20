@@ -54,6 +54,7 @@ public class InfractionTypesController : BaseController
     [ProducesResponseType(typeof(Result<CreateInfractionTypeResponse>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(Result<CreateInfractionTypeResponse>), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<Result<CreateInfractionTypeResponse>>> Create(
         [FromBody] CreateInfractionTypeRequest request,
         CancellationToken cancellationToken)
@@ -66,14 +67,15 @@ public class InfractionTypesController : BaseController
     /// Obter tipo de infração por ID
     /// </summary>
     /// <description>Retorna os detalhes de um tipo de infração disciplinar por seu identificador único.</description>
-    [HttpGet("{id:guid}", Name = nameof(GetById))]
+    [HttpGet("/api/v1/InfractionTypes/{id:guid}", Name = "GetInfractionTypeById")]
+    [HttpGet("/api/v1/infraction-types/{id:guid}")]
     [Permission("Disciplinary.InfractionTypes.View")]
     [Produces("application/json")]
-    [ProducesResponseType(typeof(Result<InfractionTypeDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(Result<InfractionTypeDto>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result<GetInfractionTypeByIdResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<GetInfractionTypeByIdResponse>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<Result<InfractionTypeDto>>> GetById(
+    public async Task<ActionResult<Result<GetInfractionTypeByIdResponse>>> GetById(
         [FromRoute] Guid id,
         CancellationToken cancellationToken)
     {
@@ -189,6 +191,11 @@ public class InfractionTypesController : BaseController
         if (IsNotFoundResult(result.ErrorCode, result.Message))
         {
             return NotFound(result);
+        }
+
+        if (IsConflictErrorCode(result.ErrorCode))
+        {
+            return ConflictResult(result);
         }
 
         return BadRequest(result);

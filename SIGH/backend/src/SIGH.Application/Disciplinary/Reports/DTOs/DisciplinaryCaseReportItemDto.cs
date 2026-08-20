@@ -9,11 +9,11 @@ public class DisciplinaryMeasureSummaryDto
     public string EmployeeName { get; set; } = string.Empty;
     public string MeasureType { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public DateTimeOffset AppliedAt { get; set; }
+    public DateTimeOffset? AppliedAt { get; set; }
     public DateTimeOffset? EffectiveFrom { get; set; }
     public DateTimeOffset? EffectiveTo { get; set; }
-    public Guid AppliedByEmployeeId { get; set; }
-    public string AppliedByEmployeeName { get; set; } = string.Empty;
+    public Guid? AppliedByUserId { get; set; }
+    public string? AppliedByUserName { get; set; }
 }
 
 public class DisciplinaryCaseReportItemDto

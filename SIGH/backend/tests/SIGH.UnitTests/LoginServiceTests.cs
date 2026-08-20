@@ -8,6 +8,7 @@ using SIGH.Application.Options;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
+using SIGH.Domain.Repositories;
 using SIGH.Infrastructure.Authentication;
 using SIGH.Persistence.Context;
 using Xunit;
@@ -34,9 +35,8 @@ public class LoginServiceTests
     {
         using var context = CreateDbContext();
         var rawPassword = "Password123!";
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Delegado Silva",
             Email = "delegado.silva@policiacivil.sp.gov.br",
             Cpf = "11122233344",
@@ -45,7 +45,7 @@ public class LoginServiceTests
             MustChangePassword = false
         };
 
-        var role = new Role { Id = Guid.NewGuid(), Name = "Delegado", Code = "ROLE_DELEGADO", Description = "Delegado" };
+        var role = new Role(Guid.NewGuid()) { Name = "Delegado", Description = "Delegado" };
         user.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id, Role = role });
 
         await context.Users.AddAsync(user);
@@ -57,9 +57,22 @@ public class LoginServiceTests
 
         var mockDateTime = new Mock<IDateTimeProvider>();
         mockDateTime.Setup(d => d.UtcNow).Returns(DateTimeOffset.UtcNow);
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetByEmailWithRolesAndPermissionsAsync(user.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        userRepositoryMock
+            .Setup(r => r.AddRefreshTokenAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()))
+            .Callback<RefreshToken, CancellationToken>((token, _) => context.RefreshTokens.Add(token))
+            .Returns(Task.CompletedTask);
+        userRepositoryMock
+            .Setup(r => r.AddUserSessionAsync(It.IsAny<UserSession>(), It.IsAny<CancellationToken>()))
+            .Callback<UserSession, CancellationToken>((session, _) => context.UserSessions.Add(session))
+            .Returns(Task.CompletedTask);
 
         var loginService = new LoginService(
             context,
+            userRepositoryMock.Object,
             _passwordHasher,
             mockJwtGenerator.Object,
             _refreshTokenGenerator,
@@ -88,9 +101,8 @@ public class LoginServiceTests
     public async Task LoginAsync_WithInvalidPassword_ShouldIncrementFailedAttempts()
     {
         using var context = CreateDbContext();
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Agente Santos",
             Email = "agente.santos@policiacivil.sp.gov.br",
             Cpf = "22233344455",
@@ -105,9 +117,14 @@ public class LoginServiceTests
         var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
         var mockDateTime = new Mock<IDateTimeProvider>();
         mockDateTime.Setup(d => d.UtcNow).Returns(DateTimeOffset.UtcNow);
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetByEmailWithRolesAndPermissionsAsync(user.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
 
         var loginService = new LoginService(
             context,
+            userRepositoryMock.Object,
             _passwordHasher,
             mockJwtGenerator.Object,
             _refreshTokenGenerator,
@@ -133,9 +150,8 @@ public class LoginServiceTests
     public async Task LoginAsync_WhenExceedingMaxFailedAttempts_ShouldLockAccount()
     {
         using var context = CreateDbContext();
-        var user = new User
+        var user = new User(Guid.NewGuid())
         {
-            Id = Guid.NewGuid(),
             FullName = "Escrivao Oliveira",
             Email = "escrivao.oliveira@policiacivil.sp.gov.br",
             Cpf = "33344455566",
@@ -150,9 +166,14 @@ public class LoginServiceTests
         var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
         var mockDateTime = new Mock<IDateTimeProvider>();
         mockDateTime.Setup(d => d.UtcNow).Returns(DateTimeOffset.UtcNow);
+        var userRepositoryMock = new Mock<IUserRepository>();
+        userRepositoryMock
+            .Setup(r => r.GetByEmailWithRolesAndPermissionsAsync(user.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
 
         var loginService = new LoginService(
             context,
+            userRepositoryMock.Object,
             _passwordHasher,
             mockJwtGenerator.Object,
             _refreshTokenGenerator,

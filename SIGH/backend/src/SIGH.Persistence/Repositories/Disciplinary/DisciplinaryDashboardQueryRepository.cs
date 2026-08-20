@@ -52,7 +52,6 @@ public class DisciplinaryDashboardQueryRepository : IDisciplinaryDashboardQueryR
 
         var caseList = await casesQuery
             .Include(c => c.Occurrences.Where(o => !o.IsDeleted))
-                .ThenInclude(o => o.InfractionType)
             .Include(c => c.Measures.Where(m => !m.IsDeleted))
             .Include(c => c.Employees.Where(e => !e.IsDeleted))
             .ToListAsync(cancellationToken);
@@ -64,14 +63,14 @@ public class DisciplinaryDashboardQueryRepository : IDisciplinaryDashboardQueryR
         }
 
         int draftCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Draft);
-        int openCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Opened);
+        int openCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Open);
         int underInvestigationCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.UnderInvestigation);
         int awaitingDecisionCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.AwaitingDecision);
         int decidedCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Decided);
-        int concludedCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Concluded);
+        int concludedCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Completed);
         int cancelledCases = caseList.Count(c => c.Status == DisciplinaryCaseStatus.Cancelled);
 
-        var concludedItems = caseList.Where(c => c.Status == DisciplinaryCaseStatus.Concluded && c.ClosedAt.HasValue).ToList();
+        var concludedItems = caseList.Where(c => c.Status == DisciplinaryCaseStatus.Completed && c.ClosedAt.HasValue).ToList();
         double avgResolutionDays = 0;
         if (concludedItems.Count > 0)
         {
@@ -128,12 +127,25 @@ public class DisciplinaryDashboardQueryRepository : IDisciplinaryDashboardQueryR
         // 4. CasesByInfractionType
         var infractionOccurrences = caseList
             .SelectMany(c => c.Occurrences)
-            .Where(o => o.InfractionType != null && !o.InfractionType.IsDeleted)
+            .ToList();
+
+        var infractionTypeIds = infractionOccurrences
+            .Select(o => o.InfractionTypeId)
+            .Distinct()
+            .ToList();
+
+        var infractionTypes = await _context.InfractionTypes
+            .AsNoTracking()
+            .Where(i => infractionTypeIds.Contains(i.Id) && !i.IsDeleted)
+            .ToDictionaryAsync(i => i.Id, i => i.Name, cancellationToken);
+
+        infractionOccurrences = infractionOccurrences
+            .Where(o => infractionTypes.ContainsKey(o.InfractionTypeId))
             .ToList();
 
         int totalInfractions = infractionOccurrences.Count;
         var casesByInfractionType = infractionOccurrences
-            .GroupBy(o => new { o.InfractionTypeId, Name = o.InfractionType?.Name ?? "Outro" })
+            .GroupBy(o => new { o.InfractionTypeId, Name = infractionTypes[o.InfractionTypeId] })
             .Select(g => new DashboardDistributionItemDto
             {
                 Id = g.Key.InfractionTypeId.ToString(),

@@ -38,7 +38,7 @@ public class EmployeeRepositoryTests
         return (company, unit, jobTitle);
     }
 
-    private Employee CreateSampleEmployee(Company company, ManagementUnit unit, JobTitle jobTitle, string cpf = "52998224725", string number = "EMP-001")
+    private Employee CreateSampleEmployee(Company company, ManagementUnit unit, JobTitle jobTitle, string cpf = "52998224725", string number = "EMP-001", string? corporateEmail = null)
     {
         return Employee.Create(
             companyId: company.Id,
@@ -47,7 +47,8 @@ public class EmployeeRepositoryTests
             cpf: cpf,
             admissionDate: new DateOnly(2025, 1, 15),
             jobTitleId: jobTitle.Id,
-            managementUnitId: unit.Id
+            managementUnitId: unit.Id,
+            corporateEmail: corporateEmail
         );
     }
 
@@ -125,8 +126,7 @@ public class EmployeeRepositoryTests
     {
         // Arrange
         var (company, unit, jobTitle) = await CreatePrerequisitesAsync();
-        var employee = CreateSampleEmployee(company, unit, jobTitle);
-        employee.UpdateContactInformation(corporateEmail: "carlos.silva@empresa.com.br");
+        var employee = CreateSampleEmployee(company, unit, jobTitle, corporateEmail: "carlos.silva@empresa.com.br");
         await _repository.AddAsync(employee);
         await _context.SaveChangesAsync();
 

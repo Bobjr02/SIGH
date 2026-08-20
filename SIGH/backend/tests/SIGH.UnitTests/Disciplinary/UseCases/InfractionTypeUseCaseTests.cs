@@ -70,7 +70,14 @@ public class InfractionTypeUseCaseTests
     public async Task GetInfractionTypeById_WhenExists_ShouldReturnItem()
     {
         // Arrange
-        var entity = InfractionType.Create("INF-100", "Insubordinação", InfractionSeverity.High, "Descrição", "Artigo 482");
+        var entity = InfractionType.Create(
+            code: "INF-100",
+            name: "Insubordinação",
+            defaultSeverity: InfractionSeverity.High,
+            requiresFormalInvestigation: false,
+            allowsTerminationRecommendation: false,
+            description: "Descrição",
+            legalReference: "Artigo 482");
         _repositoryMock.Setup(r => r.GetByIdAsync(entity.Id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
 
         // Act

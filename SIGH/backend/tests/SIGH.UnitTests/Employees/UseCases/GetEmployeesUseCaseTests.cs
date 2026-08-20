@@ -23,7 +23,7 @@ public class GetEmployeesUseCaseTests
     {
         // Arrange
         var query = new GetEmployeesQuery(HasSystemAccess: true);
-        var pagedList = new PagedList<EmployeeListItemResponse>(
+        var pagedList = new PagedResult<EmployeeListItemResponse>(
             items: new List<EmployeeListItemResponse>
             {
                 new EmployeeListItemResponse(
@@ -50,13 +50,13 @@ public class GetEmployeesUseCaseTests
                     CreatedAt: DateTimeOffset.UtcNow
                 )
             },
-            totalCount: 1,
             pageNumber: 1,
-            pageSize: 20
+            pageSize: 20,
+            totalCount: 1
         );
 
         _queryServiceMock
-            .Setup(q => q.GetEmployeesPagedAsync(It.Is<GetEmployeesQuery>(q => q.HasSystemAccess == true), It.IsAny<CancellationToken>()))
+            .Setup(q => q.SearchAsync(It.Is<GetEmployeesQuery>(q => q.HasSystemAccess == true), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedList);
 
         // Act
@@ -76,7 +76,7 @@ public class GetEmployeesUseCaseTests
     {
         // Arrange
         var query = new GetEmployeesQuery(HasSystemAccess: false);
-        var pagedList = new PagedList<EmployeeListItemResponse>(
+        var pagedList = new PagedResult<EmployeeListItemResponse>(
             items: new List<EmployeeListItemResponse>
             {
                 new EmployeeListItemResponse(
@@ -103,13 +103,13 @@ public class GetEmployeesUseCaseTests
                     CreatedAt: DateTimeOffset.UtcNow
                 )
             },
-            totalCount: 1,
             pageNumber: 1,
-            pageSize: 20
+            pageSize: 20,
+            totalCount: 1
         );
 
         _queryServiceMock
-            .Setup(q => q.GetEmployeesPagedAsync(It.Is<GetEmployeesQuery>(q => q.HasSystemAccess == false), It.IsAny<CancellationToken>()))
+            .Setup(q => q.SearchAsync(It.Is<GetEmployeesQuery>(q => q.HasSystemAccess == false), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedList);
 
         // Act
@@ -132,15 +132,15 @@ public class GetEmployeesUseCaseTests
         var toDate = new DateOnly(2025, 12, 31);
         var query = new GetEmployeesQuery(AdmissionDateFrom: fromDate, AdmissionDateTo: toDate);
 
-        var pagedList = new PagedList<EmployeeListItemResponse>(
+        var pagedList = new PagedResult<EmployeeListItemResponse>(
             items: new List<EmployeeListItemResponse>(),
-            totalCount: 0,
             pageNumber: 1,
-            pageSize: 20
+            pageSize: 20,
+            totalCount: 0
         );
 
         _queryServiceMock
-            .Setup(q => q.GetEmployeesPagedAsync(It.Is<GetEmployeesQuery>(q => q.AdmissionDateFrom == fromDate && q.AdmissionDateTo == toDate), It.IsAny<CancellationToken>()))
+            .Setup(q => q.SearchAsync(It.Is<GetEmployeesQuery>(q => q.AdmissionDateFrom == fromDate && q.AdmissionDateTo == toDate), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedList);
 
         // Act
@@ -149,7 +149,7 @@ public class GetEmployeesUseCaseTests
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue();
-        _queryServiceMock.Verify(q => q.GetEmployeesPagedAsync(It.IsAny<GetEmployeesQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+        _queryServiceMock.Verify(q => q.SearchAsync(It.IsAny<GetEmployeesQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -159,15 +159,15 @@ public class GetEmployeesUseCaseTests
         var supervisorId = Guid.NewGuid();
         var query = new GetEmployeesQuery(SupervisorId: supervisorId);
 
-        var pagedList = new PagedList<EmployeeListItemResponse>(
+        var pagedList = new PagedResult<EmployeeListItemResponse>(
             items: new List<EmployeeListItemResponse>(),
-            totalCount: 0,
             pageNumber: 1,
-            pageSize: 20
+            pageSize: 20,
+            totalCount: 0
         );
 
         _queryServiceMock
-            .Setup(q => q.GetEmployeesPagedAsync(It.Is<GetEmployeesQuery>(q => q.SupervisorId == supervisorId), It.IsAny<CancellationToken>()))
+            .Setup(q => q.SearchAsync(It.Is<GetEmployeesQuery>(q => q.SupervisorId == supervisorId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedList);
 
         // Act
@@ -176,7 +176,7 @@ public class GetEmployeesUseCaseTests
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue();
-        _queryServiceMock.Verify(q => q.GetEmployeesPagedAsync(It.Is<GetEmployeesQuery>(q => q.SupervisorId == supervisorId), It.IsAny<CancellationToken>()), Times.Once);
+        _queryServiceMock.Verify(q => q.SearchAsync(It.Is<GetEmployeesQuery>(q => q.SupervisorId == supervisorId), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -185,15 +185,15 @@ public class GetEmployeesUseCaseTests
         // Arrange
         var query = new GetEmployeesQuery(SearchTerm: "João");
 
-        var pagedList = new PagedList<EmployeeListItemResponse>(
+        var pagedList = new PagedResult<EmployeeListItemResponse>(
             items: new List<EmployeeListItemResponse>(),
-            totalCount: 0,
             pageNumber: 1,
-            pageSize: 20
+            pageSize: 20,
+            totalCount: 0
         );
 
         _queryServiceMock
-            .Setup(q => q.GetEmployeesPagedAsync(It.Is<GetEmployeesQuery>(q => q.EffectiveSearchTerm == "João"), It.IsAny<CancellationToken>()))
+            .Setup(q => q.SearchAsync(It.Is<GetEmployeesQuery>(q => q.EffectiveSearchTerm == "João"), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedList);
 
         // Act
@@ -202,6 +202,6 @@ public class GetEmployeesUseCaseTests
         // Assert
         result.Should().NotBeNull();
         result.Success.Should().BeTrue();
-        _queryServiceMock.Verify(q => q.GetEmployeesPagedAsync(It.Is<GetEmployeesQuery>(q => q.EffectiveSearchTerm == "João"), It.IsAny<CancellationToken>()), Times.Once);
+        _queryServiceMock.Verify(q => q.SearchAsync(It.Is<GetEmployeesQuery>(q => q.EffectiveSearchTerm == "João"), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

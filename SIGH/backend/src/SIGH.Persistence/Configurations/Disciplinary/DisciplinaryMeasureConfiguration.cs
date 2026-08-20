@@ -14,6 +14,9 @@ public class DisciplinaryMeasureConfiguration : IEntityTypeConfiguration<Discipl
 
         builder.HasKey(m => m.Id);
 
+        builder.Property(m => m.Id)
+            .ValueGeneratedNever();
+
         builder.Property(m => m.DisciplinaryCaseId)
             .IsRequired();
 

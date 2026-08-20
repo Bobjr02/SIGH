@@ -4,15 +4,19 @@ namespace SIGH.Application.Disciplinary.DisciplinaryCases.RecordDecision;
 
 public record RecordDecisionRequest(
     Guid DisciplinaryCaseId,
-    DecisionType Type,
-    string Justification,
-    Guid DecidedByUserId,
-    Guid? ApprovedByUserId = null,
-    DateTimeOffset? ApprovedAt = null);
+    DecisionType DecisionType,
+    string Summary,
+    string Reasoning,
+    Guid DecidedByUserId);
 
 public record RecordDecisionResponse(
     Guid DecisionId,
     Guid DisciplinaryCaseId,
-    DecisionType Type,
+    DecisionType DecisionType,
+    string Summary,
+    string Reasoning,
     DecisionStatus Status,
-    DateTimeOffset DecidedAt);
+    DateTimeOffset DecidedAt,
+    Guid DecidedByUserId,
+    Guid? ApprovedByUserId,
+    DateTimeOffset? ApprovedAt);

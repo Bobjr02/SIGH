@@ -1,5 +1,4 @@
 using FluentValidation;
-using SIGH.Domain.Disciplinary.Constants;
 
 namespace SIGH.Application.Disciplinary.DisciplinaryCases.AddEmployee;
 
@@ -15,9 +14,5 @@ public class AddEmployeeToCaseValidator : AbstractValidator<AddEmployeeToCaseReq
 
         RuleFor(x => x.Role)
             .IsInEnum().WithMessage("O papel do funcionário no processo é inválido.");
-
-        RuleFor(x => x.Notes)
-            .MaximumLength(DisciplinaryDomainConstants.NotesMaxLength)
-            .When(x => !string.IsNullOrEmpty(x.Notes));
     }
 }

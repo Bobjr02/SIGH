@@ -46,7 +46,7 @@ public class NotificationsController : BaseController
     /// Consulta paginada das notificações do usuário autenticado.
     /// </summary>
     [HttpGet]
-    [RequirePermission(NotificationPermissions.View)]
+    [Permission(NotificationPermissions.View)]
     [ProducesResponseType(typeof(Result<PagedResult<NotificationDto>>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -95,7 +95,7 @@ public class NotificationsController : BaseController
     /// Retorna todas as notificações não lidas do usuário autenticado.
     /// </summary>
     [HttpGet("unread")]
-    [RequirePermission(NotificationPermissions.View)]
+    [Permission(NotificationPermissions.View)]
     [ProducesResponseType(typeof(Result<IEnumerable<NotificationDto>>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -126,7 +126,7 @@ public class NotificationsController : BaseController
     /// Retorna a contagem de notificações não lidas do usuário autenticado.
     /// </summary>
     [HttpGet("unread/count")]
-    [RequirePermission(NotificationPermissions.View)]
+    [Permission(NotificationPermissions.View)]
     [ProducesResponseType(typeof(Result<int>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -157,7 +157,7 @@ public class NotificationsController : BaseController
     /// Marca uma notificação específica do usuário autenticado como lida.
     /// </summary>
     [HttpPut("{id:guid}/read")]
-    [RequirePermission(NotificationPermissions.Read)]
+    [Permission(NotificationPermissions.Read)]
     [ProducesResponseType(typeof(Result<NotificationDto>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -195,7 +195,7 @@ public class NotificationsController : BaseController
     /// Marca todas as notificações do usuário autenticado como lidas.
     /// </summary>
     [HttpPut("read-all")]
-    [RequirePermission(NotificationPermissions.Read)]
+    [Permission(NotificationPermissions.Read)]
     [ProducesResponseType(typeof(Result<int>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -226,7 +226,7 @@ public class NotificationsController : BaseController
     /// Executa manualmente o processamento de lembretes recorrentes e escalonamento de prazos.
     /// </summary>
     [HttpPost("process-deadlines")]
-    [RequirePermission(NotificationPermissions.Manage)]
+    [Permission(NotificationPermissions.Manage)]
     [ProducesResponseType(typeof(Result<DeadlineProcessingResultDto>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
