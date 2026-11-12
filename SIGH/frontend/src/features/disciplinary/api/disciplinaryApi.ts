@@ -21,6 +21,7 @@ import {
   AddOccurrenceRequest,
   AddEmployeeRequest,
   AddEvidenceRequest,
+  AddEvidenceResponse,
   ApplyMeasureRequest,
   CancelCaseRequest,
   ConcludeCaseRequest,
@@ -253,11 +254,12 @@ export const disciplinaryApi = {
     }
   },
 
-  async addEvidence(id: string, request: AddEvidenceRequest): Promise<void> {
-    const response = await api.post<Result<void>>(`/v1/disciplinary-cases/${id}/evidences`, request);
-    if (!response.data.success) {
+  async addEvidence(id: string, request: AddEvidenceRequest): Promise<AddEvidenceResponse> {
+    const response = await api.post<Result<AddEvidenceResponse>>(`/v1/disciplinary-cases/${id}/evidences`, request);
+    if (!response.data.success || !response.data.data) {
       throw new Error(response.data.message || 'Erro ao adicionar metadados da evidência.');
     }
+    return response.data.data;
   },
 
   async applyMeasure(id: string, request: ApplyMeasureRequest): Promise<void> {

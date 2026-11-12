@@ -24,6 +24,7 @@ export const useDisciplinaryPermissions = () => {
     canAddOccurrence: hasPermission(PERMISSIONS.DISCIPLINARY_CASES_ADD_OCCURRENCE),
     canAddEmployee: hasPermission(PERMISSIONS.DISCIPLINARY_CASES_ADD_EMPLOYEE),
     canAddEvidence: hasPermission(PERMISSIONS.DISCIPLINARY_CASES_ADD_EVIDENCE),
+    canRemoveEvidence: hasPermission(PERMISSIONS.DISCIPLINARY_CASES_REMOVE_EVIDENCE),
     canApplyMeasure: hasPermission(PERMISSIONS.DISCIPLINARY_CASES_APPLY_MEASURE),
     canCancelCases: hasPermission(PERMISSIONS.DISCIPLINARY_CASES_CANCEL),
     canConcludeCases: hasPermission(PERMISSIONS.DISCIPLINARY_CASES_CONCLUDE),

@@ -19,6 +19,8 @@ import {
   Snackbar,
   Card,
   CardContent,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   ArrowLeft,
@@ -44,6 +46,9 @@ import { CaseSeverityChip } from '../components/CaseSeverityChip';
 import { AddOccurrenceModal } from '../components/AddOccurrenceModal';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
 import { AddEvidenceModal } from '../components/AddEvidenceModal';
+import { EvidenceSection } from '../components/EvidenceSection';
+import { CaseAuditTimeline } from '../../audit/components/CaseAuditTimeline';
+import { PERMISSIONS } from '../../../auth/permissions';
 import { RecordDecisionModal } from '../components/RecordDecisionModal';
 import { ApplyMeasureModal } from '../components/ApplyMeasureModal';
 import { ConfirmActionModal, ActionType } from '../components/ConfirmActionModal';
@@ -90,6 +95,9 @@ export const DisciplinaryCaseDetailPage: React.FC = () => {
   const [addOccurrenceOpen, setAddOccurrenceOpen] = useState(false);
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false);
   const [addEvidenceOpen, setAddEvidenceOpen] = useState(false);
+  const [pendingUploadEvidenceId, setPendingUploadEvidenceId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'details' | 'history'>('details');
+  const canViewAudit = permissions.hasPermission(PERMISSIONS.AUDIT_VIEW);
   const [recordDecisionOpen, setRecordDecisionOpen] = useState(false);
   const [applyMeasureOpen, setApplyMeasureOpen] = useState(false);
 
@@ -209,9 +217,11 @@ export const DisciplinaryCaseDetailPage: React.FC = () => {
   const handleAddEvidence = async (data: any) => {
     setActionError(null);
     try {
-      await addEvidence.mutateAsync(data);
-      setToast({ open: true, message: 'Metadados da evidência vinculados.', severity: 'success' });
+      const created = await addEvidence.mutateAsync(data);
+      setToast({ open: true, message: 'Evidência registrada.', severity: 'success' });
       setAddEvidenceOpen(false);
+      // Evidência de arquivo: abre em seguida o envio do arquivo.
+      if (Number(data.evidenceType) !== EvidenceType.Text) setPendingUploadEvidenceId(created.id);
     } catch (err: any) {
       setActionError(extractErrorMessage(err));
     }
@@ -390,6 +400,17 @@ export const DisciplinaryCaseDetailPage: React.FC = () => {
         )}
       </Paper>
 
+      {canViewAudit && (
+        <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
+          <Tab value="details" label="Detalhes" />
+          <Tab value="history" label="Histórico" />
+        </Tabs>
+      )}
+
+      {tab === 'history' && canViewAudit ? (
+        <CaseAuditTimeline caseId={caseDetail.id} />
+      ) : (
+        <>
       {/* Case Overview & Metadata */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, md: 4 }}>
@@ -561,67 +582,18 @@ export const DisciplinaryCaseDetailPage: React.FC = () => {
         )}
       </Paper>
 
-      {/* Seção 3: Metadados de Evidências */}
-      <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FileText size={20} color="#16a34a" /> Metadados de Evidências ({caseDetail.evidences?.length || 0})
-          </Typography>
-          {permissions.canAddEvidence && (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<Plus size={16} />}
-              onClick={() => setAddEvidenceOpen(true)}
-            >
-              Registrar Evidência
-            </Button>
-          )}
-        </Box>
-
-        {caseDetail.evidences && caseDetail.evidences.length > 0 ? (
-          <Table size="small">
-            <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Descrição</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Localização / Ref.</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Coletado em</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {caseDetail.evidences.map((ev) => (
-                <TableRow key={ev.id}>
-                  <TableCell>
-                    <Chip
-                      label={
-                        ev.type === EvidenceType.Document
-                          ? 'Documento'
-                          : ev.type === EvidenceType.Image
-                          ? 'Imagem'
-                          : ev.type === EvidenceType.Video
-                          ? 'Vídeo'
-                          : ev.type === EvidenceType.Audio
-                          ? 'Áudio'
-                          : 'Texto'
-                      }
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>{ev.description}</TableCell>
-                  <TableCell>{ev.location || ev.referenceCode || '-'}</TableCell>
-                  <TableCell>{new Date(ev.collectedAt).toLocaleDateString('pt-BR')}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-            Nenhum metadado de evidência vinculado.
-          </Typography>
-        )}
-      </Paper>
+      {/* Seção 3: Evidências (arquivo, hash, download) */}
+      <EvidenceSection
+        caseId={caseDetail.id}
+        caseStatus={caseDetail.status}
+        evidences={caseDetail.evidences ?? []}
+        canAdd={permissions.canAddEvidence}
+        canRemove={permissions.canRemoveEvidence}
+        canDownload={permissions.canViewCases}
+        onRegisterClick={() => setAddEvidenceOpen(true)}
+        pendingUploadEvidenceId={pendingUploadEvidenceId}
+        onPendingUploadHandled={() => setPendingUploadEvidenceId(null)}
+      />
 
       {/* Seção 4: Decisões Proferidas */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
@@ -756,6 +728,9 @@ export const DisciplinaryCaseDetailPage: React.FC = () => {
       </Paper>
 
       {/* Modais de Ações do Ciclo de Vida */}
+        </>
+      )}
+
       <ConfirmActionModal
         open={confirmModalOpen}
         actionType={currentActionType}
