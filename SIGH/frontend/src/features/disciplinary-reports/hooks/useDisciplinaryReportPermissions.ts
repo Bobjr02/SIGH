@@ -1,13 +1,14 @@
 import { useAuth } from '../../../hooks/useAuth';
+import { PERMISSIONS } from '../../../auth/permissions';
 
 export function useDisciplinaryReportPermissions() {
   const { hasPermission } = useAuth();
 
   return {
-    canViewDashboard: hasPermission('Disciplinary.Reports.ViewDashboard'),
-    canViewCases: hasPermission('Disciplinary.Reports.ViewCases'),
-    canViewMeasures: hasPermission('Disciplinary.Reports.ViewMeasures'),
-    canViewEmployeeHistory: hasPermission('Disciplinary.Reports.ViewEmployeeHistory'),
-    canExport: hasPermission('Disciplinary.Reports.Export'),
+    canViewDashboard: hasPermission(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_DASHBOARD),
+    canViewCases: hasPermission(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_CASES),
+    canViewMeasures: hasPermission(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_MEASURES),
+    canViewEmployeeHistory: hasPermission(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY),
+    canExport: hasPermission(PERMISSIONS.DISCIPLINARY_REPORTS_EXPORT),
   };
 }
