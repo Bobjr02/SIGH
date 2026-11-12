@@ -219,9 +219,12 @@ public class DisciplinaryCase : AuditableEntity
         Status = DisciplinaryCaseStatus.Decided;
     }
 
-    public void RejectDecision(string reason)
+    public void RejectDecision(Guid rejectedByUserId, string reason)
     {
         EnsureNotCompletedOrCancelled();
+
+        if (rejectedByUserId == Guid.Empty)
+            throw new BusinessRuleValidationException("O usuário responsável pela rejeição é obrigatório.");
 
         if (Status != DisciplinaryCaseStatus.AwaitingDecision)
             throw new BusinessRuleValidationException("Rejeição de decisão só é permitida para processos Aguardando Decisão.");
@@ -232,7 +235,7 @@ public class DisciplinaryCase : AuditableEntity
         if (Decision.Status != DecisionStatus.PendingApproval)
             throw new BusinessRuleValidationException("Apenas decisões pendentes de aprovação podem ser rejeitadas.");
 
-        Decision.Reject(reason);
+        Decision.Reject(rejectedByUserId, reason);
         Status = DisciplinaryCaseStatus.AwaitingDecision;
     }
 

@@ -10,6 +10,7 @@ public class DisciplinaryCaseTests
 {
     private readonly Guid _companyId = Guid.NewGuid();
     private readonly Guid _openedByUserId = Guid.NewGuid();
+    private readonly Guid _reviewerUserId = Guid.NewGuid();
     private readonly DateTimeOffset _now = DateTimeOffset.UtcNow;
 
     [Fact]
@@ -272,7 +273,7 @@ public class DisciplinaryCaseTests
         var decision1 = DisciplinaryDecision.Create(disciplinaryCase.Id, DecisionType.FormalWarning, "D1", "M1", _now, _openedByUserId, DecisionStatus.Draft);
         disciplinaryCase.RegisterDecision(decision1);
         disciplinaryCase.SubmitDecisionForApproval();
-        disciplinaryCase.RejectDecision("Rejeitada por falta de embasamento.");
+        disciplinaryCase.RejectDecision(_reviewerUserId, "Rejeitada por falta de embasamento.");
 
         var decision2 = DisciplinaryDecision.Create(disciplinaryCase.Id, DecisionType.Suspension, "D2", "M2", _now, _openedByUserId, DecisionStatus.Draft);
 
@@ -303,12 +304,12 @@ public class DisciplinaryCaseTests
         disciplinaryCase.SubmitDecisionForApproval();
 
         // Act
-        disciplinaryCase.ApproveDecision(_openedByUserId, _now.AddHours(1));
+        disciplinaryCase.ApproveDecision(_reviewerUserId, _now.AddHours(1));
 
         // Assert
         disciplinaryCase.Status.Should().Be(DisciplinaryCaseStatus.Decided);
         disciplinaryCase.Decision!.Status.Should().Be(DecisionStatus.Approved);
-        disciplinaryCase.Decision.ApprovedByUserId.Should().Be(_openedByUserId);
+        disciplinaryCase.Decision.ApprovedByUserId.Should().Be(_reviewerUserId);
     }
 
     [Fact]
@@ -327,7 +328,7 @@ public class DisciplinaryCaseTests
         );
         disciplinaryCase.RegisterDecision(decision);
         disciplinaryCase.SubmitDecisionForApproval();
-        disciplinaryCase.ApproveDecision(_openedByUserId, _now.AddHours(1));
+        disciplinaryCase.ApproveDecision(_reviewerUserId, _now.AddHours(1));
         disciplinaryCase.Status.Should().Be(DisciplinaryCaseStatus.Decided);
 
         // Act
@@ -355,7 +356,7 @@ public class DisciplinaryCaseTests
         );
         disciplinaryCase.RegisterDecision(decision);
         disciplinaryCase.SubmitDecisionForApproval();
-        disciplinaryCase.ApproveDecision(_openedByUserId, _now.AddHours(1));
+        disciplinaryCase.ApproveDecision(_reviewerUserId, _now.AddHours(1));
 
         // Act
         disciplinaryCase.Complete("Processo concluído com aplicação de advertência.", _now.AddDays(1));
@@ -382,7 +383,7 @@ public class DisciplinaryCaseTests
         );
         disciplinaryCase.RegisterDecision(decision);
         disciplinaryCase.SubmitDecisionForApproval();
-        disciplinaryCase.ApproveDecision(_openedByUserId, _now.AddHours(1));
+        disciplinaryCase.ApproveDecision(_reviewerUserId, _now.AddHours(1));
 
         // Act
         Action act = () => disciplinaryCase.Complete("Conclusão com data default", default);
@@ -530,7 +531,7 @@ public class DisciplinaryCaseTests
         );
         disciplinaryCase.RegisterDecision(decision);
         disciplinaryCase.SubmitDecisionForApproval();
-        disciplinaryCase.ApproveDecision(_openedByUserId, _now.AddHours(1));
+        disciplinaryCase.ApproveDecision(_reviewerUserId, _now.AddHours(1));
 
         var accusedEmpId = disciplinaryCase.Employees.First(e => e.Role == CaseEmployeeRole.Accused).EmployeeId;
         var wrongDecisionId = Guid.NewGuid();
@@ -560,7 +561,7 @@ public class DisciplinaryCaseTests
         var decision = DisciplinaryDecision.Create(disciplinaryCase.Id, DecisionType.FormalWarning, "D1", "M1", _now, _openedByUserId, DecisionStatus.Draft);
         disciplinaryCase.RegisterDecision(decision);
         disciplinaryCase.SubmitDecisionForApproval();
-        disciplinaryCase.ApproveDecision(_openedByUserId, _now.AddHours(1));
+        disciplinaryCase.ApproveDecision(_reviewerUserId, _now.AddHours(1));
 
         // Act
         Action act = () => disciplinaryCase.Cancel("Cancelamento em Decidido", _now.AddDays(1));
@@ -637,7 +638,7 @@ public class DisciplinaryCaseTests
         );
         caseItem.RegisterDecision(decision);
         caseItem.SubmitDecisionForApproval();
-        caseItem.ApproveDecision(_openedByUserId, _now.AddHours(1));
+        caseItem.ApproveDecision(_reviewerUserId, _now.AddHours(1));
         caseItem.Complete("Processo concluído.", _now.AddDays(1));
         return caseItem;
     }

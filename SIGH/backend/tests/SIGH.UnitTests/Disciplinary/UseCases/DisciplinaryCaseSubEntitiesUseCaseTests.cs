@@ -237,7 +237,7 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
             decidedAt: _now,
             decidedByUserId: userId);
         caseObj.RegisterDecision(decision);
-        caseObj.ApproveDecision(userId, _now);
+        caseObj.ApproveDecision(Guid.NewGuid(), _now); // aprovador distinto do decisor (segregação de funções)
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
         _employeeRepositoryMock.Setup(r => r.GetByIdAsync(employee.Id, It.IsAny<CancellationToken>())).ReturnsAsync(employee);

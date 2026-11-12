@@ -229,7 +229,7 @@ public class DisciplinaryCaseUseCaseTests
             userId);
         caseObj.RegisterDecision(decision);
         caseObj.SubmitDecisionForApproval();
-        caseObj.ApproveDecision(userId, _now);
+        caseObj.ApproveDecision(Guid.NewGuid(), _now); // aprovador distinto do decisor (segregação de funções)
 
         _caseRepositoryMock.Setup(r => r.GetByIdWithDetailsAsync(caseObj.Id, It.IsAny<CancellationToken>())).ReturnsAsync(caseObj);
 

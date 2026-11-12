@@ -169,10 +169,89 @@ public class DisciplinaryDecisionTests
         decision.SubmitForApproval();
 
         // Act
-        decision.Reject("Insuficiência de provas");
+        decision.Reject(_approvedByUserId, "Insuficiência de provas");
 
         // Assert
         decision.Status.Should().Be(DecisionStatus.Rejected);
+    }
+
+    [Fact]
+    public void Approve_BySameUserWhoRecordedDecision_ShouldThrowBusinessRuleValidationException()
+    {
+        // Arrange
+        var decision = DisciplinaryDecision.Create(_caseId, DecisionType.FormalWarning, "Resumo", "Motivo", _now, _decidedByUserId);
+        decision.SubmitForApproval();
+
+        // Act
+        Action act = () => decision.Approve(_decidedByUserId, _now.AddHours(1));
+
+        // Assert
+        act.Should().Throw<BusinessRuleValidationException>()
+            .WithMessage("O usuário que registrou a decisão não pode aprovar a própria decisão.");
+        decision.Status.Should().Be(DecisionStatus.PendingApproval);
+        decision.ApprovedByUserId.Should().BeNull();
+    }
+
+    [Fact]
+    public void Approve_ByDifferentUser_ShouldSucceed()
+    {
+        // Arrange
+        var decision = DisciplinaryDecision.Create(_caseId, DecisionType.FormalWarning, "Resumo", "Motivo", _now, _decidedByUserId);
+        decision.SubmitForApproval();
+
+        // Act
+        Action act = () => decision.Approve(_approvedByUserId, _now.AddHours(1));
+
+        // Assert
+        act.Should().NotThrow();
+        decision.Status.Should().Be(DecisionStatus.Approved);
+        decision.ApprovedByUserId.Should().Be(_approvedByUserId);
+    }
+
+    [Fact]
+    public void Reject_BySameUserWhoRecordedDecision_ShouldThrowBusinessRuleValidationException()
+    {
+        // Arrange
+        var decision = DisciplinaryDecision.Create(_caseId, DecisionType.FormalWarning, "Resumo", "Motivo", _now, _decidedByUserId);
+        decision.SubmitForApproval();
+
+        // Act
+        Action act = () => decision.Reject(_decidedByUserId, "Rejeição pelo próprio decisor");
+
+        // Assert
+        act.Should().Throw<BusinessRuleValidationException>()
+            .WithMessage("O usuário que registrou a decisão não pode rejeitar a própria decisão.");
+        decision.Status.Should().Be(DecisionStatus.PendingApproval);
+    }
+
+    [Fact]
+    public void Reject_ByDifferentUser_ShouldSucceed()
+    {
+        // Arrange
+        var decision = DisciplinaryDecision.Create(_caseId, DecisionType.FormalWarning, "Resumo", "Motivo", _now, _decidedByUserId);
+        decision.SubmitForApproval();
+
+        // Act
+        Action act = () => decision.Reject(_approvedByUserId, "Fundamentação insuficiente");
+
+        // Assert
+        act.Should().NotThrow();
+        decision.Status.Should().Be(DecisionStatus.Rejected);
+    }
+
+    [Fact]
+    public void Reject_WithEmptyUser_ShouldThrowBusinessRuleValidationException()
+    {
+        // Arrange
+        var decision = DisciplinaryDecision.Create(_caseId, DecisionType.FormalWarning, "Resumo", "Motivo", _now, _decidedByUserId);
+        decision.SubmitForApproval();
+
+        // Act
+        Action act = () => decision.Reject(Guid.Empty, "Motivo");
+
+        // Assert
+        act.Should().Throw<BusinessRuleValidationException>()
+            .WithMessage("O usuário responsável pela rejeição é obrigatório.");
     }
 
     [Fact]
@@ -196,7 +275,7 @@ public class DisciplinaryDecisionTests
         // Arrange
         var decision = DisciplinaryDecision.Create(_caseId, DecisionType.FormalWarning, "Resumo", "Motivo", _now, _decidedByUserId);
         decision.SubmitForApproval();
-        decision.Reject("Recusado");
+        decision.Reject(_approvedByUserId, "Recusado");
 
         // Act
         Action act = () => decision.SubmitForApproval();
@@ -212,7 +291,7 @@ public class DisciplinaryDecisionTests
         // Arrange
         var decision = DisciplinaryDecision.Create(_caseId, DecisionType.FormalWarning, "Resumo", "Motivo", _now, _decidedByUserId);
         decision.SubmitForApproval();
-        decision.Reject("Recusado");
+        decision.Reject(_approvedByUserId, "Recusado");
 
         // Act
         Action act = () => decision.Approve(_approvedByUserId, _now.AddHours(1));
