@@ -20,5 +20,7 @@ public interface IUserRepository
     Task<List<RefreshToken>> GetActiveRefreshTokensByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<List<UserSession>> GetActiveUserSessionsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<UserSession?> GetUserSessionAsync(Guid sessionId, Guid userId, CancellationToken cancellationToken = default);
+    /// <summary>Nome completo por id, para exibição (inclui usuários removidos logicamente).</summary>
+    Task<Dictionary<Guid, string>> GetFullNamesAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default);
     Task<List<PasswordHistory>> GetRecentPasswordHistoriesAsync(Guid userId, int take, CancellationToken cancellationToken = default);
 }

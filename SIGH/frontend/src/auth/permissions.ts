@@ -29,6 +29,7 @@ export const PERMISSIONS = {
   DISCIPLINARY_CASES_ADD_OCCURRENCE: 'Disciplinary.Cases.AddOccurrence',
   DISCIPLINARY_CASES_ADD_EMPLOYEE: 'Disciplinary.Cases.AddEmployee',
   DISCIPLINARY_CASES_ADD_EVIDENCE: 'Disciplinary.Cases.AddEvidence',
+  DISCIPLINARY_CASES_REMOVE_EVIDENCE: 'Disciplinary.Cases.RemoveEvidence',
   DISCIPLINARY_CASES_RECORD_DECISION: 'Disciplinary.Cases.RecordDecision',
   DISCIPLINARY_CASES_APPLY_MEASURE: 'Disciplinary.Cases.ApplyMeasure',
   DISCIPLINARY_CASES_CANCEL: 'Disciplinary.Cases.Cancel',
@@ -46,6 +47,7 @@ export const PERMISSIONS = {
   NOTIFICATIONS_VIEW: 'Notifications.View',
   NOTIFICATIONS_READ: 'Notifications.Read',
   NOTIFICATIONS_MANAGE: 'Notifications.Manage',
+  AUDIT_VIEW: 'Audit.View',
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

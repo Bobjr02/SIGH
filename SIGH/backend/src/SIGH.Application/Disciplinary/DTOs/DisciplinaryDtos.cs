@@ -30,12 +30,16 @@ public record CaseEmployeeDto(
     CaseEmployeeRole Role,
     bool IsPrimarySubject);
 
+/// <summary>
+/// Evidência no detalhe do processo. O caminho físico do arquivo (StorageReference) nunca é exposto;
+/// o download é feito por GET .../evidences/{id}/file.
+/// </summary>
 public record EvidenceDto(
     Guid Id,
     EvidenceType EvidenceType,
     string Title,
     string? Description,
-    string? StorageReference,
+    bool HasFile,
     string? OriginalFileName,
     string? ContentType,
     long? FileSize,
@@ -43,7 +47,10 @@ public record EvidenceDto(
     DateTimeOffset CollectedAt,
     Guid CollectedByUserId,
     string? IntegrityHash,
-    EvidenceStatus Status);
+    EvidenceStatus Status,
+    DateTimeOffset? FileUploadedAt = null,
+    Guid? FileUploadedByUserId = null,
+    string? FileUploadedByName = null);
 
 public record DecisionDto(
     Guid Id,

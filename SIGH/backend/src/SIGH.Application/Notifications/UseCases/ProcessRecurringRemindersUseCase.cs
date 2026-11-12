@@ -19,6 +19,7 @@ public class ProcessRecurringRemindersUseCase : IProcessRecurringRemindersUseCas
     private readonly IApplicationDbContext _context;
     private readonly NotificationReminderOptions _reminderOptions;
     private readonly ILogger<ProcessRecurringRemindersUseCase> _logger;
+    private readonly SIGH.Application.Email.IDeadlineAlertEmailer? _deadlineAlerts;
 
     public ProcessRecurringRemindersUseCase(
         IDeadlineMonitoringQueryRepository queryRepository,
@@ -26,8 +27,10 @@ public class ProcessRecurringRemindersUseCase : IProcessRecurringRemindersUseCas
         IDateTimeProvider dateTimeProvider,
         IApplicationDbContext context,
         IOptions<NotificationReminderOptions> reminderOptions,
-        ILogger<ProcessRecurringRemindersUseCase> logger)
+        ILogger<ProcessRecurringRemindersUseCase> logger,
+        SIGH.Application.Email.IDeadlineAlertEmailer? deadlineAlerts = null)
     {
+        _deadlineAlerts = deadlineAlerts;
         _queryRepository = queryRepository;
         _notificationRepository = notificationRepository;
         _dateTimeProvider = dateTimeProvider;
@@ -100,6 +103,7 @@ public class ProcessRecurringRemindersUseCase : IProcessRecurringRemindersUseCas
                             metadata: $"SourceEntity={item.SourceEntity};SourceId={item.Id}");
 
                         await _notificationRepository.AddAsync(notification, cancellationToken);
+                        if (_deadlineAlerts is not null) await _deadlineAlerts.EnqueueAsync(notification, cancellationToken);
 
                         var newLog = NotificationLog.Create(
                             item.CompanyId,
@@ -153,6 +157,7 @@ public class ProcessRecurringRemindersUseCase : IProcessRecurringRemindersUseCas
                             metadata: $"SourceEntity={item.SourceEntity};SourceId={item.Id}");
 
                         await _notificationRepository.AddAsync(notification, cancellationToken);
+                        if (_deadlineAlerts is not null) await _deadlineAlerts.EnqueueAsync(notification, cancellationToken);
 
                         existingLog.RecordReminderSent(now, notification.Id);
                         await _notificationRepository.UpdateLogAsync(existingLog, cancellationToken);

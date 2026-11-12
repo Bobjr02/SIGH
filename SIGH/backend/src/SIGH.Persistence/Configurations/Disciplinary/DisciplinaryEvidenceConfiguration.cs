@@ -52,6 +52,11 @@ public class DisciplinaryEvidenceConfiguration : IEntityTypeConfiguration<Discip
             .IsRequired()
             .HasConversion<int>();
 
+        builder.Property(ev => ev.RemovalReason)
+            .HasMaxLength(DisciplinaryDomainConstants.EvidenceRemovalReasonMaxLength);
+
+        builder.Ignore(ev => ev.HasFile);
+
         // Relationship
         builder.HasOne<DisciplinaryOccurrence>()
             .WithMany()

@@ -16,13 +16,25 @@ public class CreateUserService : ICreateUserService
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly PasswordOptions _passwordOptions;
+    private readonly SIGH.Application.Authentication.PasswordTokens.IPasswordTokenService? _tokens;
+    private readonly SIGH.Application.Email.IEmailOutbox? _outbox;
+    private readonly IRandomStringGenerator? _random;
+    private readonly AppOptions _appOptions;
 
     public CreateUserService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        IOptions<PasswordOptions> passwordOptions)
+        IOptions<PasswordOptions> passwordOptions,
+        SIGH.Application.Authentication.PasswordTokens.IPasswordTokenService? tokens = null,
+        SIGH.Application.Email.IEmailOutbox? outbox = null,
+        IRandomStringGenerator? random = null,
+        IOptions<AppOptions>? appOptions = null)
     {
+        _tokens = tokens;
+        _outbox = outbox;
+        _random = random;
+        _appOptions = appOptions?.Value ?? new AppOptions();
         _context = context;
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
@@ -31,11 +43,20 @@ public class CreateUserService : ICreateUserService
 
     public async Task<CreateUserResponse> CreateUserAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
     {
-        // Validar complexidade da senha inicial
-        var (isValid, errorMessage) = PasswordComplexityValidator.Validate(request.InitialPassword, _passwordOptions);
-        if (!isValid)
+        // Senha inicial opcional. Sem ela, a conta recebe uma senha aleatória que ninguém conhece:
+        // o acesso só é possível pelo link de definição de senha enviado por e-mail.
+        var hasInitialPassword = !string.IsNullOrWhiteSpace(request.InitialPassword);
+        if (hasInitialPassword)
         {
-            throw new BusinessRuleValidationException(errorMessage);
+            var (isValid, errorMessage) = PasswordComplexityValidator.Validate(request.InitialPassword!, _passwordOptions);
+            if (!isValid)
+            {
+                throw new BusinessRuleValidationException(errorMessage);
+            }
+        }
+        else if (_random is null)
+        {
+            throw new BusinessRuleValidationException("A senha inicial é obrigatória.");
         }
 
         var email = request.Email.Trim().ToLowerInvariant();
@@ -61,7 +82,7 @@ public class CreateUserService : ICreateUserService
             throw new BusinessRuleValidationException("Um ou mais perfis (Roles) fornecidos são inválidos ou inexistentes.");
         }
 
-        var passwordHash = _passwordHasher.HashPassword(request.InitialPassword);
+        var passwordHash = _passwordHasher.HashPassword(hasInitialPassword ? request.InitialPassword! : _random!.GenerateRandomString(64));
 
         var user = new User
         {
@@ -90,6 +111,20 @@ public class CreateUserService : ICreateUserService
         });
 
         await _userRepository.AddAsync(user, cancellationToken);
+
+        // E-mail de conta criada, com link de definição de senha (nunca a senha). Mesma transação.
+        if (_tokens is not null && _outbox is not null)
+        {
+            var rawToken = await _tokens.IssueAsync(user.Id, PasswordTokenPurpose.AccountSetup, cancellationToken);
+            var hours = (int)_tokens.LifetimeOf(PasswordTokenPurpose.AccountSetup).TotalHours;
+            _outbox.Enqueue(user.Email, SIGH.Application.Email.EmailTemplates.AccountCreated(
+                user.FullName,
+                user.Email,
+                _appOptions.BuildUrl($"/reset-password?token={Uri.EscapeDataString(rawToken)}&setup=1"),
+                hours,
+                _appOptions.BuildUrl("/login")));
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return new CreateUserResponse(

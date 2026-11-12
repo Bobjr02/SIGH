@@ -46,6 +46,7 @@ public static class PermissionCodes
         public const string AddOccurrence = "Disciplinary.Cases.AddOccurrence";
         public const string AddEmployee = "Disciplinary.Cases.AddEmployee";
         public const string AddEvidence = "Disciplinary.Cases.AddEvidence";
+        public const string RemoveEvidence = "Disciplinary.Cases.RemoveEvidence";
         public const string RecordDecision = "Disciplinary.Cases.RecordDecision";
         public const string ApplyMeasure = "Disciplinary.Cases.ApplyMeasure";
         public const string Cancel = "Disciplinary.Cases.Cancel";
@@ -68,6 +69,11 @@ public static class PermissionCodes
         public const string ViewMeasures = "Disciplinary.Reports.ViewMeasures";
         public const string ViewEmployeeHistory = "Disciplinary.Reports.ViewEmployeeHistory";
         public const string Export = "Disciplinary.Reports.Export";
+    }
+
+    public static class Audit
+    {
+        public const string View = "Audit.View";
     }
 
     public static class Notifications
@@ -108,6 +114,7 @@ public static class PermissionCodes
         new(DisciplinaryCases.AddOccurrence, "Registrar ocorrências", "Registrar ocorrências em processos disciplinares."),
         new(DisciplinaryCases.AddEmployee, "Vincular funcionários a processos", "Vincular funcionários envolvidos a processos disciplinares."),
         new(DisciplinaryCases.AddEvidence, "Anexar evidências", "Anexar evidências a processos disciplinares."),
+        new(DisciplinaryCases.RemoveEvidence, "Remover evidências", "Remover logicamente evidências de processos disciplinares, informando o motivo."),
         new(DisciplinaryCases.RecordDecision, "Registrar decisões", "Registrar a decisão fundamentada de processos disciplinares."),
         new(DisciplinaryCases.ApplyMeasure, "Aplicar medidas disciplinares", "Aplicar medidas disciplinares aos funcionários envolvidos."),
         new(DisciplinaryCases.Cancel, "Cancelar processos disciplinares", "Cancelar processos disciplinares informando o motivo."),
@@ -131,5 +138,8 @@ public static class PermissionCodes
         new(Notifications.View, "Visualizar notificações", "Consultar as próprias notificações."),
         new(Notifications.Read, "Marcar notificações como lidas", "Marcar as próprias notificações como lidas."),
         new(Notifications.Manage, "Gerenciar notificações", "Executar rotinas administrativas de notificações."),
+
+        // Auditoria
+        new(Audit.View, "Consultar auditoria", "Consultar a trilha de auditoria do sistema."),
     };
 }

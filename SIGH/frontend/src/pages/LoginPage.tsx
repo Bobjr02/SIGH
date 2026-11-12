@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Navigate, useLocation, useNavigate, type Location } from 'react-router-dom';
-import { Alert, Box, Button, CircularProgress, Paper, TextField, Typography } from '@mui/material';
+import { Link as RouterLink, Navigate, useLocation, useNavigate, type Location } from 'react-router-dom';
+import { Alert, Box, Button, CircularProgress, Link, Paper, TextField, Typography } from '@mui/material';
 import { Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { authErrorMessage } from '../auth/apiErrorMessage';
@@ -91,6 +91,9 @@ export const LoginPage: React.FC = () => {
           <Button type="submit" variant="contained" size="large" disabled={isSubmitting}>
             {isSubmitting ? <CircularProgress size={22} color="inherit" /> : 'Entrar'}
           </Button>
+          <Link component={RouterLink} to="/forgot-password" variant="body2" sx={{ alignSelf: 'center' }}>
+            Esqueci minha senha
+          </Link>
         </Box>
       </Paper>
     </Box>

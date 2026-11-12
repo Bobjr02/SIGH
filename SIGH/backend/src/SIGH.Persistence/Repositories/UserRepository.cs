@@ -135,4 +135,17 @@ public class UserRepository : IUserRepository
             .Take(take)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<Dictionary<Guid, string>> GetFullNamesAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default)
+    {
+        var ids = userIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<Guid, string>();
+
+        return await _context.Users
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(u => ids.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+    }
 }

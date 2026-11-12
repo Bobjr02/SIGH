@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +47,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// </summary>
     public System.Collections.Concurrent.ConcurrentDictionary<string, (string AccessToken, Guid UserId)> TokenCache { get; } = new();
 
+    /// <summary>Relógio da API (IDateTimeProvider). Volta ao tempo real a cada reset do banco.</summary>
+    public TestClock Clock { get; } = new();
+
+    public const string PublicBaseUrl = "https://sigh.test";
+
+    /// <summary>Raiz do storage de evidências desta execução (diretório temporário, fora da aplicação).</summary>
+    public string StorageRoot { get; } = Path.Combine(Path.GetTempPath(), "sigh-it-storage", Guid.NewGuid().ToString("N"));
+
     public CustomWebApplicationFactory()
     {
         // HTTPS: o cookie do refresh token é Secure e só é reenviado pelo HttpClient em https.
@@ -63,6 +73,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         // "Testing": não carrega appsettings.Development.json nem user-secrets da máquina.
         builder.UseEnvironment("Testing");
 
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IDateTimeProvider>();
+            services.AddSingleton<IDateTimeProvider>(Clock);
+            services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter, LoopbackRemoteIpStartupFilter>();
+        });
+
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -77,7 +94,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["Seed:DefaultCompanyName"] = "Empresa Padrão (Testes)",
                 // O schema é criado uma vez por execução em SqlServerTestDatabase.
                 ["Database:ApplyMigrationsOnStartup"] = "false",
-                ["BackgroundWorkerOptions:Enabled"] = "false"
+                ["BackgroundWorkerOptions:Enabled"] = "false",
+                ["Storage:Local:RootPath"] = StorageRoot,
+                ["App:PublicBaseUrl"] = PublicBaseUrl,
+                // Os testes leem os e-mails direto da outbox; o worker de envio fica desligado.
+                ["Email:Enabled"] = "false",
+                ["Email:Outbox:DispatcherEnabled"] = "false",
+                // Limitadores são em memória e compartilhados pelos testes do mesmo host;
+                // PasswordRecoveryTests cobre o limite com um host próprio.
+                ["RateLimits:ForgotPassword:PermitLimit"] = "1000",
+                ["RateLimits:ResetPassword:PermitLimit"] = "1000"
             });
         });
     }
@@ -88,6 +114,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// </summary>
     public async Task ResetDatabaseAsync()
     {
+        Clock.Reset();
         await SqlServerTestDatabase.ResetAsync();
 
         await using var scope = Services.CreateAsyncScope();

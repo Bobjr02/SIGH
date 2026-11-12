@@ -47,3 +47,6 @@ mssql-data/
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Dados locais da API (storage de evidências em dev)
+SIGH/backend/.data/

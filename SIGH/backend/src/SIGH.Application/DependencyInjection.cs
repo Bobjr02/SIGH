@@ -31,8 +31,8 @@ public static class DependencyInjection
         // JwtOptions é registrado e validado em SIGH.Infrastructure (AddInfrastructure).
         services.Configure<PasswordOptions>(configuration.GetSection(PasswordOptions.SectionName));
         services.Configure<TokenOptions>(configuration.GetSection(TokenOptions.SectionName));
+        services.Configure<AuthOptions>(configuration.GetSection(AuthOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
-        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));
         services.Configure<NotificationReminderOptions>(configuration.GetSection(NotificationReminderOptions.SectionName));
         services.Configure<BackgroundWorkerOptions>(configuration.GetSection(BackgroundWorkerOptions.SectionName));
@@ -47,6 +47,13 @@ public static class DependencyInjection
         services.AddScoped<IChangePasswordService, ChangePasswordService>();
         services.AddScoped<SIGH.Application.Authentication.CurrentUser.IGetCurrentUserService, SIGH.Application.Authentication.CurrentUser.GetCurrentUserService>();
         services.AddScoped<ICreateUserService, CreateUserService>();
+        services.AddScoped<SIGH.Application.Authentication.PasswordTokens.IPasswordTokenService, SIGH.Application.Authentication.PasswordTokens.PasswordTokenService>();
+        services.AddScoped<SIGH.Application.Email.IDeadlineAlertEmailer, SIGH.Application.Email.DeadlineAlertEmailer>();
+
+        // Evidências: upload, download e remoção lógica
+        services.AddScoped<SIGH.Application.Disciplinary.Evidences.IUploadEvidenceFileUseCase, SIGH.Application.Disciplinary.Evidences.UploadEvidenceFileUseCase>();
+        services.AddScoped<SIGH.Application.Disciplinary.Evidences.IDownloadEvidenceFileUseCase, SIGH.Application.Disciplinary.Evidences.DownloadEvidenceFileUseCase>();
+        services.AddScoped<SIGH.Application.Disciplinary.Evidences.IRemoveEvidenceUseCase, SIGH.Application.Disciplinary.Evidences.RemoveEvidenceUseCase>();
         services.AddScoped<IUnlockUserService, UnlockUserService>();
         services.AddScoped<IChangeUserStatusService, ChangeUserStatusService>();
         services.AddScoped<IGetUsersService, GetUsersService>();

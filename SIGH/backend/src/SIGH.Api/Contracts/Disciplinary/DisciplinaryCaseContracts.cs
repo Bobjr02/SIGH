@@ -47,16 +47,10 @@ public record AddEvidenceHttpRequest(
     string Title,
     DateTimeOffset CollectedAt,
     Guid? OccurrenceId = null,
-    string? Description = null,
-    string? StorageReference = null,
-    string? OriginalFileName = null,
-    string? ContentType = null,
-    long? FileSize = null,
-    string? IntegrityHash = null)
+    string? Description = null)
 {
     public AddEvidenceRequest ToApplicationRequest(Guid caseId, Guid actorUserId) =>
-        new(caseId, EvidenceType, Title, actorUserId, CollectedAt, OccurrenceId, Description,
-            StorageReference, OriginalFileName, ContentType, FileSize, IntegrityHash);
+        new(caseId, EvidenceType, Title, actorUserId, CollectedAt, OccurrenceId, Description);
 }
 
 public record RecordDecisionHttpRequest(

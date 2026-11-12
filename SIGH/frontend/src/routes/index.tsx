@@ -9,6 +9,9 @@ import { MainLayout } from '../layouts/MainLayout';
 // Páginas carregadas sob demanda: cada uma vira um chunk separado do bundle principal.
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const ChangePasswordPage = lazy(() => import('../pages/ChangePasswordPage'));
+const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'));
+const AuditPage = lazy(() => import('../features/audit/pages/AuditPage'));
 const Home = lazy(() => import('../pages/Home').then((m) => ({ default: m.Home })));
 const NotificationsPage = lazy(() =>
   import('../features/notifications/pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
@@ -59,6 +62,9 @@ export const AppRoutes: React.FC = () => {
     <Suspense fallback={<FullScreenLoader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* Públicas: recuperação de senha e definição no primeiro acesso. */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path={CHANGE_PASSWORD_PATH} element={<ChangePasswordPage />} />
@@ -96,6 +102,7 @@ export const AppRoutes: React.FC = () => {
               path="/disciplinary/reports/employees/history"
               element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY, <EmployeeDisciplinaryHistoryPage />)}
             />
+            <Route path="/audit" element={guard(PERMISSIONS.AUDIT_VIEW, <AuditPage />)} />
             <Route path="*" element={<Navigate to="/disciplinary/cases" replace />} />
           </Route>
         </Route>

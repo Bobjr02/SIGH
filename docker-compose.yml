@@ -22,6 +22,54 @@ services:
       retries: 10
       start_period: 20s
 
+  # Servidor SMTP de desenvolvimento: captura todos os e-mails (nada sai para a internet).
+  # SMTP em localhost:1025, interface web em http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: sigh-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+
+  # API em container (opcional: em dev normalmente roda com "dotnet run").
+  #   docker compose --profile api up -d --build
+  # Roda sem root (USER $APP_UID na imagem) e grava as evidências no volume nomeado sigh-evidences.
+  api:
+    profiles: ["api"]
+    build:
+      context: .
+      dockerfile: SIGH/backend/Dockerfile
+    container_name: sigh-api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    ports:
+      - "5080:3000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=SIGH_DB;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;"
+      JwtOptions__SecretKey: ${JwtOptions__SecretKey:-}
+      JwtOptions__Issuer: ${JwtOptions__Issuer:-SIGH.Api}
+      JwtOptions__Audience: ${JwtOptions__Audience:-SIGH.Client}
+      Seed__AdminEmail: ${Seed__AdminEmail:-}
+      Seed__AdminPassword: ${Seed__AdminPassword:-}
+      Database__ApplyMigrationsOnStartup: "true"
+      Storage__Local__RootPath: /var/lib/sigh/evidences
+      Email__Enabled: "true"
+      Email__Smtp__Host: mailpit
+      Email__Smtp__Port: "1025"
+      Email__Smtp__UseStartTls: "false"
+      Email__From: ${Email__From:-nao-responda@sigh.local}
+      App__PublicBaseUrl: ${App__PublicBaseUrl:-http://localhost:3000}
+    volumes:
+      - sigh-evidences:/var/lib/sigh/evidences
+
 volumes:
   sigh-mssql-data:
+    driver: local
+  sigh-evidences:
     driver: local

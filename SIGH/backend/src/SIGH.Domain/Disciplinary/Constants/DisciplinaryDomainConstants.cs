@@ -17,6 +17,7 @@ public static class DisciplinaryDomainConstants
     public const int ContentTypeMaxLength = 150;
     public const int IntegrityHashMaxLength = 256;
     public const int StorageReferenceMaxLength = 1000;
+    public const int EvidenceRemovalReasonMaxLength = 1000;
     
     public const int InfractionCodeMaxLength = 50;
     public const int InfractionNameMaxLength = 100;

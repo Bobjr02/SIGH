@@ -55,6 +55,21 @@ export const authApi = {
     return response.data.data;
   },
 
+  /** Sempre devolve a mesma mensagem genérica, exista ou não a conta. */
+  forgotPassword: async (email: string): Promise<string> => {
+    const response = await api.post<ApiResult<{ success: boolean; message: string }>>(
+      '/v1/auth/forgot-password',
+      { email },
+      { skipAuthRefresh: true },
+    );
+    return response.data.data?.message ?? response.data.message ?? '';
+  },
+
+  /** Redefine (ou define, no primeiro acesso) a senha com o token do link do e-mail. */
+  resetPassword: async (token: string, newPassword: string): Promise<void> => {
+    await api.post('/v1/auth/reset-password', { token, newPassword }, { skipAuthRefresh: true });
+  },
+
   logout: async (): Promise<void> => {
     await api.post('/v1/auth/logout', null, { withCredentials: true, skipAuthRefresh: true });
   },

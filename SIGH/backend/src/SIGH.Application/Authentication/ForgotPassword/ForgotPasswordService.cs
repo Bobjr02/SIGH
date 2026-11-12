@@ -1,39 +1,65 @@
-using SIGH.Application.Interfaces;
+using Microsoft.Extensions.Options;
+using SIGH.Application.Authentication.PasswordTokens;
+using SIGH.Application.Common.Interfaces;
+using SIGH.Application.Email;
+using SIGH.Application.Options;
+using SIGH.Application.Security;
+using SIGH.Domain.Entities;
+using SIGH.Domain.Enums;
 using SIGH.Domain.Repositories;
 
 namespace SIGH.Application.Authentication.ForgotPassword;
 
 public class ForgotPasswordService : IForgotPasswordService
 {
+    public const string GenericMessage =
+        "Se o e-mail informado estiver cadastrado, você receberá as instruções para redefinir a senha.";
+
+    private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
-    private readonly IRandomStringGenerator _randomStringGenerator;
-    private readonly IEmailService _emailService;
+    private readonly IPasswordTokenService _tokens;
+    private readonly IEmailOutbox _outbox;
+    private readonly ISecurityAuditLogger _securityAudit;
+    private readonly AppOptions _appOptions;
 
     public ForgotPasswordService(
+        IApplicationDbContext context,
         IUserRepository userRepository,
-        IRandomStringGenerator randomStringGenerator,
-        IEmailService emailService)
+        IPasswordTokenService tokens,
+        IEmailOutbox outbox,
+        ISecurityAuditLogger securityAudit,
+        IOptions<AppOptions> appOptions)
     {
+        _context = context;
         _userRepository = userRepository;
-        _randomStringGenerator = randomStringGenerator;
-        _emailService = emailService;
+        _tokens = tokens;
+        _outbox = outbox;
+        _securityAudit = securityAudit;
+        _appOptions = appOptions.Value;
     }
 
+    /// <summary>
+    /// Sempre devolve a mesma resposta, exista ou não o e-mail (sem enumeração de usuários). O e-mail
+    /// vai pela outbox: a requisição não espera o SMTP.
+    /// </summary>
     public async Task<ForgotPasswordResponse> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
-        var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
+        var email = (request.Email ?? string.Empty).Trim().ToLowerInvariant();
+        var user = string.IsNullOrEmpty(email) ? null : await _userRepository.GetByEmailAsync(email, cancellationToken);
 
-        if (user != null)
+        // Contas inativas ou suspensas não recebem link (o administrador precisa reativá-las).
+        if (user is not null && user.Status is not (UserStatus.Inactive or UserStatus.Suspended))
         {
-            var resetToken = _randomStringGenerator.GenerateRandomString(32);
-            var subject = "Redefinição de Senha - SIGH";
-            var body = $"Olá {user.FullName}, utilize o token/código a seguir para redefinir sua senha: {resetToken}";
+            var rawToken = await _tokens.IssueAsync(user.Id, PasswordTokenPurpose.PasswordReset, cancellationToken);
+            var link = _appOptions.BuildUrl($"/reset-password?token={Uri.EscapeDataString(rawToken)}");
+            var minutes = (int)_tokens.LifetimeOf(PasswordTokenPurpose.PasswordReset).TotalMinutes;
 
-            await _emailService.SendEmailAsync(user.Email, subject, body, cancellationToken);
+            _outbox.Enqueue(user.Email, EmailTemplates.PasswordReset(user.FullName, link, minutes));
+            await _context.SaveChangesAsync(cancellationToken);
+
+            await _securityAudit.RecordAsync(SecurityAuditActions.PasswordResetRequested, user.Id, null, cancellationToken);
         }
 
-        // Sempre retorna mensagem genérica para mitigar enumeração de contas
-        return new ForgotPasswordResponse(true, "Se o e-mail informado estiver cadastrado em nosso sistema, as instruções para redefinição de senha foram enviadas.");
+        return new ForgotPasswordResponse(true, GenericMessage);
     }
 }

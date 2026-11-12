@@ -517,16 +517,46 @@ public class DisciplinaryCase : AuditableEntity
         evidence.MarkAsRejected();
     }
 
-    public void RemoveEvidence(Guid evidenceId)
+    /// <summary>Lança se a evidência não puder receber arquivo (processo encerrado, evidência inexistente ou já com arquivo).</summary>
+    public void EnsureEvidenceAcceptsFile(Guid evidenceId)
     {
         EnsureNotCompletedOrCancelled();
 
-        var evidence = _evidences.FirstOrDefault(e => e.Id == evidenceId);
-        if (evidence != null)
-        {
-            _evidences.Remove(evidence);
-        }
+        var evidence = FindActiveEvidence(evidenceId);
+
+        if (evidence.EvidenceType == EvidenceType.Text)
+            throw new BusinessRuleValidationException("Evidências textuais não recebem arquivo.");
+
+        if (evidence.HasFile)
+            throw new BusinessRuleValidationException("Esta evidência já possui arquivo. Um arquivo enviado não pode ser substituído.");
     }
+
+    public void AttachEvidenceFile(
+        Guid evidenceId,
+        string storageReference,
+        string originalFileName,
+        string contentType,
+        long fileSize,
+        string sha256Hash,
+        Guid uploadedByUserId,
+        DateTimeOffset uploadedAt)
+    {
+        EnsureNotCompletedOrCancelled();
+
+        FindActiveEvidence(evidenceId).AttachFile(storageReference, originalFileName, contentType, fileSize, sha256Hash, uploadedByUserId, uploadedAt);
+    }
+
+    /// <summary>Remoção lógica da evidência, com motivo obrigatório. Nada é excluído fisicamente.</summary>
+    public void RemoveEvidence(Guid evidenceId, string reason, Guid removedByUserId, DateTimeOffset removedAt)
+    {
+        EnsureNotCompletedOrCancelled();
+
+        FindActiveEvidence(evidenceId).Remove(reason, removedByUserId, removedAt);
+    }
+
+    private DisciplinaryEvidence FindActiveEvidence(Guid evidenceId) =>
+        _evidences.FirstOrDefault(e => e.Id == evidenceId && !e.IsDeleted)
+        ?? throw new BusinessRuleValidationException("A evidência informada não pertence a este processo disciplinar.");
 
     public void AddMeasure(DisciplinaryMeasure measure)
     {

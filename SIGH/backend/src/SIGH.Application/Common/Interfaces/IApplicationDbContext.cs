@@ -15,6 +15,8 @@ public interface IApplicationDbContext
     DbSet<InfractionType> InfractionTypes { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<NotificationLog> NotificationLogs { get; }
+    DbSet<SIGH.Domain.Entities.PasswordResetToken> PasswordResetTokens { get; }
+    DbSet<SIGH.Domain.Entities.EmailOutboxMessage> EmailOutbox { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

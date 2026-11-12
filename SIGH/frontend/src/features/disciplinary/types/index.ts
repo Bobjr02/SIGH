@@ -192,16 +192,43 @@ export interface CaseEmployeeDto {
   notes?: string;
 }
 
+/** Evidência no detalhe do processo (espelha EvidenceDto do backend). */
 export interface EvidenceDto {
   id: string;
-  type: EvidenceType;
-  description: string;
-  collectedByUserId: string;
+  evidenceType: EvidenceType;
+  title: string;
+  description?: string | null;
+  hasFile: boolean;
+  originalFileName?: string | null;
+  contentType?: string | null;
+  fileSize?: number | null;
+  occurrenceId?: string | null;
   collectedAt: string;
-  occurrenceId?: string;
-  referenceCode?: string;
-  location?: string;
+  collectedByUserId: string;
+  /** SHA-256 (hex) calculado no servidor. */
+  integrityHash?: string | null;
   status: EvidenceStatus;
+  fileUploadedAt?: string | null;
+  fileUploadedByUserId?: string | null;
+  fileUploadedByName?: string | null;
+}
+
+export interface AddEvidenceResponse {
+  id: string;
+  disciplinaryCaseId: string;
+  evidenceType: EvidenceType;
+  status: EvidenceStatus;
+  collectedAt: string;
+}
+
+export interface EvidenceFileDto {
+  evidenceId: string;
+  originalFileName: string;
+  contentType: string;
+  fileSize: number;
+  sha256Hash: string;
+  uploadedAt: string;
+  uploadedByUserId: string;
 }
 
 export interface DecisionDto {

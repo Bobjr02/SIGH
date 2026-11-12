@@ -89,7 +89,8 @@ public class PasswordHistoryTests
             new SystemDateTimeProvider(),
             Options.Create(new PasswordOptions { PasswordHistoryLimit = 3 }),
             Options.Create(new JwtOptions { ExpiryInMinutes = 60 }),
-            Options.Create(new TokenOptions())
+            Options.Create(new TokenOptions()),
+            Moq.Mock.Of<SIGH.Application.Security.ISecurityAuditLogger>()
         );
 
         // Tentar reusar pwd2 (que está no histórico de 3)
@@ -146,7 +147,8 @@ public class PasswordHistoryTests
             new SystemDateTimeProvider(),
             Options.Create(new PasswordOptions { PasswordHistoryLimit = 3 }),
             Options.Create(new JwtOptions { ExpiryInMinutes = 60 }),
-            Options.Create(new TokenOptions())
+            Options.Create(new TokenOptions()),
+            Moq.Mock.Of<SIGH.Application.Security.ISecurityAuditLogger>()
         );
 
         var request = new ChangePasswordRequest(user.Id, currentPwd, newPwd);

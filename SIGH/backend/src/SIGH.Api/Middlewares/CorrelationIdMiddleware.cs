@@ -19,9 +19,14 @@ public class CorrelationIdMiddleware
             correlationId = Guid.NewGuid().ToString();
         }
 
-        context.Response.Headers[CorrelationIdHeaderName] = correlationId;
+        // Id externo é só para rastreio: limita o tamanho antes de reaproveitar em logs e auditoria.
+        var id = correlationId.ToString();
+        if (id.Length > 100) id = id[..100];
 
-        using (LogContext.PushProperty("CorrelationId", correlationId.ToString()))
+        context.Response.Headers[CorrelationIdHeaderName] = id;
+        context.Items[SIGH.Infrastructure.Services.HttpRequestContext.CorrelationIdItemKey] = id;
+
+        using (LogContext.PushProperty("CorrelationId", id))
         using (LogContext.PushProperty("RequestId", context.TraceIdentifier))
         {
             await _next(context);

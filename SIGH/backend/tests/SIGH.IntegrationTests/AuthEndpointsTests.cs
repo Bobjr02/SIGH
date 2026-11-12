@@ -100,11 +100,14 @@ public class AuthEndpointsTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Refresh_WithRotatedCookie_IsRejectedAndCookieIsDeleted()
+    public async Task Refresh_WithRotatedCookie_AfterGraceWindow_IsRejectedAndCookieIsDeleted()
     {
         using var client = Factory.CreateClient();
         var (_, firstCookie) = await AuthTestHelpers.LoginAsync(client, AdminEmail, CustomWebApplicationFactory.DefaultPassword);
         (await client.PostAsync("/api/v1/auth/refresh", null)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Dentro da janela de tolerância (Auth:RefreshTokenReuseGraceSeconds) o cookie antigo ainda vale.
+        Factory.Clock.Advance(TimeSpan.FromMinutes(1));
 
         using var replayClient = AuthTestHelpers.CreateClientWithoutCookieJar(Factory, refreshToken: firstCookie.Value);
         var response = await replayClient.PostAsync("/api/v1/auth/refresh", null);
