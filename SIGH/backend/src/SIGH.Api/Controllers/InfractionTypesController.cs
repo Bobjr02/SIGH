@@ -47,7 +47,7 @@ public class InfractionTypesController : BaseController
     /// </summary>
     /// <description>Cadastra um novo tipo de infração disciplinar no sistema SIGH.</description>
     [HttpPost]
-    [Permission("Disciplinary.InfractionTypes.Create")]
+    [Permission(PermissionCodes.InfractionTypes.Create)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<CreateInfractionTypeResponse>), StatusCodes.Status201Created)]
@@ -69,7 +69,7 @@ public class InfractionTypesController : BaseController
     /// <description>Retorna os detalhes de um tipo de infração disciplinar por seu identificador único.</description>
     [HttpGet("/api/v1/InfractionTypes/{id:guid}", Name = "GetInfractionTypeById")]
     [HttpGet("/api/v1/infraction-types/{id:guid}")]
-    [Permission("Disciplinary.InfractionTypes.View")]
+    [Permission(PermissionCodes.InfractionTypes.View)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<GetInfractionTypeByIdResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<GetInfractionTypeByIdResponse>), StatusCodes.Status404NotFound)]
@@ -88,7 +88,7 @@ public class InfractionTypesController : BaseController
     /// </summary>
     /// <description>Obtém a listagem paginada de tipos de infração disciplinar cadastrados.</description>
     [HttpGet]
-    [Permission("Disciplinary.InfractionTypes.View")]
+    [Permission(PermissionCodes.InfractionTypes.View)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<PagedResult<InfractionTypeDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -106,7 +106,7 @@ public class InfractionTypesController : BaseController
     /// </summary>
     /// <description>Atualiza os dados cadastrais de um tipo de infração disciplinar existente.</description>
     [HttpPut("{id:guid}")]
-    [Permission("Disciplinary.InfractionTypes.Update")]
+    [Permission(PermissionCodes.InfractionTypes.Update)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<UpdateInfractionTypeResponse>), StatusCodes.Status200OK)]
@@ -129,7 +129,7 @@ public class InfractionTypesController : BaseController
     /// </summary>
     /// <description>Ativa um tipo de infração disciplinar inativo.</description>
     [HttpPost("{id:guid}/activate")]
-    [Permission("Disciplinary.InfractionTypes.Activate")]
+    [Permission(PermissionCodes.InfractionTypes.Activate)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<ActivateInfractionTypeResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<ActivateInfractionTypeResponse>), StatusCodes.Status400BadRequest)]
@@ -150,7 +150,7 @@ public class InfractionTypesController : BaseController
     /// </summary>
     /// <description>Desativa um tipo de infração disciplinar ativo.</description>
     [HttpPost("{id:guid}/deactivate")]
-    [Permission("Disciplinary.InfractionTypes.Deactivate")]
+    [Permission(PermissionCodes.InfractionTypes.Deactivate)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<DeactivateInfractionTypeResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<DeactivateInfractionTypeResponse>), StatusCodes.Status400BadRequest)]

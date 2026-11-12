@@ -84,7 +84,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Cria um rascunho de processo disciplinar no sistema.</description>
     [HttpPost]
-    [Permission("Disciplinary.Cases.Create")]
+    [Permission(PermissionCodes.DisciplinaryCases.Create)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<CreateDisciplinaryCaseResponse>), StatusCodes.Status201Created)]
@@ -107,7 +107,7 @@ public class DisciplinaryCasesController : BaseController
     /// <description>Obtém os detalhes completos do processo disciplinar, incluindo ocorrências, envolvidos, evidências, decisões e medidas.</description>
     [HttpGet("/api/v1/DisciplinaryCases/{id:guid}", Name = "GetDisciplinaryCaseById")]
     [HttpGet("/api/v1/disciplinary-cases/{id:guid}")]
-    [Permission("Disciplinary.Cases.View")]
+    [Permission(PermissionCodes.DisciplinaryCases.View)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<GetDisciplinaryCaseByIdResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<GetDisciplinaryCaseByIdResponse>), StatusCodes.Status404NotFound)]
@@ -126,7 +126,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Retorna uma lista paginada de processos disciplinares filtrados por empresa, status, prioridade ou termo de busca.</description>
     [HttpGet]
-    [Permission("Disciplinary.Cases.View")]
+    [Permission(PermissionCodes.DisciplinaryCases.View)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<PagedResult<DisciplinaryCaseSummaryDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -144,7 +144,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Transiciona o status do processo disciplinar de Rascunho (Draft) para Aberto (Open).</description>
     [HttpPost("{id:guid}/open")]
-    [Permission("Disciplinary.Cases.Open")]
+    [Permission(PermissionCodes.DisciplinaryCases.Open)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<OpenCaseResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<OpenCaseResponse>), StatusCodes.Status400BadRequest)]
@@ -166,7 +166,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Inicia a fase de investigação de um processo disciplinar aberto.</description>
     [HttpPost("{id:guid}/start-investigation")]
-    [Permission("Disciplinary.Cases.StartInvestigation")]
+    [Permission(PermissionCodes.DisciplinaryCases.StartInvestigation)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<StartInvestigationResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<StartInvestigationResponse>), StatusCodes.Status400BadRequest)]
@@ -188,7 +188,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Encaminha o processo sob investigação para a etapa de julgamento/decisão.</description>
     [HttpPost("{id:guid}/submit-for-decision")]
-    [Permission("Disciplinary.Cases.SubmitForDecision")]
+    [Permission(PermissionCodes.DisciplinaryCases.SubmitForDecision)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<SubmitCaseForDecisionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<SubmitCaseForDecisionResponse>), StatusCodes.Status400BadRequest)]
@@ -210,7 +210,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Aprova a decisão registrada para o processo disciplinar.</description>
     [HttpPost("{id:guid}/approve-decision")]
-    [Permission("Disciplinary.Cases.ApproveDecision")]
+    [Permission(PermissionCodes.DisciplinaryCases.ApproveDecision)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<ApproveDecisionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<ApproveDecisionResponse>), StatusCodes.Status400BadRequest)]
@@ -232,7 +232,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Rejeita a decisão registrada com justificativa e retorna para análise.</description>
     [HttpPost("{id:guid}/reject-decision")]
-    [Permission("Disciplinary.Cases.RejectDecision")]
+    [Permission(PermissionCodes.DisciplinaryCases.RejectDecision)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<RejectDecisionResponse>), StatusCodes.Status200OK)]
@@ -255,7 +255,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Registra uma nova ocorrência com tipo de infração, gravidade e data no processo disciplinar.</description>
     [HttpPost("{id:guid}/occurrences")]
-    [Permission("Disciplinary.Cases.AddOccurrence")]
+    [Permission(PermissionCodes.DisciplinaryCases.AddOccurrence)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<AddOccurrenceResponse>), StatusCodes.Status200OK)]
@@ -278,7 +278,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Adiciona um funcionário ao processo com papel específico (Acusado, Testemunha, Noticiante, etc.).</description>
     [HttpPost("{id:guid}/employees")]
-    [Permission("Disciplinary.Cases.AddEmployee")]
+    [Permission(PermissionCodes.DisciplinaryCases.AddEmployee)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<AddEmployeeToCaseResponse>), StatusCodes.Status200OK)]
@@ -301,7 +301,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Registra uma evidência documental ou física vinculada ao processo disciplinar.</description>
     [HttpPost("{id:guid}/evidences")]
-    [Permission("Disciplinary.Cases.AddEvidence")]
+    [Permission(PermissionCodes.DisciplinaryCases.AddEvidence)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<AddEvidenceResponse>), StatusCodes.Status200OK)]
@@ -324,7 +324,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Registra a decisão fundamentada da autoridade julgadora para o processo.</description>
     [HttpPost("{id:guid}/decisions")]
-    [Permission("Disciplinary.Cases.RecordDecision")]
+    [Permission(PermissionCodes.DisciplinaryCases.RecordDecision)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<RecordDecisionResponse>), StatusCodes.Status200OK)]
@@ -347,7 +347,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Aplica a medida disciplinar acordada (ex: advertência escrita, suspensão) ao funcionário envolvido.</description>
     [HttpPost("{id:guid}/measures")]
-    [Permission("Disciplinary.Cases.ApplyMeasure")]
+    [Permission(PermissionCodes.DisciplinaryCases.ApplyMeasure)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<ApplyMeasureResponse>), StatusCodes.Status200OK)]
@@ -370,7 +370,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Cancela o processo disciplinar informando o motivo do cancelamento.</description>
     [HttpPost("{id:guid}/cancel")]
-    [Permission("Disciplinary.Cases.Cancel")]
+    [Permission(PermissionCodes.DisciplinaryCases.Cancel)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<CancelDisciplinaryCaseResponse>), StatusCodes.Status200OK)]
@@ -393,7 +393,7 @@ public class DisciplinaryCasesController : BaseController
     /// </summary>
     /// <description>Finaliza e conclui formalmente o processo disciplinar com um resumo conclusivo.</description>
     [HttpPost("{id:guid}/conclude")]
-    [Permission("Disciplinary.Cases.Conclude")]
+    [Permission(PermissionCodes.DisciplinaryCases.Conclude)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<ConcludeDisciplinaryCaseResponse>), StatusCodes.Status200OK)]

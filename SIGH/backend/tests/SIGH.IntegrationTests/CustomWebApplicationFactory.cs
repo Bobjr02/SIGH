@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using SIGH.Application.Interfaces;
-using SIGH.Application.Notifications.Common;
+using SIGH.Application.Common.Authorization;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Persistence.Context;
@@ -87,7 +87,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         var notificationsViewPerm = new Permission(Guid.NewGuid())
         {
-            Code = NotificationPermissions.View,
+            Code = PermissionCodes.Notifications.View,
             Name = "Visualizar Notificações",
             Description = "Permite visualizar notificações"
         };

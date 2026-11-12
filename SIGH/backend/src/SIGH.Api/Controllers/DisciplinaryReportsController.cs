@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIGH.Application.Common.Models;
-using SIGH.Application.Disciplinary.Common;
 using SIGH.Application.Disciplinary.Reports.DTOs;
 using SIGH.Application.Disciplinary.Reports.Queries;
 using SIGH.Application.Disciplinary.Reports.UseCases;
@@ -39,7 +38,7 @@ public class DisciplinaryReportsController : BaseController
     /// Retorna os indicadores e distribuições consolidada do dashboard disciplinar.
     /// </summary>
     [HttpGet("dashboard")]
-    [Permission(DisciplinaryReportPermissions.ViewDashboard)]
+    [Permission(PermissionCodes.DisciplinaryReports.ViewDashboard)]
     [ProducesResponseType(typeof(Result<DisciplinaryDashboardDto>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
@@ -68,7 +67,7 @@ public class DisciplinaryReportsController : BaseController
     /// Consulta analítica paginada de processos disciplinares.
     /// </summary>
     [HttpGet("cases")]
-    [Permission(DisciplinaryReportPermissions.ViewCases)]
+    [Permission(PermissionCodes.DisciplinaryReports.ViewCases)]
     [ProducesResponseType(typeof(Result<PagedResult<DisciplinaryCaseReportItemDto>>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
@@ -97,7 +96,7 @@ public class DisciplinaryReportsController : BaseController
     /// Exporta o relatório analítico de processos disciplinares em formato CSV UTF-8.
     /// </summary>
     [HttpGet("cases/export")]
-    [Permission(DisciplinaryReportPermissions.Export)]
+    [Permission(PermissionCodes.DisciplinaryReports.Export)]
     [ProducesResponseType(typeof(FileResult), 200, "text/csv")]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
@@ -134,7 +133,7 @@ public class DisciplinaryReportsController : BaseController
     /// Consulta paginada de medidas disciplinares aplicadas.
     /// </summary>
     [HttpGet("measures")]
-    [Permission(DisciplinaryReportPermissions.ViewMeasures)]
+    [Permission(PermissionCodes.DisciplinaryReports.ViewMeasures)]
     [ProducesResponseType(typeof(Result<PagedResult<DisciplinaryMeasureSummaryDto>>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]
@@ -163,7 +162,7 @@ public class DisciplinaryReportsController : BaseController
     /// Consulta o histórico disciplinar consolidado de um funcionário específico.
     /// </summary>
     [HttpGet("employees/{employeeId:guid}/history")]
-    [Permission(DisciplinaryReportPermissions.ViewEmployeeHistory)]
+    [Permission(PermissionCodes.DisciplinaryReports.ViewEmployeeHistory)]
     [ProducesResponseType(typeof(Result<EmployeeDisciplinaryHistoryDto>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 403)]

@@ -65,7 +65,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Cadastra um novo funcionário na empresa informada com validação de regras de negócio.</description>
     [HttpPost]
-    [Permission("Employees.Create")]
+    [Permission(PermissionCodes.Employees.Create)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<CreateEmployeeResponse>), StatusCodes.Status201Created)]
@@ -85,7 +85,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Retorna os detalhes completos de um funcionário a partir do seu identificador único (ID).</description>
     [HttpGet("{id:guid}", Name = "GetEmployeeById")]
-    [Permission("Employees.View")]
+    [Permission(PermissionCodes.Employees.View)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<GetEmployeeByIdResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<GetEmployeeByIdResponse>), StatusCodes.Status404NotFound)]
@@ -104,7 +104,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Obtém a listagem paginada de funcionários aplicando filtros como empresa, unidade gestora, departamento, cargo, status e termo de busca.</description>
     [HttpGet]
-    [Permission("Employees.View")]
+    [Permission(PermissionCodes.Employees.View)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<PagedResult<EmployeeListItemResponse>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -122,7 +122,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Atualiza os dados cadastrais e de identificação de um funcionário existente.</description>
     [HttpPut("{id:guid}")]
-    [Permission("Employees.Update")]
+    [Permission(PermissionCodes.Employees.Update)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<UpdateEmployeeResponse>), StatusCodes.Status200OK)]
@@ -145,7 +145,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Altera o cargo, unidade gestora e departamento associados ao funcionário.</description>
     [HttpPatch("{id:guid}/organizational-assignment")]
-    [Permission("Employees.ChangeOrganizationalAssignment")]
+    [Permission(PermissionCodes.Employees.ChangeOrganizationalAssignment)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
@@ -168,7 +168,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Define ou altera o gestor/supervisor responsável pelo funcionário.</description>
     [HttpPatch("{id:guid}/supervisor")]
-    [Permission("Employees.ChangeSupervisor")]
+    [Permission(PermissionCodes.Employees.ChangeSupervisor)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
@@ -191,7 +191,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Altera o status do funcionário conforme as regras de transição permitidas.</description>
     [HttpPatch("{id:guid}/status")]
-    [Permission("Employees.ChangeStatus")]
+    [Permission(PermissionCodes.Employees.ChangeStatus)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
@@ -214,7 +214,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Efetua o desligamento/demissão do funcionário com registro de data e motivo.</description>
     [HttpPatch("{id:guid}/terminate")]
-    [Permission("Employees.Terminate")]
+    [Permission(PermissionCodes.Employees.Terminate)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<TerminateEmployeeResponse>), StatusCodes.Status200OK)]
@@ -237,7 +237,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Reativa o cadastro de um funcionário desligado informando a nova data de admissão.</description>
     [HttpPatch("{id:guid}/reactivate")]
-    [Permission("Employees.Reactivate")]
+    [Permission(PermissionCodes.Employees.Reactivate)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
@@ -260,7 +260,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Associa uma conta de usuário do sistema ao cadastro do funcionário.</description>
     [HttpPatch("{id:guid}/link-user")]
-    [Permission("Employees.LinkUser")]
+    [Permission(PermissionCodes.Employees.LinkUser)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
@@ -283,7 +283,7 @@ public class EmployeesController : BaseController
     /// </summary>
     /// <description>Remove o vínculo da conta de usuário de sistema com o cadastro do funcionário.</description>
     [HttpPatch("{id:guid}/unlink-user")]
-    [Permission("Employees.UnlinkUser")]
+    [Permission(PermissionCodes.Employees.UnlinkUser)]
     [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result), StatusCodes.Status200OK)]
