@@ -11,16 +11,18 @@ public class SighDbContextFactory : IDesignTimeDbContextFactory<SighDbContext>
 {
     private const string ConnectionStringEnvironmentVariable = "ConnectionStrings__DefaultConnection";
 
-    // Fallback apenas para desenvolvimento local, compatível com o docker-compose.yml da raiz.
-    private const string LocalDevelopmentConnectionString =
-        "Server=localhost,1433;Database=SIGH_DB;User Id=sa;Password=YourStrong@Password2026!;TrustServerCertificate=True;";
+    // Fallback sem credenciais: basta para comandos que não abrem conexão
+    // (migrations add, has-pending-model-changes). Para "database update",
+    // defina ConnectionStrings__DefaultConnection com a connection string completa.
+    private const string DesignTimeFallbackConnectionString =
+        "Server=localhost,1433;Database=SIGH_DB;TrustServerCertificate=True;";
 
     public SighDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariable);
 
         if (string.IsNullOrWhiteSpace(connectionString))
-            connectionString = LocalDevelopmentConnectionString;
+            connectionString = DesignTimeFallbackConnectionString;
 
         var options = new DbContextOptionsBuilder<SighDbContext>()
             .UseSqlServer(connectionString, b => b.MigrationsAssembly(typeof(SighDbContext).Assembly.FullName))
