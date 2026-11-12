@@ -1,0 +1,9 @@
+<Project>
+  <!--
+    Projetos de produção (src/*): warning é erro. Os projetos de teste ficam fora
+    para não bloquear o build por avisos de bibliotecas de teste.
+  -->
+  <PropertyGroup Condition="$([MSBuild]::MakeRelative('$(MSBuildThisFileDirectory)', '$(MSBuildProjectDirectory)').Replace('\', '/').StartsWith('src/'))">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
