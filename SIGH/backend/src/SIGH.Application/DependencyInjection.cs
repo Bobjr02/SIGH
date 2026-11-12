@@ -31,6 +31,7 @@ public static class DependencyInjection
         // JwtOptions é registrado e validado em SIGH.Infrastructure (AddInfrastructure).
         services.Configure<PasswordOptions>(configuration.GetSection(PasswordOptions.SectionName));
         services.Configure<TokenOptions>(configuration.GetSection(TokenOptions.SectionName));
+        services.Configure<AuthOptions>(configuration.GetSection(AuthOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.Configure<NotificationOptions>(configuration.GetSection(NotificationOptions.SectionName));

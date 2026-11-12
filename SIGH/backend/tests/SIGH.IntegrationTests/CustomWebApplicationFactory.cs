@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +47,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// </summary>
     public System.Collections.Concurrent.ConcurrentDictionary<string, (string AccessToken, Guid UserId)> TokenCache { get; } = new();
 
+    /// <summary>Relógio da API (IDateTimeProvider). Volta ao tempo real a cada reset do banco.</summary>
+    public TestClock Clock { get; } = new();
+
     public CustomWebApplicationFactory()
     {
         // HTTPS: o cookie do refresh token é Secure e só é reenviado pelo HttpClient em https.
@@ -62,6 +67,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         // "Testing": não carrega appsettings.Development.json nem user-secrets da máquina.
         builder.UseEnvironment("Testing");
+
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IDateTimeProvider>();
+            services.AddSingleton<IDateTimeProvider>(Clock);
+        });
 
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
@@ -88,6 +99,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// </summary>
     public async Task ResetDatabaseAsync()
     {
+        Clock.Reset();
         await SqlServerTestDatabase.ResetAsync();
 
         await using var scope = Services.CreateAsyncScope();

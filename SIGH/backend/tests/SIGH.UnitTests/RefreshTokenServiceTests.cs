@@ -5,6 +5,7 @@ using Moq;
 using SIGH.Application.Authentication.RefreshToken;
 using SIGH.Application.Interfaces;
 using SIGH.Application.Options;
+using SIGH.Application.Security;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
@@ -80,8 +81,10 @@ public class RefreshTokenServiceTests
             _refreshTokenGenerator,
             _tokenHasher,
             mockDateTime.Object,
+            Mock.Of<ISecurityAuditLogger>(),
             Options.Create(new JwtOptions { ExpiryInMinutes = 60 }),
-            Options.Create(new TokenOptions { RefreshTokenExpirationInDays = 7 })
+            Options.Create(new TokenOptions { RefreshTokenExpirationInDays = 7 }),
+            Options.Create(new AuthOptions())
         );
 
         var request = new RefreshTokenRequest(rawToken);
@@ -168,8 +171,10 @@ public class RefreshTokenServiceTests
             _refreshTokenGenerator,
             _tokenHasher,
             mockDateTime.Object,
+            Mock.Of<ISecurityAuditLogger>(),
             Options.Create(new JwtOptions()),
-            Options.Create(new TokenOptions())
+            Options.Create(new TokenOptions()),
+            Options.Create(new AuthOptions())
         );
 
         var request = new RefreshTokenRequest(reusedRawToken);
