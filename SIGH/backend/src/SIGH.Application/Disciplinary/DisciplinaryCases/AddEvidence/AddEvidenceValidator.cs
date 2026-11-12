@@ -32,29 +32,5 @@ public class AddEvidenceValidator : AbstractValidator<AddEvidenceRequest>
 
         RuleFor(x => x.CollectedAt)
             .NotEmpty().WithMessage("A data de coleta é obrigatória.");
-
-        RuleFor(x => x.StorageReference)
-            .NotEmpty().WithMessage("A referência de armazenamento é obrigatória para evidências de arquivo.")
-            .MaximumLength(DisciplinaryDomainConstants.StorageReferenceMaxLength).WithMessage($"A referência de armazenamento deve ter no máximo {DisciplinaryDomainConstants.StorageReferenceMaxLength} caracteres.")
-            .When(x => x.EvidenceType != EvidenceType.Text);
-
-        RuleFor(x => x.OriginalFileName)
-            .NotEmpty().WithMessage("O nome original do arquivo é obrigatório para evidências de arquivo.")
-            .MaximumLength(DisciplinaryDomainConstants.OriginalFileNameMaxLength).WithMessage($"O nome original do arquivo deve ter no máximo {DisciplinaryDomainConstants.OriginalFileNameMaxLength} caracteres.")
-            .When(x => x.EvidenceType != EvidenceType.Text);
-
-        RuleFor(x => x.ContentType)
-            .NotEmpty().WithMessage("O tipo de conteúdo é obrigatório para evidências de arquivo.")
-            .MaximumLength(DisciplinaryDomainConstants.ContentTypeMaxLength).WithMessage($"O tipo de conteúdo deve ter no máximo {DisciplinaryDomainConstants.ContentTypeMaxLength} caracteres.")
-            .When(x => x.EvidenceType != EvidenceType.Text);
-
-        RuleFor(x => x.FileSize)
-            .NotNull().WithMessage("O tamanho do arquivo é obrigatório para evidências de arquivo.")
-            .GreaterThanOrEqualTo(0).WithMessage("O tamanho do arquivo não pode ser negativo.")
-            .When(x => x.EvidenceType != EvidenceType.Text);
-
-        RuleFor(x => x.IntegrityHash)
-            .MaximumLength(DisciplinaryDomainConstants.IntegrityHashMaxLength).WithMessage($"O hash de integridade deve ter no máximo {DisciplinaryDomainConstants.IntegrityHashMaxLength} caracteres.")
-            .When(x => !string.IsNullOrEmpty(x.IntegrityHash));
     }
 }

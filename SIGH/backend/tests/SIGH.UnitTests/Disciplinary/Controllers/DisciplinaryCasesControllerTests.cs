@@ -322,11 +322,7 @@ public class DisciplinaryCasesControllerTests
         var request = new AddEvidenceHttpRequest(
             EvidenceType.Document,
             "Relatório de catraca",
-            DateTimeOffset.UtcNow,
-            StorageReference: "evidences/relatorio-catraca.pdf",
-            OriginalFileName: "relatorio-catraca.pdf",
-            ContentType: "application/pdf",
-            FileSize: 1024);
+            DateTimeOffset.UtcNow);
         var response = new AddEvidenceResponse(Guid.NewGuid(), caseId, request.EvidenceType, EvidenceStatus.PendingVerification, request.CollectedAt);
 
         _addEvidenceUseCaseMock

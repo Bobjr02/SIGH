@@ -72,7 +72,8 @@ public static class DependencyInjection
         services.AddScoped<IRequestContext, HttpRequestContext>();
         services.AddScoped<IAuthorizedCompanyProvider, AuthorizedCompanyProvider>();
         services.AddScoped<IEmailService, NullEmailService>();
-        services.AddScoped<IStorageService, LocalStorageService>();
+        services.AddSingleton<SIGH.Application.Interfaces.Storage.IFileStorage, LocalFileStorage>();
+        services.AddSingleton<SIGH.Application.Interfaces.Storage.IMalwareScanner, NoOpMalwareScanner>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IDeadlineCalculator, DeadlineCalculator>();
         services.AddSingleton<IBackgroundJobScheduler, BackgroundJobScheduler>();

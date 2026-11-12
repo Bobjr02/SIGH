@@ -145,11 +145,7 @@ public class DisciplinaryCaseSubEntitiesUseCaseTests
             EvidenceType.Document,
             "E-mail impresso",
             userId,
-            _now,
-            StorageReference: "evidences/email-impresso.pdf",
-            OriginalFileName: "email-impresso.pdf",
-            ContentType: "application/pdf",
-            FileSize: 1024);
+            _now);
 
         // Act
         var result = await _addEvidenceUseCase.ExecuteAsync(request);

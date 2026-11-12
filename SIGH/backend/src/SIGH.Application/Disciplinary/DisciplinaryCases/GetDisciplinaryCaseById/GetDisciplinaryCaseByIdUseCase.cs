@@ -8,8 +8,11 @@ public class GetDisciplinaryCaseByIdUseCase : IGetDisciplinaryCaseByIdUseCase
 {
     private readonly IDisciplinaryCaseRepository _caseRepository;
 
-    public GetDisciplinaryCaseByIdUseCase(IDisciplinaryCaseRepository caseRepository)
+    private readonly SIGH.Domain.Repositories.IUserRepository? _userRepository;
+
+    public GetDisciplinaryCaseByIdUseCase(IDisciplinaryCaseRepository caseRepository, SIGH.Domain.Repositories.IUserRepository? userRepository = null)
     {
+        _userRepository = userRepository;
         _caseRepository = caseRepository;
     }
 
@@ -38,12 +41,17 @@ public class GetDisciplinaryCaseByIdUseCase : IGetDisciplinaryCaseByIdUseCase
             e.Role,
             e.IsPrimarySubject)).ToList();
 
+        var uploaderIds = item.Evidences.Where(e => e.FileUploadedByUserId.HasValue).Select(e => e.FileUploadedByUserId!.Value).ToList();
+        var uploaderNames = _userRepository is null || uploaderIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _userRepository.GetFullNamesAsync(uploaderIds, cancellationToken);
+
         var evidences = item.Evidences.Select(e => new EvidenceDto(
             e.Id,
             e.EvidenceType,
             e.Title,
             e.Description,
-            e.StorageReference,
+            e.HasFile,
             e.OriginalFileName,
             e.ContentType,
             e.FileSize,
@@ -51,7 +59,10 @@ public class GetDisciplinaryCaseByIdUseCase : IGetDisciplinaryCaseByIdUseCase
             e.CollectedAt,
             e.CollectedByUserId,
             e.IntegrityHash,
-            e.Status)).ToList();
+            e.Status,
+            e.FileUploadedAt,
+            e.FileUploadedByUserId,
+            e.FileUploadedByUserId.HasValue && uploaderNames.TryGetValue(e.FileUploadedByUserId.Value, out var name) ? name : null)).ToList();
 
         var decisions = item.Decisions.Select(d => new DecisionDto(
             d.Id,

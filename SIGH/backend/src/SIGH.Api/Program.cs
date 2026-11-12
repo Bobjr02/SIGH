@@ -38,6 +38,19 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddPersistence(builder.Configuration);
 
+    // Limite de upload (Storage:MaxUploadSizeBytes, padrão 25 MB) aplicado também no Kestrel e no
+    // FormOptions, com folga para o envelope multipart. O tamanho exato do arquivo é validado no caso de uso.
+    var maxUploadBytes = builder.Configuration.GetSection(SIGH.Application.Options.StorageOptions.SectionName)
+        .Get<SIGH.Application.Options.StorageOptions>()?.MaxUploadSizeBytes
+        ?? SIGH.Application.Options.StorageOptions.DefaultMaxUploadSizeBytes;
+    var maxRequestBodyBytes = maxUploadBytes + 1024 * 1024;
+    builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = maxRequestBodyBytes);
+    builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(form =>
+    {
+        form.MultipartBodyLengthLimit = maxRequestBodyBytes;
+        form.ValueCountLimit = 64;
+    });
+
     // Suporte a ProblemDetails
     builder.Services.AddProblemDetails();
 
@@ -126,6 +139,9 @@ try
     });
 
     var app = builder.Build();
+
+    // Falha no startup se Storage:Local:RootPath estiver ausente ou dentro do diretório da aplicação.
+    app.Services.GetRequiredService<SIGH.Application.Interfaces.Storage.IFileStorage>();
 
     // Fail-fast: valida JwtOptions e ConnectionStrings (ValidateOnStart) antes das
     // migrations, para que configuração ausente gere uma mensagem clara e não um erro de conexão.

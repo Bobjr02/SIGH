@@ -23,6 +23,7 @@
   "Disciplinary.Cases.AddOccurrence",
   "Disciplinary.Cases.AddEmployee",
   "Disciplinary.Cases.AddEvidence",
+  "Disciplinary.Cases.RemoveEvidence",
   "Disciplinary.Cases.RecordDecision",
   "Disciplinary.Cases.ApplyMeasure",
   "Disciplinary.Cases.Cancel",

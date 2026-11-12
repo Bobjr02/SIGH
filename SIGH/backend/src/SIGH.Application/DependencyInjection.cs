@@ -48,6 +48,11 @@ public static class DependencyInjection
         services.AddScoped<IChangePasswordService, ChangePasswordService>();
         services.AddScoped<SIGH.Application.Authentication.CurrentUser.IGetCurrentUserService, SIGH.Application.Authentication.CurrentUser.GetCurrentUserService>();
         services.AddScoped<ICreateUserService, CreateUserService>();
+
+        // Evidências: upload, download e remoção lógica
+        services.AddScoped<SIGH.Application.Disciplinary.Evidences.IUploadEvidenceFileUseCase, SIGH.Application.Disciplinary.Evidences.UploadEvidenceFileUseCase>();
+        services.AddScoped<SIGH.Application.Disciplinary.Evidences.IDownloadEvidenceFileUseCase, SIGH.Application.Disciplinary.Evidences.DownloadEvidenceFileUseCase>();
+        services.AddScoped<SIGH.Application.Disciplinary.Evidences.IRemoveEvidenceUseCase, SIGH.Application.Disciplinary.Evidences.RemoveEvidenceUseCase>();
         services.AddScoped<IUnlockUserService, UnlockUserService>();
         services.AddScoped<IChangeUserStatusService, ChangeUserStatusService>();
         services.AddScoped<IGetUsersService, GetUsersService>();

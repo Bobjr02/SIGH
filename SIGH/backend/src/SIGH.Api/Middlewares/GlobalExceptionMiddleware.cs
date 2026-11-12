@@ -48,6 +48,15 @@ public class GlobalExceptionMiddleware
 
         switch (exception)
         {
+            // Corpo acima de Kestrel MaxRequestBodySize ou do limite do multipart (FormOptions).
+            case BadHttpRequestException badRequestEx when badRequestEx.StatusCode == StatusCodes.Status413PayloadTooLarge:
+            case InvalidDataException invalidDataEx when invalidDataEx.Message.Contains("body length limit", StringComparison.OrdinalIgnoreCase):
+                context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+                problemDetails.Status = StatusCodes.Status413PayloadTooLarge;
+                problemDetails.Title = "Arquivo muito grande";
+                problemDetails.Detail = "O arquivo ou a requisição excede o tamanho máximo permitido.";
+                break;
+
             case BusinessRuleValidationException businessEx:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 problemDetails.Status = (int)HttpStatusCode.BadRequest;

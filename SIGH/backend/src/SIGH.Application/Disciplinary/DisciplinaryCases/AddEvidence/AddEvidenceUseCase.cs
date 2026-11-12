@@ -45,17 +45,12 @@ public class AddEvidenceUseCase : IAddEvidenceUseCase
                 request.CollectedAt,
                 request.CollectedByUserId,
                 request.OccurrenceId)
-            : DisciplinaryEvidence.CreateFileEvidence(
+            : DisciplinaryEvidence.CreatePendingFileEvidence(
                 caseObj.Id,
                 request.EvidenceType,
                 request.Title,
-                request.StorageReference!,
-                request.OriginalFileName!,
-                request.ContentType!,
-                request.FileSize!.Value,
                 request.CollectedAt,
                 request.CollectedByUserId,
-                request.IntegrityHash,
                 request.OccurrenceId,
                 request.Description);
 

@@ -312,6 +312,12 @@ namespace SIGH.Persistence.Migrations
                     b.Property<long?>("FileSize")
                         .HasColumnType("bigint");
 
+                    b.Property<DateTimeOffset?>("FileUploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("FileUploadedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("IntegrityHash")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -322,6 +328,10 @@ namespace SIGH.Persistence.Migrations
                     b.Property<string>("OriginalFileName")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("RemovalReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");

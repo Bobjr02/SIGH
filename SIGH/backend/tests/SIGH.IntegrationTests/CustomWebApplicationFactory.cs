@@ -50,6 +50,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// <summary>Relógio da API (IDateTimeProvider). Volta ao tempo real a cada reset do banco.</summary>
     public TestClock Clock { get; } = new();
 
+    /// <summary>Raiz do storage de evidências desta execução (diretório temporário, fora da aplicação).</summary>
+    public string StorageRoot { get; } = Path.Combine(Path.GetTempPath(), "sigh-it-storage", Guid.NewGuid().ToString("N"));
+
     public CustomWebApplicationFactory()
     {
         // HTTPS: o cookie do refresh token é Secure e só é reenviado pelo HttpClient em https.
@@ -89,7 +92,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["Seed:DefaultCompanyName"] = "Empresa Padrão (Testes)",
                 // O schema é criado uma vez por execução em SqlServerTestDatabase.
                 ["Database:ApplyMigrationsOnStartup"] = "false",
-                ["BackgroundWorkerOptions:Enabled"] = "false"
+                ["BackgroundWorkerOptions:Enabled"] = "false",
+                ["Storage:Local:RootPath"] = StorageRoot
             });
         });
     }

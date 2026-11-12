@@ -133,11 +133,7 @@ public class DisciplinaryCasesEndpointsTests : IntegrationTestBase
         var evRequest = new AddEvidenceHttpRequest(
             EvidenceType.Document,
             "Folha de ponto",
-            DateTimeOffset.UtcNow,
-            StorageReference: "evidences/folha-ponto.pdf",
-            OriginalFileName: "folha-ponto.pdf",
-            ContentType: "application/pdf",
-            FileSize: 1024);
+            DateTimeOffset.UtcNow);
         (await deciderClient.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/evidences", evRequest))
             .StatusCode.Should().Be(HttpStatusCode.OK);
 
