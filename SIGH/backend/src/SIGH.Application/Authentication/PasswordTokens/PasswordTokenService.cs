@@ -14,7 +14,7 @@ public interface IPasswordTokenService
     /// Gera um token novo (só o hash é guardado) e invalida os anteriores ainda não usados do usuário.
     /// Não grava: entra no SaveChanges do caso de uso. Devolve o valor bruto, que vai só no link do e-mail.
     /// </summary>
-    Task<string> IssueAsync(Guid userId, PasswordTokenPurpose purpose, CancellationToken cancellationToken = default);
+    Task<string> IssueAsync(Guid userId, PasswordTokenPurpose purpose, CancellationToken cancellationToken = default, string? requestedFromIp = null);
 
     /// <summary>Token válido (existe, não usado, não expirado) ou null.</summary>
     Task<PasswordResetToken?> FindUsableAsync(string rawToken, CancellationToken cancellationToken = default);
@@ -57,13 +57,13 @@ public sealed class PasswordTokenService : IPasswordTokenService
         ? TimeSpan.FromHours(Math.Max(1, _options.AccountSetupTokenHours))
         : TimeSpan.FromMinutes(Math.Max(1, _options.PasswordResetTokenMinutes));
 
-    public async Task<string> IssueAsync(Guid userId, PasswordTokenPurpose purpose, CancellationToken cancellationToken = default)
+    public async Task<string> IssueAsync(Guid userId, PasswordTokenPurpose purpose, CancellationToken cancellationToken = default, string? requestedFromIp = null)
     {
         await InvalidateAllAsync(userId, cancellationToken);
 
         var raw = _random.GenerateRandomString(TokenLength);
         _context.PasswordResetTokens.Add(PasswordResetToken.Create(
-            userId, _hasher.HashToken(raw), purpose, _clock.UtcNow, LifetimeOf(purpose), _requestContext.IpAddress));
+            userId, _hasher.HashToken(raw), purpose, _clock.UtcNow, LifetimeOf(purpose), requestedFromIp ?? _requestContext.IpAddress));
 
         return raw;
     }

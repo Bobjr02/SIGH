@@ -96,6 +96,7 @@ public static class DependencyInjection
 
         // Background Workers
         services.AddHostedService<SIGH.Infrastructure.BackgroundWorkers.DisciplinaryDeadlineBackgroundWorker>();
+        services.AddHostedService<SIGH.Infrastructure.BackgroundWorkers.PasswordResetRequestWorker>();
 
         // Registros de Segurança e Criptografia
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
