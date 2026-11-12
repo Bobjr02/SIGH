@@ -1,20 +1,22 @@
-version: '3.8'
-
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: sigh-sqlserver
     restart: always
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=YourStrong@Password2026!
-      - MSSQL_PID=Developer
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      # Lida do arquivo .env da raiz (fora do git). Veja .env.example.
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD no arquivo .env (veja .env.example)}
     ports:
       - "1433:1433"
     volumes:
-      - sigh-mssql-data:/var/opt/mssql/data
+      # Volume nomeado na raiz /var/opt/mssql: o Docker copia a estrutura (de propriedade
+      # do usuário mssql, uid 10001) para o volume, e o container roda sem root.
+      - sigh-mssql-data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Password2026!' -C -Q 'SELECT 1' || exit 1"]
+      # "$$" escapa a interpolação do compose: a variável é expandida pelo shell do container.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10

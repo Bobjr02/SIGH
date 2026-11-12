@@ -10,6 +10,7 @@ using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
 using SIGH.Domain.Repositories;
 using SIGH.Infrastructure.Authentication;
+using SIGH.Infrastructure.Services;
 using SIGH.Persistence.Context;
 using Xunit;
 
@@ -27,6 +28,14 @@ public class PasswordHistoryTests
     }
 
     private BCryptPasswordHasher _passwordHasher = new();
+
+    private static JwtTokenGenerator CreateJwtTokenGenerator() =>
+        new(Options.Create(new JwtOptions
+        {
+            Issuer = "SIGH.Tests",
+            Audience = "SIGH.Tests",
+            SecretKey = "unit-test-only-signing-key-0123456789abcdef"
+        }));
 
     [Fact]
     public async Task ChangePassword_ReusingLast3Passwords_ShouldThrowException()
@@ -74,7 +83,13 @@ public class PasswordHistoryTests
             context,
             userRepositoryMock.Object,
             _passwordHasher,
-            Options.Create(new PasswordOptions { PasswordHistoryLimit = 3 })
+            CreateJwtTokenGenerator(),
+            new RefreshTokenGenerator(),
+            new Sha256TokenHasher(),
+            new SystemDateTimeProvider(),
+            Options.Create(new PasswordOptions { PasswordHistoryLimit = 3 }),
+            Options.Create(new JwtOptions { ExpiryInMinutes = 60 }),
+            Options.Create(new TokenOptions())
         );
 
         // Tentar reusar pwd2 (que está no histórico de 3)
@@ -112,6 +127,10 @@ public class PasswordHistoryTests
         userRepositoryMock
             .Setup(r => r.GetRecentPasswordHistoriesAsync(user.Id, 3, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<PasswordHistory>());
+        var previousRefreshToken = new RefreshToken { UserId = user.Id, TokenHash = "old-hash", ExpiresAt = DateTimeOffset.UtcNow.AddDays(1) };
+        userRepositoryMock
+            .Setup(r => r.GetActiveRefreshTokensByUserIdAsync(user.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<RefreshToken> { previousRefreshToken });
         userRepositoryMock
             .Setup(r => r.AddPasswordHistoryAsync(It.IsAny<PasswordHistory>(), It.IsAny<CancellationToken>()))
             .Callback<PasswordHistory, CancellationToken>((history, _) => context.PasswordHistories.Add(history))
@@ -121,7 +140,13 @@ public class PasswordHistoryTests
             context,
             userRepositoryMock.Object,
             _passwordHasher,
-            Options.Create(new PasswordOptions { PasswordHistoryLimit = 3 })
+            CreateJwtTokenGenerator(),
+            new RefreshTokenGenerator(),
+            new Sha256TokenHasher(),
+            new SystemDateTimeProvider(),
+            Options.Create(new PasswordOptions { PasswordHistoryLimit = 3 }),
+            Options.Create(new JwtOptions { ExpiryInMinutes = 60 }),
+            Options.Create(new TokenOptions())
         );
 
         var request = new ChangePasswordRequest(user.Id, currentPwd, newPwd);
@@ -130,6 +155,10 @@ public class PasswordHistoryTests
 
         response.Should().NotBeNull();
         response.Success.Should().BeTrue();
+        response.AccessToken.Should().NotBeNullOrWhiteSpace();
+        response.RefreshToken.Should().NotBeNullOrWhiteSpace();
+        previousRefreshToken.RevokedAt.Should().NotBeNull("os refresh tokens anteriores devem ser revogados na troca de senha");
+        userRepositoryMock.Verify(r => r.AddRefreshTokenAsync(It.IsAny<RefreshToken>(), It.IsAny<CancellationToken>()), Times.Once);
 
         var histories = await context.PasswordHistories.Where(ph => ph.UserId == user.Id).ToListAsync();
         histories.Should().NotBeEmpty();

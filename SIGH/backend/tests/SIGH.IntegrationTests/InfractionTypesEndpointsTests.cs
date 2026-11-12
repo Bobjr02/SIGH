@@ -14,11 +14,12 @@ using Xunit;
 
 namespace SIGH.IntegrationTests;
 
-public class InfractionTypesEndpointsTests : IClassFixture<CustomWebApplicationFactory>
+public class InfractionTypesEndpointsTests : IntegrationTestBase
 {
     private readonly HttpClient _client;
 
     public InfractionTypesEndpointsTests(CustomWebApplicationFactory factory)
+        : base(factory)
     {
         _client = factory.CreateClient();
     }
@@ -230,8 +231,7 @@ public class InfractionTypesEndpointsTests : IClassFixture<CustomWebApplicationF
     public async Task Endpoint_WhenUnauthenticated_Returns401Unauthorized()
     {
         // Arrange
-        var factory = new CustomWebApplicationFactory();
-        var anonymousClient = factory.CreateClient();
+        var anonymousClient = Factory.CreateClient();
 
         // Act
         var response = await anonymousClient.GetAsync("/api/v1/infraction-types");
@@ -248,7 +248,7 @@ public class InfractionTypesEndpointsTests : IClassFixture<CustomWebApplicationF
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<Result<LoginResponse>>();
 
-        var unprivilegedClient = new CustomWebApplicationFactory().CreateClient();
+        var unprivilegedClient = Factory.CreateClient();
         unprivilegedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginResult!.Data!.AccessToken);
 
         // Act

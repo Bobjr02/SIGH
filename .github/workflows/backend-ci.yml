@@ -50,7 +50,9 @@ jobs:
             --results-directory SIGH/backend/TestResults \
             --collect:"XPlat Code Coverage"
 
-      - name: Run Integration Tests
+      # Testcontainers sobe um SQL Server real (mcr.microsoft.com/mssql/server:2022-latest)
+      # no Docker do runner; o schema vem das migrations.
+      - name: Run Integration Tests (SQL Server via Testcontainers)
         run: |
           dotnet test SIGH/backend/tests/SIGH.IntegrationTests/SIGH.IntegrationTests.csproj \
             --configuration Release \
@@ -74,3 +76,15 @@ jobs:
           name: code-coverage
           path: SIGH/backend/TestResults/**/coverage.cobertura.xml
           retention-days: 14
+
+  docker-image:
+    name: Build Backend Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Garante que SIGH/backend/Dockerfile continua compilando (contexto = raiz do repositório).
+      - name: Build Docker Image
+        run: docker build --file SIGH/backend/Dockerfile --tag sigh-api:ci .

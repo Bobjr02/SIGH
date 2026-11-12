@@ -14,6 +14,6 @@ public record LogoutHttpRequest(string? RefreshToken = null, Guid? SessionId = n
 
 public record ChangePasswordHttpRequest(string CurrentPassword, string NewPassword)
 {
-    public ChangePasswordRequest ToApplicationRequest(Guid actorUserId) =>
-        new(actorUserId, CurrentPassword, NewPassword);
+    public ChangePasswordRequest ToApplicationRequest(Guid actorUserId, string? ipAddress = null, string? userAgent = null) =>
+        new(actorUserId, CurrentPassword, NewPassword, ipAddress, userAgent);
 }

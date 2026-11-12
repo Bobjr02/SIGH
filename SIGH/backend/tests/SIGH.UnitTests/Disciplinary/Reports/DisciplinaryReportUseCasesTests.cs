@@ -128,7 +128,7 @@ public class DisciplinaryReportUseCasesTests
     }
 
     [Fact]
-    public async Task ExportDisciplinaryCaseReportCsv_ShouldSanitizeCsvInjection()
+    public void ExportDisciplinaryCaseReportCsv_ShouldSanitizeCsvInjection()
     {
         // Test sanitization helper
         Assert.Equal("\"'=1+1\"", CsvSanitizer.SanitizeField(" =1+1"));

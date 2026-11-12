@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using SIGH.Application.Common.Interfaces;
 using SIGH.Application.Interfaces.Repositories;
 using SIGH.Application.Interfaces.Repositories.Disciplinary;
 using SIGH.Domain.Repositories;
 using SIGH.Persistence.Context;
+using SIGH.Persistence.Options;
 using SIGH.Persistence.Repositories;
 using SIGH.Persistence.Repositories.Disciplinary;
 
@@ -17,10 +19,18 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        services.AddOptions<ConnectionStringsOptions>()
+            .Bind(configuration.GetSection(ConnectionStringsOptions.SectionName))
+            .Validate(
+                o => !string.IsNullOrWhiteSpace(o.DefaultConnection),
+                "ConnectionStrings:DefaultConnection não configurada. " +
+                "Em desenvolvimento use 'dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"<connection string>\"' no projeto SIGH.Api; " +
+                "em CI/produção defina a variável de ambiente ConnectionStrings__DefaultConnection.")
+            .ValidateOnStart();
 
-        services.AddDbContext<SighDbContext>(options =>
-            options.UseSqlServer(connectionString,
+        services.AddDbContext<SighDbContext>((serviceProvider, options) =>
+            options.UseSqlServer(
+                serviceProvider.GetRequiredService<IOptions<ConnectionStringsOptions>>().Value.DefaultConnection,
                 b => b.MigrationsAssembly(typeof(SighDbContext).Assembly.FullName)));
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<SighDbContext>());

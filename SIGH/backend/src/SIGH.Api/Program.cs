@@ -122,6 +122,10 @@ try
 
     var app = builder.Build();
 
+    // Fail-fast: valida JwtOptions e ConnectionStrings (ValidateOnStart) antes das
+    // migrations, para que configuração ausente gere uma mensagem clara e não um erro de conexão.
+    app.Services.GetService<Microsoft.Extensions.Options.IStartupValidator>()?.Validate();
+
     // Migrations + seed na inicialização (habilitado em Development).
     // Provedores não relacionais (ex.: InMemory nos testes) são ignorados.
     if (app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
@@ -163,6 +167,8 @@ try
     app.UseCors("AllowFrontend");
 
     app.UseAuthentication();
+    // Troca de senha pendente: só change-password, logout e refresh ficam acessíveis.
+    app.UseMiddleware<PasswordChangeRequiredMiddleware>();
     app.UseAuthorization();
 
     app.MapControllers();
@@ -184,13 +190,42 @@ try
     Log.Information("Aplicação SIGH.Api v1 iniciada com sucesso.");
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (TryGetConfigurationFailures(ex, out var failures))
+{
+    Log.Fatal(
+        "Configuração inválida: a aplicação SIGH.Api não pode iniciar.{NewLine}{Failures}",
+        Environment.NewLine,
+        string.Join(Environment.NewLine, failures.Select(f => " - " + f)));
+    Environment.ExitCode = 1;
+}
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "A aplicação SIGH.Api encerrou inesperadamente.");
+    Environment.ExitCode = 1;
 }
 finally
 {
     Log.CloseAndFlush();
+}
+
+// ValidateOnStart agrega as falhas de todas as opções num AggregateException.
+static bool TryGetConfigurationFailures(Exception ex, out IReadOnlyList<string> failures)
+{
+    var validationErrors = ex is AggregateException aggregate
+        ? aggregate.Flatten().InnerExceptions.ToList()
+        : new List<Exception> { ex };
+
+    if (validationErrors.Count > 0 && validationErrors.All(e => e is Microsoft.Extensions.Options.OptionsValidationException))
+    {
+        failures = validationErrors
+            .Cast<Microsoft.Extensions.Options.OptionsValidationException>()
+            .SelectMany(e => e.Failures)
+            .ToList();
+        return true;
+    }
+
+    failures = Array.Empty<string>();
+    return false;
 }
 
 public partial class Program { }

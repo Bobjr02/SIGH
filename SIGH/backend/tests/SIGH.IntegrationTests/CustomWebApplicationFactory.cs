@@ -1,21 +1,43 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 using SIGH.Application.Interfaces;
-using SIGH.Application.Common.Authorization;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
+using SIGH.IntegrationTests.Infrastructure;
 using SIGH.Persistence.Context;
+using SIGH.Persistence.Seeds;
+using Xunit;
 
 namespace SIGH.IntegrationTests;
 
-public class CustomWebApplicationFactory : WebApplicationFactory<Program>
+/// <summary>
+/// Host da API para os testes de integração, contra SQL Server real (Testcontainers).
+/// Toda a configuração vem daqui: nenhum appsettings de desenvolvimento, user-secret ou segredo real.
+/// </summary>
+public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly string _dbName = Guid.NewGuid().ToString();
+    /// <summary>Senha dos usuários de fixture (admin, approver, locked, unprivileged).</summary>
+    public const string DefaultPassword = "Admin@123456";
+
+    /// <summary>Administrador criado pelo DatabaseSeeder real: troca de senha obrigatória.</summary>
+    public const string SeedAdminEmail = "seed.admin@sigh.test";
+    public const string SeedAdminPassword = "Seed@Admin2026!";
+
+    // IDs fixos: o reset entre testes recria os usuários com os mesmos IDs, então
+    // access tokens guardados no TokenCache continuam válidos.
+    public static readonly Guid AdminUserId = Guid.Parse("10000000-0000-0000-0000-000000000001");
+    public static readonly Guid ApproverUserId = Guid.Parse("10000000-0000-0000-0000-000000000002");
+    public static readonly Guid LockedUserId = Guid.Parse("10000000-0000-0000-0000-000000000003");
+    public static readonly Guid UnprivilegedUserId = Guid.Parse("10000000-0000-0000-0000-000000000004");
+
+    // Chave de assinatura exclusiva dos testes (não é segredo; 32+ bytes para passar na validação).
+    private const string TestJwtSecretKey = "integration-tests-only-signing-key-not-a-secret-0123456789";
+
+    private string _connectionString = string.Empty;
+    private string? _fixturePasswordHash;
 
     /// <summary>
     /// Cache de tokens por e-mail, compartilhado entre os testes da mesma fixture.
@@ -23,198 +45,91 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     /// </summary>
     public System.Collections.Concurrent.ConcurrentDictionary<string, (string AccessToken, Guid UserId)> TokenCache { get; } = new();
 
+    public async Task InitializeAsync()
+    {
+        _connectionString = await SqlServerTestDatabase.GetConnectionStringAsync();
+    }
+
+    Task IAsyncLifetime.DisposeAsync() => Task.CompletedTask;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureServices(services =>
-        {
-            services.RemoveAll<DbContextOptions<SighDbContext>>();
-            services.RemoveAll<IDbContextOptionsConfiguration<SighDbContext>>();
+        // "Testing": não carrega appsettings.Development.json nem user-secrets da máquina.
+        builder.UseEnvironment("Testing");
 
-            services.AddDbContext<SighDbContext>(options =>
+        builder.ConfigureAppConfiguration((_, configuration) =>
+        {
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                options.UseInMemoryDatabase(_dbName);
+                ["ConnectionStrings:DefaultConnection"] = _connectionString,
+                ["JwtOptions:SecretKey"] = TestJwtSecretKey,
+                ["JwtOptions:Issuer"] = "SIGH.Api.IntegrationTests",
+                ["JwtOptions:Audience"] = "SIGH.Client.IntegrationTests",
+                ["JwtOptions:ExpiryInMinutes"] = "60",
+                ["Seed:AdminEmail"] = SeedAdminEmail,
+                ["Seed:AdminPassword"] = SeedAdminPassword,
+                ["Seed:DefaultCompanyName"] = "Empresa Padrão (Testes)",
+                // O schema é criado uma vez por execução em SqlServerTestDatabase.
+                ["Database:ApplyMigrationsOnStartup"] = "false",
+                ["BackgroundWorkerOptions:Enabled"] = "false"
             });
         });
     }
 
-    protected override IHost CreateHost(IHostBuilder builder)
+    /// <summary>
+    /// Limpa os dados (Respawn), roda o DatabaseSeeder real e recria os usuários de fixture.
+    /// Chamado antes de cada teste por <see cref="IntegrationTestBase"/>.
+    /// </summary>
+    public async Task ResetDatabaseAsync()
     {
-        var host = base.CreateHost(builder);
+        await SqlServerTestDatabase.ResetAsync();
 
-        using var scope = host.Services.CreateScope();
+        await using var scope = Services.CreateAsyncScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+        await seeder.SeedAsync();
+
         var db = scope.ServiceProvider.GetRequiredService<SighDbContext>();
         var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        _fixturePasswordHash ??= passwordHasher.HashPassword(DefaultPassword);
 
-        db.Database.EnsureCreated();
-
-        SeedDatabase(db, passwordHasher);
-
-        return host;
+        await SeedFixtureUsersAsync(db, _fixturePasswordHash);
     }
 
-    private static void SeedDatabase(SighDbContext db, IPasswordHasher passwordHasher)
+    private static async Task SeedFixtureUsersAsync(SighDbContext db, string passwordHash)
     {
-        if (db.Users.Any()) return;
+        var administratorRole = await db.Roles.SingleAsync(r => r.Name == DatabaseSeeder.AdministratorRoleName);
 
-        // Seeds
-        var createPerm = new Permission(Guid.NewGuid())
-        {
-            Code = "Users.Create",
-            Name = "Criar Usuário",
-            Description = "Permite criar novos usuários"
-        };
-
-        var statusPerm = new Permission(Guid.NewGuid())
-        {
-            Code = "Users.ChangeStatus",
-            Name = "Alterar Status do Usuário",
-            Description = "Permite alterar status do usuário"
-        };
-
-        var unlockPerm = new Permission(Guid.NewGuid())
-        {
-            Code = "Users.Unlock",
-            Name = "Desbloquear Usuário",
-            Description = "Permite desbloquear usuário"
-        };
-
-        var viewPerm = new Permission(Guid.NewGuid())
-        {
-            Code = "Users.View",
-            Name = "Visualizar Usuários",
-            Description = "Permite visualizar usuários"
-        };
-
-        var notificationsViewPerm = new Permission(Guid.NewGuid())
-        {
-            Code = PermissionCodes.Notifications.View,
-            Name = "Visualizar Notificações",
-            Description = "Permite visualizar notificações"
-        };
-
-        var discPerms = new[]
-        {
-            "Disciplinary.InfractionTypes.Create",
-            "Disciplinary.InfractionTypes.View",
-            "Disciplinary.InfractionTypes.Update",
-            "Disciplinary.InfractionTypes.Activate",
-            "Disciplinary.InfractionTypes.Deactivate",
-            "Disciplinary.Cases.Create",
-            "Disciplinary.Cases.View",
-            "Disciplinary.Cases.Open",
-            "Disciplinary.Cases.StartInvestigation",
-            "Disciplinary.Cases.SubmitForDecision",
-            "Disciplinary.Cases.ApproveDecision",
-            "Disciplinary.Cases.RejectDecision",
-            "Disciplinary.Cases.AddOccurrence",
-            "Disciplinary.Cases.AddEmployee",
-            "Disciplinary.Cases.AddEvidence",
-            "Disciplinary.Cases.RecordDecision",
-            "Disciplinary.Cases.ApplyMeasure",
-            "Disciplinary.Cases.Cancel",
-            "Disciplinary.Cases.Conclude"
-        }.Select(code => new Permission(Guid.NewGuid())
-        {
-            Code = code,
-            Name = code,
-            Description = code
-        }).ToList();
-
-        db.Permissions.AddRange(createPerm, statusPerm, unlockPerm, viewPerm, notificationsViewPerm);
-        db.Permissions.AddRange(discPerms);
-
-        var adminRole = new Role(Guid.NewGuid())
-        {
-            Name = "Admin",
-            Description = "Administrador do Sistema"
-        };
-
-        db.Roles.Add(adminRole);
-
-        db.RolePermissions.AddRange(
-            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = createPerm.Id },
-            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = statusPerm.Id },
-            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = unlockPerm.Id },
-            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = viewPerm.Id },
-            new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = notificationsViewPerm.Id }
-        );
-
-        foreach (var p in discPerms)
-        {
-            db.RolePermissions.Add(new RolePermission(Guid.NewGuid()) { RoleId = adminRole.Id, PermissionId = p.Id });
-        }
-
-        var passwordHash = passwordHasher.HashPassword("Admin@123456");
-
-        var adminUser = new User(Guid.NewGuid())
-        {
-            FullName = "Administrador do Sistema",
-            Email = "admin@sigh.com",
-            Cpf = "12345678901",
-            PasswordHash = passwordHash,
-            Status = UserStatus.Active,
-            MustChangePassword = false,
-            FailedLoginAttempts = 0,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-
-        db.Users.Add(adminUser);
-
-        db.UserRoles.Add(new UserRole(Guid.NewGuid())
-        {
-            UserId = adminUser.Id,
-            RoleId = adminRole.Id
-        });
+        var adminUser = CreateUser(AdminUserId, "Administrador do Sistema", "admin@sigh.com", "12345678901", passwordHash);
 
         // Segundo usuário com o mesmo perfil: necessário para fluxos que exigem
         // segregação de funções (quem registra a decisão não pode aprová-la).
-        var approverUser = new User(Guid.NewGuid())
-        {
-            FullName = "Aprovador do Sistema",
-            Email = "approver@sigh.com",
-            Cpf = "55566677788",
-            PasswordHash = passwordHash,
-            Status = UserStatus.Active,
-            MustChangePassword = false,
-            FailedLoginAttempts = 0,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
+        var approverUser = CreateUser(ApproverUserId, "Aprovador do Sistema", "approver@sigh.com", "55566677788", passwordHash);
 
-        db.Users.Add(approverUser);
+        var lockedUser = CreateUser(LockedUserId, "Usuário Bloqueado", "locked@sigh.com", "98765432100", passwordHash);
+        lockedUser.Status = UserStatus.Locked;
+        lockedUser.LockoutEnd = DateTimeOffset.UtcNow.AddHours(1);
+        lockedUser.FailedLoginAttempts = 5;
 
-        db.UserRoles.Add(new UserRole(Guid.NewGuid())
-        {
-            UserId = approverUser.Id,
-            RoleId = adminRole.Id
-        });
+        var unprivilegedUser = CreateUser(UnprivilegedUserId, "Usuário Sem Permissao", "unprivileged@sigh.com", "11122233344", passwordHash);
 
-        var lockedUser = new User(Guid.NewGuid())
-        {
-            FullName = "Usuário Bloqueado",
-            Email = "locked@sigh.com",
-            Cpf = "98765432100",
-            PasswordHash = passwordHash,
-            Status = UserStatus.Locked,
-            LockoutEnd = DateTimeOffset.UtcNow.AddHours(1),
-            MustChangePassword = false,
-            FailedLoginAttempts = 5,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
+        db.Users.AddRange(adminUser, approverUser, lockedUser, unprivilegedUser);
+        db.UserRoles.AddRange(
+            new UserRole(Guid.NewGuid()) { UserId = adminUser.Id, RoleId = administratorRole.Id },
+            new UserRole(Guid.NewGuid()) { UserId = approverUser.Id, RoleId = administratorRole.Id });
 
-        var unprivilegedUser = new User(Guid.NewGuid())
-        {
-            FullName = "Usuário Sem Permissao",
-            Email = "unprivileged@sigh.com",
-            Cpf = "11122233344",
-            PasswordHash = passwordHash,
-            Status = UserStatus.Active,
-            MustChangePassword = false,
-            FailedLoginAttempts = 0,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-
-        db.Users.AddRange(lockedUser, unprivilegedUser);
-
-        db.SaveChanges();
+        await db.SaveChangesAsync();
     }
+
+    private static User CreateUser(Guid id, string fullName, string email, string cpf, string passwordHash) =>
+        new(id)
+        {
+            FullName = fullName,
+            Email = email,
+            Cpf = cpf,
+            PasswordHash = passwordHash,
+            Status = UserStatus.Active,
+            MustChangePassword = false,
+            FailedLoginAttempts = 0,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
 }
