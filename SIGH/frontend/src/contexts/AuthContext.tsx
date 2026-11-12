@@ -46,9 +46,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let cancelled = false;
 
     refreshAccessToken()
-      .then(() => authApi.me())
+      .then(() => (cancelled ? null : authApi.me()))
       .then((me) => {
-        if (cancelled) return;
+        if (cancelled || !me) return;
         setUser(me);
         setStatus('authenticated');
       })
