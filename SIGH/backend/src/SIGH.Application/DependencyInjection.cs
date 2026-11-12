@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<IForgotPasswordService, ForgotPasswordService>();
         services.AddScoped<IResetPasswordService, ResetPasswordService>();
         services.AddScoped<IChangePasswordService, ChangePasswordService>();
+        services.AddScoped<SIGH.Application.Authentication.CurrentUser.IGetCurrentUserService, SIGH.Application.Authentication.CurrentUser.GetCurrentUserService>();
         services.AddScoped<ICreateUserService, CreateUserService>();
         services.AddScoped<IUnlockUserService, UnlockUserService>();
         services.AddScoped<IChangeUserStatusService, ChangeUserStatusService>();

@@ -18,5 +18,6 @@ public record ChangePasswordResponse(
     string Message,
     string AccessToken,
     string RefreshToken,
-    int ExpiresInMinutes
+    int ExpiresInMinutes,
+    DateTimeOffset RefreshTokenExpiresAt
 );

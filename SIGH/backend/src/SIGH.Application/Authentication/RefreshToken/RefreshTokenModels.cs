@@ -9,5 +9,6 @@ public record RefreshTokenRequest(
 public record RefreshTokenResponse(
     string AccessToken,
     string RefreshToken,
-    int ExpiresInMinutes
+    int ExpiresInMinutes,
+    DateTimeOffset RefreshTokenExpiresAt
 );

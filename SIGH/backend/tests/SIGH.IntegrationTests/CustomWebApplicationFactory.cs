@@ -45,6 +45,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// </summary>
     public System.Collections.Concurrent.ConcurrentDictionary<string, (string AccessToken, Guid UserId)> TokenCache { get; } = new();
 
+    public CustomWebApplicationFactory()
+    {
+        // HTTPS: o cookie do refresh token é Secure e só é reenviado pelo HttpClient em https.
+        ClientOptions.BaseAddress = new Uri("https://localhost");
+    }
+
     public async Task InitializeAsync()
     {
         _connectionString = await SqlServerTestDatabase.GetConnectionStringAsync();

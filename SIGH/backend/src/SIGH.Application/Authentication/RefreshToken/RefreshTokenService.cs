@@ -137,7 +137,8 @@ public class RefreshTokenService : IRefreshTokenService
         return new RefreshTokenResponse(
             newAccessToken,
             newRawRefreshToken,
-            _jwtOptions.ExpiryInMinutes > 0 ? _jwtOptions.ExpiryInMinutes : 60
+            _jwtOptions.ExpiryInMinutes > 0 ? _jwtOptions.ExpiryInMinutes : 60,
+            newTokenEntity.ExpiresAt
         );
     }
 }

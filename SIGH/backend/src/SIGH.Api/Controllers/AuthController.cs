@@ -1,15 +1,19 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.RateLimiting;
+using SIGH.Api.Authentication;
 using SIGH.Api.Contracts.Auth;
 using SIGH.Api.Middlewares;
 using SIGH.Application.Authentication.ChangePassword;
+using SIGH.Application.Authentication.CurrentUser;
 using SIGH.Application.Authentication.ForgotPassword;
 using SIGH.Application.Authentication.Login;
 using SIGH.Application.Authentication.Logout;
 using SIGH.Application.Authentication.RefreshToken;
 using SIGH.Application.Authentication.ResetPassword;
 using SIGH.Application.Common.Models;
+using SIGH.Domain.Exceptions;
 
 namespace SIGH.Api.Controllers;
 
@@ -23,6 +27,7 @@ public class AuthController : BaseController
     private readonly IForgotPasswordService _forgotPasswordService;
     private readonly IResetPasswordService _resetPasswordService;
     private readonly IChangePasswordService _changePasswordService;
+    private readonly IGetCurrentUserService _getCurrentUserService;
 
     public AuthController(
         ILoginService loginService,
@@ -30,7 +35,8 @@ public class AuthController : BaseController
         IRefreshTokenService refreshTokenService,
         IForgotPasswordService forgotPasswordService,
         IResetPasswordService resetPasswordService,
-        IChangePasswordService changePasswordService)
+        IChangePasswordService changePasswordService,
+        IGetCurrentUserService getCurrentUserService)
     {
         _loginService = loginService;
         _logoutService = logoutService;
@@ -38,57 +44,95 @@ public class AuthController : BaseController
         _forgotPasswordService = forgotPasswordService;
         _resetPasswordService = resetPasswordService;
         _changePasswordService = changePasswordService;
+        _getCurrentUserService = getCurrentUserService;
     }
 
     [HttpPost("login")]
     [EnableRateLimiting("LoginIpRateLimit")]
-    [ProducesResponseType(typeof(Result<LoginResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<LoginHttpResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
-    public async Task<ActionResult<Result<LoginResponse>>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<LoginHttpResponse>>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-        var userAgent = Request.Headers.UserAgent.ToString();
-
         var updatedRequest = request with
         {
-            IpAddress = ipAddress,
-            UserAgent = userAgent
+            IpAddress = GetClientIpAddress(),
+            UserAgent = Request.Headers.UserAgent.ToString()
         };
 
         var result = await _loginService.LoginAsync(updatedRequest, cancellationToken);
-        return OkResult(result, "Autenticação realizada com sucesso.");
+        RefreshTokenCookie.Append(Response, result.RefreshToken, result.RefreshTokenExpiresAt);
+        return OkResult(LoginHttpResponse.From(result), "Autenticação realizada com sucesso.");
     }
 
+    /// <summary>
+    /// Revoga o refresh token do cookie (e a sessão informada, se houver) e apaga o cookie.
+    /// </summary>
     [HttpPost("logout")]
     [Authorize]
     [AllowWhilePasswordChangeRequired]
     [ProducesResponseType(typeof(Result<LogoutResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<Result<LogoutResponse>>> Logout([FromBody] LogoutHttpRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<LogoutResponse>>> Logout(
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] LogoutHttpRequest? request,
+        CancellationToken cancellationToken)
     {
-        var updatedRequest = request.ToApplicationRequest(GetUserId());
+        var updatedRequest = (request ?? new LogoutHttpRequest()).ToApplicationRequest(GetUserId(), RefreshTokenCookie.Read(Request));
         var result = await _logoutService.LogoutAsync(updatedRequest, cancellationToken);
+        RefreshTokenCookie.Delete(Response);
         return OkResult(result, "Logout realizado com sucesso.");
     }
 
+    /// <summary>
+    /// Renova o access token usando o refresh token do cookie sigh_rt. O corpo da requisição é ignorado.
+    /// </summary>
     [HttpPost("refresh")]
     [AllowWhilePasswordChangeRequired]
-    [ProducesResponseType(typeof(Result<RefreshTokenResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<RefreshHttpResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<Result<RefreshTokenResponse>>> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<Result<RefreshHttpResponse>>> Refresh(CancellationToken cancellationToken)
     {
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-        var userAgent = Request.Headers.UserAgent.ToString();
-
-        var updatedRequest = request with
+        var refreshToken = RefreshTokenCookie.Read(Request);
+        if (refreshToken is null)
         {
-            IpAddress = ipAddress,
-            UserAgent = userAgent
-        };
+            return Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "Não Autorizado",
+                detail: "Sessão ausente ou expirada. Faça login novamente.");
+        }
 
-        var result = await _refreshTokenService.RefreshTokenAsync(updatedRequest, cancellationToken);
-        return OkResult(result, "Token renovado com sucesso.");
+        RefreshTokenResponse result;
+        try
+        {
+            result = await _refreshTokenService.RefreshTokenAsync(
+                new RefreshTokenRequest(refreshToken, GetClientIpAddress(), Request.Headers.UserAgent.ToString()),
+                cancellationToken);
+        }
+        catch (BusinessRuleValidationException)
+        {
+            // Token inválido, expirado ou reutilizado: o cookie não serve mais.
+            RefreshTokenCookie.Delete(Response);
+            throw;
+        }
+
+        RefreshTokenCookie.Append(Response, result.RefreshToken, result.RefreshTokenExpiresAt);
+        return OkResult(RefreshHttpResponse.From(result), "Token renovado com sucesso.");
+    }
+
+    /// <summary>
+    /// Dados do usuário autenticado. Perfis e permissões vêm do banco, não do token.
+    /// Liberado durante a troca de senha obrigatória.
+    /// </summary>
+    [HttpGet("me")]
+    [Authorize]
+    [AllowWhilePasswordChangeRequired]
+    [ProducesResponseType(typeof(Result<CurrentUserResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<Result<CurrentUserResponse>>> Me(CancellationToken cancellationToken)
+    {
+        var result = await _getCurrentUserService.GetAsync(GetUserId(), cancellationToken);
+        return OkResult(result);
     }
 
     [HttpPost("forgot-password")]
@@ -111,17 +155,18 @@ public class AuthController : BaseController
     [HttpPost("change-password")]
     [Authorize]
     [AllowWhilePasswordChangeRequired]
-    [ProducesResponseType(typeof(Result<ChangePasswordResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<ChangePasswordHttpResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<Result<ChangePasswordResponse>>> ChangePassword([FromBody] ChangePasswordHttpRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<ChangePasswordHttpResponse>>> ChangePassword([FromBody] ChangePasswordHttpRequest request, CancellationToken cancellationToken)
     {
-        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-        var userAgent = Request.Headers.UserAgent.ToString();
-
-        // Devolve um novo par de tokens sem a claim pwd_change_required; os refresh tokens anteriores são revogados.
-        var updatedRequest = request.ToApplicationRequest(GetUserId(), ipAddress, userAgent);
+        // Devolve um novo access token sem a claim pwd_change_required e grava o novo refresh token
+        // no cookie; os refresh tokens anteriores são revogados.
+        var updatedRequest = request.ToApplicationRequest(GetUserId(), GetClientIpAddress(), Request.Headers.UserAgent.ToString());
         var result = await _changePasswordService.ChangePasswordAsync(updatedRequest, cancellationToken);
-        return OkResult(result, "Senha alterada com sucesso.");
+        RefreshTokenCookie.Append(Response, result.RefreshToken, result.RefreshTokenExpiresAt);
+        return OkResult(ChangePasswordHttpResponse.From(result), "Senha alterada com sucesso.");
     }
+
+    private string GetClientIpAddress() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
 }
