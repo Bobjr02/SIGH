@@ -28,7 +28,7 @@ public static class DependencyInjection
 
         // Bind Options
         services.Configure<DatabaseOptions>(configuration.GetSection(DatabaseOptions.SectionName));
-        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        // JwtOptions é registrado e validado em SIGH.Infrastructure (AddInfrastructure).
         services.Configure<PasswordOptions>(configuration.GetSection(PasswordOptions.SectionName));
         services.Configure<TokenOptions>(configuration.GetSection(TokenOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));

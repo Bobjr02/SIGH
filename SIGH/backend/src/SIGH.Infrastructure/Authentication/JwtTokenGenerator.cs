@@ -21,11 +21,8 @@ public class JwtTokenGenerator : IJwtTokenGenerator
     public string GenerateToken(User user, IEnumerable<string> roles, IEnumerable<string> permissions)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var secretKey = string.IsNullOrEmpty(_jwtOptions.SecretKey)
-            ? "TemporaryDefaultSecretKeyForInfrastructureBootstrap2026!"
-            : _jwtOptions.SecretKey;
-
-        var key = Encoding.UTF8.GetBytes(secretKey);
+        // A chave é validada no startup (JwtOptions + ValidateOnStart); não há segredo de fallback.
+        var key = Encoding.UTF8.GetBytes(_jwtOptions.SecretKey);
 
         var claims = new List<Claim>
         {
