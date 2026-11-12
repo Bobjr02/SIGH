@@ -58,12 +58,14 @@ try
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        // Login: RateLimits:Login:PermitLimit por minuto e por IP (padrão 10).
+        var loginPermits = builder.Configuration.GetValue("RateLimits:Login:PermitLimit", 10);
         options.AddPolicy("LoginIpRateLimit", httpContext =>
         {
             var ipAddress = httpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
             return RateLimitPartition.GetFixedWindowLimiter(ipAddress, _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = loginPermits,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             });

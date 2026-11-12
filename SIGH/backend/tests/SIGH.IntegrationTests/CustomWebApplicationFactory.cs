@@ -103,6 +103,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 // Limitadores são em memória e compartilhados pelos testes do mesmo host;
                 // PasswordRecoveryTests cobre o limite com um host próprio.
                 ["RateLimits:ForgotPassword:PermitLimit"] = "1000",
+                ["RateLimits:Login:PermitLimit"] = "1000",
                 ["RateLimits:ResetPassword:PermitLimit"] = "1000"
             });
         });

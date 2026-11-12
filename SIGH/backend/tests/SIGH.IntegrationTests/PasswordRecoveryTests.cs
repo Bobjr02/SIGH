@@ -141,6 +141,20 @@ public class PasswordRecoveryTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Login_KeepsItsRateLimit()
+    {
+        await using var limited = Factory.WithWebHostBuilder(b => b.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["RateLimits:Login:PermitLimit"] = "2" })));
+        var client = limited.CreateClient();
+
+        var statuses = new List<HttpStatusCode>();
+        for (var i = 0; i < 3; i++)
+            statuses.Add((await client.PostAsJsonAsync("/api/v1/auth/login", new { email = "ninguem@sigh.com", password = "x" })).StatusCode);
+
+        statuses.Should().Equal(HttpStatusCode.BadRequest, HttpStatusCode.BadRequest, HttpStatusCode.TooManyRequests);
+    }
+
+    [Fact]
     public async Task CreatingAUser_SendsASetupLinkWithoutAnyPassword_AndTheLinkDefinesThePassword()
     {
         var admin = Factory.CreateClient();
