@@ -1,0 +1,11 @@
+# Usado pelo BuildKit para "docker build -f SIGH/backend/Dockerfile ." (contexto na raiz).
+**/.git
+**/node_modules
+**/bin
+**/obj
+**/TestResults
+**/logs
+**/.env
+**/.env.*
+**/appsettings.*.local.json
+dist

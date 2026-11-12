@@ -1,39 +1,36 @@
-# Stage 1: Build & Test Stage using .NET 9 SDK
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS test
-WORKDIR /app
+# Build da imagem da API. Contexto = raiz do repositório:
+#   docker build -f SIGH/backend/Dockerfile .
+# Os testes rodam no CI (os de integração precisam de Docker/Testcontainers),
+# não durante o build da imagem.
 
-# Copy Solution and Project Files for Optimized Caching
-COPY SIGH/backend/SIGH.sln ./SIGH/backend/
-COPY SIGH/backend/global.json ./SIGH/backend/
+# Stage 1: restore + publish com o SDK .NET 9
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Arquivos de projeto primeiro, para cache do restore
+COPY SIGH/backend/global.json SIGH/backend/Directory.Build.props ./SIGH/backend/
 COPY SIGH/backend/src/SIGH.Domain/SIGH.Domain.csproj ./SIGH/backend/src/SIGH.Domain/
 COPY SIGH/backend/src/SIGH.Application/SIGH.Application.csproj ./SIGH/backend/src/SIGH.Application/
 COPY SIGH/backend/src/SIGH.Persistence/SIGH.Persistence.csproj ./SIGH/backend/src/SIGH.Persistence/
 COPY SIGH/backend/src/SIGH.Infrastructure/SIGH.Infrastructure.csproj ./SIGH/backend/src/SIGH.Infrastructure/
 COPY SIGH/backend/src/SIGH.Api/SIGH.Api.csproj ./SIGH/backend/src/SIGH.Api/
-COPY SIGH/backend/tests/SIGH.UnitTests/SIGH.UnitTests.csproj ./SIGH/backend/tests/SIGH.UnitTests/
-COPY SIGH/backend/tests/SIGH.IntegrationTests/SIGH.IntegrationTests.csproj ./SIGH/backend/tests/SIGH.IntegrationTests/
+RUN dotnet restore ./SIGH/backend/src/SIGH.Api/SIGH.Api.csproj
 
-# Restore NuGet Dependencies
-RUN dotnet restore ./SIGH/backend/SIGH.sln
+COPY SIGH/backend/src/ ./SIGH/backend/src/
+RUN dotnet publish ./SIGH/backend/src/SIGH.Api/SIGH.Api.csproj \
+      --configuration Release \
+      --no-restore \
+      --output /app/publish \
+      /p:UseAppHost=false
 
-# Copy Entire Source Code
-COPY SIGH/backend/ ./SIGH/backend/
-
-# Build Solution in Release Configuration
-RUN dotnet build ./SIGH/backend/SIGH.sln --configuration Release --no-restore
-
-# Run Tests
-RUN dotnet test ./SIGH/backend/tests/SIGH.UnitTests/SIGH.UnitTests.csproj --configuration Release --no-build --logger "trx;LogFileName=unit-tests.trx"
-RUN dotnet test ./SIGH/backend/tests/SIGH.IntegrationTests/SIGH.IntegrationTests.csproj --configuration Release --no-build --logger "trx;LogFileName=integration-tests.trx"
-
-# Stage 2: Publish Stage
-FROM test AS publish
-RUN dotnet publish ./SIGH/backend/src/SIGH.Api/SIGH.Api.csproj -c Release -o /app/publish --no-build
-
-# Stage 3: Runtime Stage
+# Stage 2: runtime, sem root
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
+
+# Configuração obrigatória (a API não sobe sem ela), sempre por variável de ambiente:
+#   ConnectionStrings__DefaultConnection, JwtOptions__SecretKey, JwtOptions__Issuer, JwtOptions__Audience
 ENV ASPNETCORE_URLS=http://+:3000
 EXPOSE 3000
+USER $APP_UID
 ENTRYPOINT ["dotnet", "SIGH.Api.dll"]
