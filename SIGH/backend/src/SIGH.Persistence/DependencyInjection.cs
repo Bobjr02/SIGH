@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<SighDbContext>());
         services.AddScoped<SIGH.Persistence.Seeds.DatabaseSeeder>();
         services.AddScoped<SIGH.Application.Security.ISecurityAuditLogger, SIGH.Persistence.Auditing.SecurityAuditLogger>();
+        services.AddScoped<SIGH.Application.Audit.IAuditLogQueryService, AuditLogQueryService>();
 
         // Registro de repositórios
         services.AddScoped<IUserRepository, UserRepository>();

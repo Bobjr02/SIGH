@@ -464,4 +464,25 @@ public class DisciplinaryCasesController : BaseController
 
         return false;
     }
+
+    /// <summary>
+    /// Linha do tempo de auditoria do processo e das suas subentidades (exige Audit.View).
+    /// </summary>
+    [HttpGet("{id:guid}/audit-trail")]
+    [Permission(PermissionCodes.Audit.View)]
+    [ProducesResponseType(typeof(Result<PagedResult<SIGH.Application.Audit.AuditLogDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<PagedResult<SIGH.Application.Audit.AuditLogDto>>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<Result<PagedResult<SIGH.Application.Audit.AuditLogDto>>>> GetAuditTrail(
+        [FromRoute] Guid id,
+        [FromServices] SIGH.Application.Audit.IAuditLogQueryService auditQuery,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var trail = await auditQuery.GetDisciplinaryCaseTrailAsync(id, pageNumber, pageSize, cancellationToken);
+        return trail is null
+            ? NotFoundResult<PagedResult<SIGH.Application.Audit.AuditLogDto>>("Processo disciplinar não encontrado.")
+            : OkResult(trail);
+    }
 }

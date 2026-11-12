@@ -46,6 +46,7 @@ export const PERMISSIONS = {
   NOTIFICATIONS_VIEW: 'Notifications.View',
   NOTIFICATIONS_READ: 'Notifications.Read',
   NOTIFICATIONS_MANAGE: 'Notifications.Manage',
+  AUDIT_VIEW: 'Audit.View',
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

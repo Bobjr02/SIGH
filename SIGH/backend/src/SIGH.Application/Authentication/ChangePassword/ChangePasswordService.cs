@@ -1,3 +1,4 @@
+using SIGH.Application.Security;
 using Microsoft.Extensions.Options;
 using SIGH.Application.Authentication.Common;
 using SIGH.Application.Common.Interfaces;
@@ -24,6 +25,7 @@ public class ChangePasswordService : IChangePasswordService
     private readonly PasswordOptions _passwordOptions;
     private readonly JwtOptions _jwtOptions;
     private readonly TokenOptions _tokenOptions;
+    private readonly ISecurityAuditLogger _securityAudit;
 
     public ChangePasswordService(
         IApplicationDbContext context,
@@ -35,7 +37,8 @@ public class ChangePasswordService : IChangePasswordService
         IDateTimeProvider dateTimeProvider,
         IOptions<PasswordOptions> passwordOptions,
         IOptions<JwtOptions> jwtOptions,
-        IOptions<TokenOptions> tokenOptions)
+        IOptions<TokenOptions> tokenOptions,
+        ISecurityAuditLogger securityAudit)
     {
         _context = context;
         _userRepository = userRepository;
@@ -47,6 +50,7 @@ public class ChangePasswordService : IChangePasswordService
         _passwordOptions = passwordOptions.Value;
         _jwtOptions = jwtOptions.Value;
         _tokenOptions = tokenOptions.Value;
+        _securityAudit = securityAudit;
     }
 
     public async Task<ChangePasswordResponse> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default)
@@ -133,6 +137,9 @@ public class ChangePasswordService : IChangePasswordService
         }, cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        await _securityAudit.RecordAsync(SecurityAuditActions.PasswordChanged, user.Id,
+            new { revokedRefreshTokens = activeRefreshTokens.Count }, cancellationToken);
 
         return new ChangePasswordResponse(
             true,

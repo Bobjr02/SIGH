@@ -39,5 +39,6 @@
   "Disciplinary.Reports.Export",
   "Notifications.View",
   "Notifications.Read",
-  "Notifications.Manage"
+  "Notifications.Manage",
+  "Audit.View"
 ]

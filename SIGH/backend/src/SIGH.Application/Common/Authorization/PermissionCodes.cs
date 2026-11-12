@@ -70,6 +70,11 @@ public static class PermissionCodes
         public const string Export = "Disciplinary.Reports.Export";
     }
 
+    public static class Audit
+    {
+        public const string View = "Audit.View";
+    }
+
     public static class Notifications
     {
         public const string View = "Notifications.View";
@@ -131,5 +136,8 @@ public static class PermissionCodes
         new(Notifications.View, "Visualizar notificações", "Consultar as próprias notificações."),
         new(Notifications.Read, "Marcar notificações como lidas", "Marcar as próprias notificações como lidas."),
         new(Notifications.Manage, "Gerenciar notificações", "Executar rotinas administrativas de notificações."),
+
+        // Auditoria
+        new(Audit.View, "Consultar auditoria", "Consultar a trilha de auditoria do sistema."),
     };
 }

@@ -61,6 +61,29 @@ public static class EntityAuditBuilder
             });
         }
 
+        var accessChanges = logs
+            .Where(l => l.Entity is nameof(UserRole) or nameof(RolePermission))
+            .Select(l => new { entity = l.Entity, id = l.EntityId, action = l.Action })
+            .ToList();
+
+        // Evento de segurança explícito sempre que perfis de usuários ou permissões de perfis mudam,
+        // venha a mudança de onde vier (seed, criação de usuário, endpoints futuros).
+        if (accessChanges.Count > 0)
+        {
+            logs.Add(new AuditLog
+            {
+                Action = SIGH.Application.Security.SecurityAuditActions.RolesOrPermissionsChanged,
+                Entity = "AccessControl",
+                NewValues = JsonSerializer.Serialize(new { changes = accessChanges }, JsonOptions),
+                UserId = userId,
+                IpAddress = ipAddress,
+                UserAgent = userAgent,
+                CorrelationId = correlationId,
+                CreatedAt = now,
+                CreatedBy = userId
+            });
+        }
+
         return logs;
     }
 

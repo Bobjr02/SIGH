@@ -50,13 +50,14 @@ public static class AuditPolicy
     };
 
     /// <summary>
-    /// Propriedades com hash que NÃO são segredo: o SHA-256 do arquivo de evidência é justamente
-    /// a prova de integridade e precisa ficar na trilha.
+    /// Propriedades cujo nome lembra segredo mas que NÃO são: o SHA-256 do arquivo de evidência é
+    /// justamente a prova de integridade e precisa ficar na trilha; MustChangePassword é só um flag.
     /// </summary>
-    public static readonly IReadOnlySet<string> NonSecretHashProperties = new HashSet<string>(StringComparer.Ordinal)
+    public static readonly IReadOnlySet<string> NonSecretProperties = new HashSet<string>(StringComparer.Ordinal)
     {
         "Sha256Hash",
         "IntegrityHash",
+        "MustChangePassword",
     };
 
     /// <summary>

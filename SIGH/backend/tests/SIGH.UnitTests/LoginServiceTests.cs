@@ -80,7 +80,8 @@ public class LoginServiceTests
             mockDateTime.Object,
             Options.Create(new JwtOptions { ExpiryInMinutes = 60 }),
             Options.Create(new PasswordOptions { MaxFailedAccessAttempts = 5 }),
-            Options.Create(new TokenOptions { RefreshTokenExpirationInDays = 7 })
+            Options.Create(new TokenOptions { RefreshTokenExpirationInDays = 7 }),
+            Moq.Mock.Of<SIGH.Application.Security.ISecurityAuditLogger>()
         );
 
         var request = new LoginRequest("delegado.silva@policiacivil.sp.gov.br", rawPassword);
@@ -132,7 +133,8 @@ public class LoginServiceTests
             mockDateTime.Object,
             Options.Create(new JwtOptions()),
             Options.Create(new PasswordOptions { MaxFailedAccessAttempts = 5, LockoutDurationInMinutes = 15 }),
-            Options.Create(new TokenOptions())
+            Options.Create(new TokenOptions()),
+            Moq.Mock.Of<SIGH.Application.Security.ISecurityAuditLogger>()
         );
 
         var request = new LoginRequest("agente.santos@policiacivil.sp.gov.br", "WrongPassword123!");
@@ -181,7 +183,8 @@ public class LoginServiceTests
             mockDateTime.Object,
             Options.Create(new JwtOptions()),
             Options.Create(new PasswordOptions { MaxFailedAccessAttempts = 5, LockoutDurationInMinutes = 15 }),
-            Options.Create(new TokenOptions())
+            Options.Create(new TokenOptions()),
+            Moq.Mock.Of<SIGH.Application.Security.ISecurityAuditLogger>()
         );
 
         var request = new LoginRequest("escrivao.oliveira@policiacivil.sp.gov.br", "WrongPassword123!");

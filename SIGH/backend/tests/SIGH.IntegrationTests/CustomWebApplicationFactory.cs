@@ -72,6 +72,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         {
             services.RemoveAll<IDateTimeProvider>();
             services.AddSingleton<IDateTimeProvider>(Clock);
+            services.AddSingleton<Microsoft.AspNetCore.Hosting.IStartupFilter, LoopbackRemoteIpStartupFilter>();
         });
 
         builder.ConfigureAppConfiguration((_, configuration) =>

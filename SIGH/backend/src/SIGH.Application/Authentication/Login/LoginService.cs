@@ -1,3 +1,4 @@
+using SIGH.Application.Security;
 using Microsoft.Extensions.Options;
 using SIGH.Application.Authentication.Common;
 using SIGH.Application.Common.Interfaces;
@@ -23,6 +24,7 @@ public class LoginService : ILoginService
     private readonly JwtOptions _jwtOptions;
     private readonly PasswordOptions _passwordOptions;
     private readonly TokenOptions _tokenOptions;
+    private readonly ISecurityAuditLogger _securityAudit;
 
     public LoginService(
         IApplicationDbContext context,
@@ -34,7 +36,8 @@ public class LoginService : ILoginService
         IDateTimeProvider dateTimeProvider,
         IOptions<JwtOptions> jwtOptions,
         IOptions<PasswordOptions> passwordOptions,
-        IOptions<TokenOptions> tokenOptions)
+        IOptions<TokenOptions> tokenOptions,
+        ISecurityAuditLogger securityAudit)
     {
         _context = context;
         _userRepository = userRepository;
@@ -46,6 +49,7 @@ public class LoginService : ILoginService
         _jwtOptions = jwtOptions.Value;
         _passwordOptions = passwordOptions.Value;
         _tokenOptions = tokenOptions.Value;
+        _securityAudit = securityAudit;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -56,6 +60,7 @@ public class LoginService : ILoginService
 
         if (user == null)
         {
+            await _securityAudit.RecordAsync(SecurityAuditActions.LoginFailed, null, new { email, reason = "UnknownUser" }, cancellationToken);
             throw new BusinessRuleValidationException("E-mail ou senha inválidos.");
         }
 
@@ -64,6 +69,7 @@ public class LoginService : ILoginService
         // Verificar Bloqueio Ativo
         if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > now)
         {
+            await _securityAudit.RecordAsync(SecurityAuditActions.LoginFailed, user.Id, new { email, reason = "AccountLocked" }, cancellationToken);
             throw new BusinessRuleValidationException("Conta temporariamente bloqueada devido a múltiplas tentativas incorretas. Tente novamente mais tarde.");
         }
 
@@ -78,12 +84,14 @@ public class LoginService : ILoginService
             }
             else
             {
+                await _securityAudit.RecordAsync(SecurityAuditActions.LoginFailed, user.Id, new { email, reason = "AccountLocked" }, cancellationToken);
                 throw new BusinessRuleValidationException("Usuário bloqueado. Entre em contato com o administrador do sistema.");
             }
         }
 
         if (user.Status == UserStatus.Inactive || user.Status == UserStatus.Suspended)
         {
+            await _securityAudit.RecordAsync(SecurityAuditActions.LoginFailed, user.Id, new { email, reason = "InactiveOrSuspended" }, cancellationToken);
             throw new BusinessRuleValidationException("Usuário inativo ou suspenso. Acesso negado.");
         }
 
@@ -92,13 +100,25 @@ public class LoginService : ILoginService
         if (!isPasswordValid)
         {
             user.FailedLoginAttempts++;
+            var lockedNow = false;
             if (user.FailedLoginAttempts >= _passwordOptions.MaxFailedAccessAttempts)
             {
                 user.Status = UserStatus.Locked;
                 user.LockoutEnd = now.AddMinutes(_passwordOptions.LockoutDurationInMinutes);
+                lockedNow = true;
             }
 
             await _context.SaveChangesAsync(cancellationToken);
+
+            // Nunca registra a senha informada.
+            await _securityAudit.RecordAsync(SecurityAuditActions.LoginFailed, user.Id,
+                new { email, reason = "InvalidPassword", failedAttempts = user.FailedLoginAttempts }, cancellationToken);
+            if (lockedNow)
+            {
+                await _securityAudit.RecordAsync(SecurityAuditActions.AccountLocked, user.Id,
+                    new { lockoutEnd = user.LockoutEnd, failedAttempts = user.FailedLoginAttempts }, cancellationToken);
+            }
+
             throw new BusinessRuleValidationException("E-mail ou senha inválidos.");
         }
 
@@ -148,6 +168,9 @@ public class LoginService : ILoginService
         await _userRepository.AddUserSessionAsync(sessionEntity, cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        await _securityAudit.RecordAsync(SecurityAuditActions.LoginSucceeded, user.Id,
+            new { sessionId = sessionEntity.Id, mustChangePassword = user.MustChangePassword }, cancellationToken);
 
         var userDto = new UserDto(
             user.Id,
