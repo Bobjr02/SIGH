@@ -1,0 +1,51 @@
+// Espelho exato de PermissionCodes.All (backend: SIGH.Application/Common/Authorization/PermissionCodes.cs).
+//
+// Como manter sincronizado:
+// 1. Ao criar/renomear/remover uma permissão no backend, atualize permission-codes.json
+//    (mesma ordem de PermissionCodes.All). O teste do backend PermissionCodesFrontendSyncTests falha se divergir.
+// 2. Atualize este objeto. O teste do front permissions.test.ts falha se ele divergir do JSON.
+export const PERMISSIONS = {
+  USERS_VIEW: 'Users.View',
+  USERS_CREATE: 'Users.Create',
+  USERS_CHANGE_STATUS: 'Users.ChangeStatus',
+  USERS_UNLOCK: 'Users.Unlock',
+  EMPLOYEES_VIEW: 'Employees.View',
+  EMPLOYEES_CREATE: 'Employees.Create',
+  EMPLOYEES_UPDATE: 'Employees.Update',
+  EMPLOYEES_CHANGE_ORGANIZATIONAL_ASSIGNMENT: 'Employees.ChangeOrganizationalAssignment',
+  EMPLOYEES_CHANGE_SUPERVISOR: 'Employees.ChangeSupervisor',
+  EMPLOYEES_CHANGE_STATUS: 'Employees.ChangeStatus',
+  EMPLOYEES_TERMINATE: 'Employees.Terminate',
+  EMPLOYEES_REACTIVATE: 'Employees.Reactivate',
+  EMPLOYEES_LINK_USER: 'Employees.LinkUser',
+  EMPLOYEES_UNLINK_USER: 'Employees.UnlinkUser',
+  DISCIPLINARY_CASES_VIEW: 'Disciplinary.Cases.View',
+  DISCIPLINARY_CASES_CREATE: 'Disciplinary.Cases.Create',
+  DISCIPLINARY_CASES_OPEN: 'Disciplinary.Cases.Open',
+  DISCIPLINARY_CASES_START_INVESTIGATION: 'Disciplinary.Cases.StartInvestigation',
+  DISCIPLINARY_CASES_SUBMIT_FOR_DECISION: 'Disciplinary.Cases.SubmitForDecision',
+  DISCIPLINARY_CASES_APPROVE_DECISION: 'Disciplinary.Cases.ApproveDecision',
+  DISCIPLINARY_CASES_REJECT_DECISION: 'Disciplinary.Cases.RejectDecision',
+  DISCIPLINARY_CASES_ADD_OCCURRENCE: 'Disciplinary.Cases.AddOccurrence',
+  DISCIPLINARY_CASES_ADD_EMPLOYEE: 'Disciplinary.Cases.AddEmployee',
+  DISCIPLINARY_CASES_ADD_EVIDENCE: 'Disciplinary.Cases.AddEvidence',
+  DISCIPLINARY_CASES_RECORD_DECISION: 'Disciplinary.Cases.RecordDecision',
+  DISCIPLINARY_CASES_APPLY_MEASURE: 'Disciplinary.Cases.ApplyMeasure',
+  DISCIPLINARY_CASES_CANCEL: 'Disciplinary.Cases.Cancel',
+  DISCIPLINARY_CASES_CONCLUDE: 'Disciplinary.Cases.Conclude',
+  DISCIPLINARY_INFRACTION_TYPES_VIEW: 'Disciplinary.InfractionTypes.View',
+  DISCIPLINARY_INFRACTION_TYPES_CREATE: 'Disciplinary.InfractionTypes.Create',
+  DISCIPLINARY_INFRACTION_TYPES_UPDATE: 'Disciplinary.InfractionTypes.Update',
+  DISCIPLINARY_INFRACTION_TYPES_ACTIVATE: 'Disciplinary.InfractionTypes.Activate',
+  DISCIPLINARY_INFRACTION_TYPES_DEACTIVATE: 'Disciplinary.InfractionTypes.Deactivate',
+  DISCIPLINARY_REPORTS_VIEW_DASHBOARD: 'Disciplinary.Reports.ViewDashboard',
+  DISCIPLINARY_REPORTS_VIEW_CASES: 'Disciplinary.Reports.ViewCases',
+  DISCIPLINARY_REPORTS_VIEW_MEASURES: 'Disciplinary.Reports.ViewMeasures',
+  DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY: 'Disciplinary.Reports.ViewEmployeeHistory',
+  DISCIPLINARY_REPORTS_EXPORT: 'Disciplinary.Reports.Export',
+  NOTIFICATIONS_VIEW: 'Notifications.View',
+  NOTIFICATIONS_READ: 'Notifications.Read',
+  NOTIFICATIONS_MANAGE: 'Notifications.Manage',
+} as const;
+
+export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
