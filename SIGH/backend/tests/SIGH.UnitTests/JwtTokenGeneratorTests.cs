@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
+using SIGH.Application.Common.Authorization;
 using SIGH.Application.Options;
 using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
@@ -52,4 +53,53 @@ public class JwtTokenGeneratorTests
         jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value.Should().Be("Administrador");
         jwtToken.Claims.Where(c => c.Type == "permission").Select(c => c.Value).Should().Contain("USERS_CREATE");
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void GenerateToken_ShouldNeverContainCpf(bool mustChangePassword)
+    {
+        var user = CreateUser(mustChangePassword);
+
+        var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(CreateGenerator().GenerateToken(user, [], []));
+
+        jwtToken.Claims.Should().NotContain(c => string.Equals(c.Type, "cpf", StringComparison.OrdinalIgnoreCase));
+        jwtToken.Claims.Should().NotContain(c => c.Value == user.Cpf);
+    }
+
+    [Fact]
+    public void GenerateToken_WhenMustChangePassword_ShouldIncludePasswordChangeRequiredClaim()
+    {
+        var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(CreateGenerator().GenerateToken(CreateUser(true), [], []));
+
+        jwtToken.Claims.Should().ContainSingle(c => c.Type == SighClaimTypes.PasswordChangeRequired)
+            .Which.Value.Should().Be("true");
+    }
+
+    [Fact]
+    public void GenerateToken_WhenPasswordAlreadyChanged_ShouldNotIncludePasswordChangeRequiredClaim()
+    {
+        var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(CreateGenerator().GenerateToken(CreateUser(false), [], []));
+
+        jwtToken.Claims.Should().NotContain(c => c.Type == SighClaimTypes.PasswordChangeRequired);
+    }
+
+    private static JwtTokenGenerator CreateGenerator() =>
+        new(Options.Create(new JwtOptions
+        {
+            Issuer = "SIGH_Issuer",
+            Audience = "SIGH_Audience",
+            SecretKey = "SuperSecretKeyForTestingJwtTokenGeneration123!",
+            ExpiryInMinutes = 60
+        }));
+
+    private static User CreateUser(bool mustChangePassword) =>
+        new(Guid.NewGuid())
+        {
+            FullName = "Ana Souza",
+            Email = "ana.souza@sigh.test",
+            Cpf = "52998224725",
+            Status = mustChangePassword ? UserStatus.PendingFirstAccess : UserStatus.Active,
+            MustChangePassword = mustChangePassword
+        };
 }

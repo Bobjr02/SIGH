@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using SIGH.Api.Contracts.Auth;
+using SIGH.Api.Middlewares;
 using SIGH.Application.Authentication.ChangePassword;
 using SIGH.Application.Authentication.ForgotPassword;
 using SIGH.Application.Authentication.Login;
@@ -61,6 +62,7 @@ public class AuthController : BaseController
 
     [HttpPost("logout")]
     [Authorize]
+    [AllowWhilePasswordChangeRequired]
     [ProducesResponseType(typeof(Result<LogoutResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<Result<LogoutResponse>>> Logout([FromBody] LogoutHttpRequest request, CancellationToken cancellationToken)
@@ -71,6 +73,7 @@ public class AuthController : BaseController
     }
 
     [HttpPost("refresh")]
+    [AllowWhilePasswordChangeRequired]
     [ProducesResponseType(typeof(Result<RefreshTokenResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Result<RefreshTokenResponse>>> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
@@ -107,12 +110,17 @@ public class AuthController : BaseController
 
     [HttpPost("change-password")]
     [Authorize]
+    [AllowWhilePasswordChangeRequired]
     [ProducesResponseType(typeof(Result<ChangePasswordResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<Result<ChangePasswordResponse>>> ChangePassword([FromBody] ChangePasswordHttpRequest request, CancellationToken cancellationToken)
     {
-        var updatedRequest = request.ToApplicationRequest(GetUserId());
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        var userAgent = Request.Headers.UserAgent.ToString();
+
+        // Devolve um novo par de tokens sem a claim pwd_change_required; os refresh tokens anteriores são revogados.
+        var updatedRequest = request.ToApplicationRequest(GetUserId(), ipAddress, userAgent);
         var result = await _changePasswordService.ChangePasswordAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Senha alterada com sucesso.");
     }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using SIGH.Application.Authentication.Common;
 using SIGH.Application.Common.Interfaces;
 using SIGH.Application.Interfaces;
 using SIGH.Application.Options;
@@ -112,19 +113,8 @@ public class LoginService : ILoginService
         }
 
         // Extrair Roles e Permissões
-        var roles = user.UserRoles
-            .Where(ur => !ur.IsDeleted && ur.Role != null && !ur.Role.IsDeleted)
-            .Select(ur => ur.Role.Name)
-            .Distinct()
-            .ToList();
-
-        var permissions = user.UserRoles
-            .Where(ur => !ur.IsDeleted && ur.Role != null && !ur.Role.IsDeleted)
-            .SelectMany(ur => ur.Role.RolePermissions)
-            .Where(rp => !rp.IsDeleted && rp.Permission != null && !rp.Permission.IsDeleted)
-            .Select(rp => rp.Permission.Code)
-            .Distinct()
-            .ToList();
+        var roles = user.GetActiveRoleNames();
+        var permissions = user.GetActivePermissionCodes();
 
         // Gerar Access Token e Refresh Token
         var accessToken = _jwtTokenGenerator.GenerateToken(user, roles, permissions);

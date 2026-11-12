@@ -167,6 +167,8 @@ try
     app.UseCors("AllowFrontend");
 
     app.UseAuthentication();
+    // Troca de senha pendente: só change-password, logout e refresh ficam acessíveis.
+    app.UseMiddleware<PasswordChangeRequiredMiddleware>();
     app.UseAuthorization();
 
     app.MapControllers();

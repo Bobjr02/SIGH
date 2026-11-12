@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using SIGH.Application.Authentication.Common;
 using SIGH.Application.Common.Interfaces;
 using SIGH.Application.Common.Validators;
 using SIGH.Application.Interfaces;
@@ -7,6 +8,7 @@ using SIGH.Domain.Entities;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
 using SIGH.Domain.Repositories;
+using RefreshTokenEntity = SIGH.Domain.Entities.RefreshToken;
 
 namespace SIGH.Application.Authentication.ChangePassword;
 
@@ -15,18 +17,36 @@ public class ChangePasswordService : IChangePasswordService
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IRefreshTokenGenerator _refreshTokenGenerator;
+    private readonly ITokenHasher _tokenHasher;
+    private readonly IDateTimeProvider _dateTimeProvider;
     private readonly PasswordOptions _passwordOptions;
+    private readonly JwtOptions _jwtOptions;
+    private readonly TokenOptions _tokenOptions;
 
     public ChangePasswordService(
         IApplicationDbContext context,
         IUserRepository userRepository,
         IPasswordHasher passwordHasher,
-        IOptions<PasswordOptions> passwordOptions)
+        IJwtTokenGenerator jwtTokenGenerator,
+        IRefreshTokenGenerator refreshTokenGenerator,
+        ITokenHasher tokenHasher,
+        IDateTimeProvider dateTimeProvider,
+        IOptions<PasswordOptions> passwordOptions,
+        IOptions<JwtOptions> jwtOptions,
+        IOptions<TokenOptions> tokenOptions)
     {
         _context = context;
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
+        _jwtTokenGenerator = jwtTokenGenerator;
+        _refreshTokenGenerator = refreshTokenGenerator;
+        _tokenHasher = tokenHasher;
+        _dateTimeProvider = dateTimeProvider;
         _passwordOptions = passwordOptions.Value;
+        _jwtOptions = jwtOptions.Value;
+        _tokenOptions = tokenOptions.Value;
     }
 
     public async Task<ChangePasswordResponse> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default)
@@ -82,8 +102,41 @@ public class ChangePasswordService : IChangePasswordService
             PasswordHash = newHash
         }, cancellationToken);
 
+        var now = _dateTimeProvider.UtcNow;
+
+        // Revoga todos os refresh tokens anteriores: sessões abertas com a senha antiga
+        // (inclusive as emitidas com a claim pwd_change_required) não podem mais ser renovadas.
+        var activeRefreshTokens = await _userRepository.GetActiveRefreshTokensByUserIdAsync(user.Id, cancellationToken);
+        foreach (var activeToken in activeRefreshTokens)
+        {
+            activeToken.RevokedAt = now;
+            activeToken.ReasonRevoked = "Senha alterada pelo usuário";
+        }
+
+        // Novo par de tokens, já refletindo MustChangePassword = false.
+        var userWithAccess = await _userRepository.GetByIdWithRolesAndPermissionsAsync(user.Id, cancellationToken);
+        var roles = userWithAccess?.GetActiveRoleNames() ?? new List<string>();
+        var permissions = userWithAccess?.GetActivePermissionCodes() ?? new List<string>();
+
+        var accessToken = _jwtTokenGenerator.GenerateToken(user, roles, permissions);
+        var rawRefreshToken = _refreshTokenGenerator.GenerateRefreshToken();
+
+        await _userRepository.AddRefreshTokenAsync(new RefreshTokenEntity
+        {
+            UserId = user.Id,
+            TokenHash = _tokenHasher.HashToken(rawRefreshToken),
+            ExpiresAt = now.AddDays(_tokenOptions.RefreshTokenExpirationInDays),
+            IpAddress = request.IpAddress,
+            UserAgent = request.UserAgent
+        }, cancellationToken);
+
         await _context.SaveChangesAsync(cancellationToken);
 
-        return new ChangePasswordResponse(true, "Senha alterada com sucesso.");
+        return new ChangePasswordResponse(
+            true,
+            "Senha alterada com sucesso.",
+            accessToken,
+            rawRefreshToken,
+            _jwtOptions.ExpiryInMinutes > 0 ? _jwtOptions.ExpiryInMinutes : 60);
     }
 }
