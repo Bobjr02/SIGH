@@ -1,31 +1,105 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { Home } from '../pages/Home';
-import { InfractionTypesPage } from '../features/disciplinary/pages/InfractionTypesPage';
-import { DisciplinaryCasesListPage } from '../features/disciplinary/pages/DisciplinaryCasesListPage';
-import { CreateDisciplinaryCasePage } from '../features/disciplinary/pages/CreateDisciplinaryCasePage';
-import { DisciplinaryCaseDetailPage } from '../features/disciplinary/pages/DisciplinaryCaseDetailPage';
-import { DisciplinaryDashboardPage } from '../features/disciplinary-reports/pages/DisciplinaryDashboardPage';
-import { DisciplinaryCasesReportPage } from '../features/disciplinary-reports/pages/DisciplinaryCasesReportPage';
-import { DisciplinaryMeasuresReportPage } from '../features/disciplinary-reports/pages/DisciplinaryMeasuresReportPage';
-import { EmployeeDisciplinaryHistoryPage } from '../features/disciplinary-reports/pages/EmployeeDisciplinaryHistoryPage';
-import { NotificationsPage } from '../features/notifications/pages/NotificationsPage';
+import React, { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { ProtectedRoute, CHANGE_PASSWORD_PATH } from '../auth/ProtectedRoute';
+import { RequirePermission } from '../auth/RequirePermission';
+import { PERMISSIONS, type PermissionCode } from '../auth/permissions';
+import { FullScreenLoader } from '../components/common/FullScreenLoader';
+import { MainLayout } from '../layouts/MainLayout';
+
+// Páginas carregadas sob demanda: cada uma vira um chunk separado do bundle principal.
+const LoginPage = lazy(() => import('../pages/LoginPage'));
+const ChangePasswordPage = lazy(() => import('../pages/ChangePasswordPage'));
+const Home = lazy(() => import('../pages/Home').then((m) => ({ default: m.Home })));
+const NotificationsPage = lazy(() =>
+  import('../features/notifications/pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
+);
+const InfractionTypesPage = lazy(() =>
+  import('../features/disciplinary/pages/InfractionTypesPage').then((m) => ({ default: m.InfractionTypesPage })),
+);
+const DisciplinaryCasesListPage = lazy(() =>
+  import('../features/disciplinary/pages/DisciplinaryCasesListPage').then((m) => ({ default: m.DisciplinaryCasesListPage })),
+);
+const CreateDisciplinaryCasePage = lazy(() =>
+  import('../features/disciplinary/pages/CreateDisciplinaryCasePage').then((m) => ({ default: m.CreateDisciplinaryCasePage })),
+);
+const DisciplinaryCaseDetailPage = lazy(() =>
+  import('../features/disciplinary/pages/DisciplinaryCaseDetailPage').then((m) => ({ default: m.DisciplinaryCaseDetailPage })),
+);
+const DisciplinaryDashboardPage = lazy(() =>
+  import('../features/disciplinary-reports/pages/DisciplinaryDashboardPage').then((m) => ({ default: m.DisciplinaryDashboardPage })),
+);
+const DisciplinaryCasesReportPage = lazy(() =>
+  import('../features/disciplinary-reports/pages/DisciplinaryCasesReportPage').then((m) => ({ default: m.DisciplinaryCasesReportPage })),
+);
+const DisciplinaryMeasuresReportPage = lazy(() =>
+  import('../features/disciplinary-reports/pages/DisciplinaryMeasuresReportPage').then((m) => ({
+    default: m.DisciplinaryMeasuresReportPage,
+  })),
+);
+const EmployeeDisciplinaryHistoryPage = lazy(() =>
+  import('../features/disciplinary-reports/pages/EmployeeDisciplinaryHistoryPage').then((m) => ({
+    default: m.EmployeeDisciplinaryHistoryPage,
+  })),
+);
+
+const guard = (permission: PermissionCode, element: React.ReactNode) => (
+  <RequirePermission permission={permission}>{element}</RequirePermission>
+);
+
+const AppLayout: React.FC = () => (
+  <MainLayout>
+    <Suspense fallback={<FullScreenLoader />}>
+      <Outlet />
+    </Suspense>
+  </MainLayout>
+);
 
 export const AppRoutes: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/notifications" element={<NotificationsPage />} />
-      <Route path="/disciplinary/infraction-types" element={<InfractionTypesPage />} />
-      <Route path="/disciplinary/cases" element={<DisciplinaryCasesListPage />} />
-      <Route path="/disciplinary/cases/new" element={<CreateDisciplinaryCasePage />} />
-      <Route path="/disciplinary/cases/:id" element={<DisciplinaryCaseDetailPage />} />
-      <Route path="/disciplinary/reports/dashboard" element={<DisciplinaryDashboardPage />} />
-      <Route path="/disciplinary/reports/cases" element={<DisciplinaryCasesReportPage />} />
-      <Route path="/disciplinary/reports/measures" element={<DisciplinaryMeasuresReportPage />} />
-      <Route path="/disciplinary/reports/employees/:employeeId/history" element={<EmployeeDisciplinaryHistoryPage />} />
-      <Route path="/disciplinary/reports/employees/history" element={<EmployeeDisciplinaryHistoryPage />} />
-      <Route path="*" element={<Navigate to="/disciplinary/cases" replace />} />
-    </Routes>
+    <Suspense fallback={<FullScreenLoader />}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route path={CHANGE_PASSWORD_PATH} element={<ChangePasswordPage />} />
+
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/notifications" element={guard(PERMISSIONS.NOTIFICATIONS_VIEW, <NotificationsPage />)} />
+            <Route
+              path="/disciplinary/infraction-types"
+              element={guard(PERMISSIONS.DISCIPLINARY_INFRACTION_TYPES_VIEW, <InfractionTypesPage />)}
+            />
+            <Route path="/disciplinary/cases" element={guard(PERMISSIONS.DISCIPLINARY_CASES_VIEW, <DisciplinaryCasesListPage />)} />
+            <Route
+              path="/disciplinary/cases/new"
+              element={guard(PERMISSIONS.DISCIPLINARY_CASES_CREATE, <CreateDisciplinaryCasePage />)}
+            />
+            <Route path="/disciplinary/cases/:id" element={guard(PERMISSIONS.DISCIPLINARY_CASES_VIEW, <DisciplinaryCaseDetailPage />)} />
+            <Route
+              path="/disciplinary/reports/dashboard"
+              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_DASHBOARD, <DisciplinaryDashboardPage />)}
+            />
+            <Route
+              path="/disciplinary/reports/cases"
+              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_CASES, <DisciplinaryCasesReportPage />)}
+            />
+            <Route
+              path="/disciplinary/reports/measures"
+              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_MEASURES, <DisciplinaryMeasuresReportPage />)}
+            />
+            <Route
+              path="/disciplinary/reports/employees/:employeeId/history"
+              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY, <EmployeeDisciplinaryHistoryPage />)}
+            />
+            <Route
+              path="/disciplinary/reports/employees/history"
+              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY, <EmployeeDisciplinaryHistoryPage />)}
+            />
+            <Route path="*" element={<Navigate to="/disciplinary/cases" replace />} />
+          </Route>
+        </Route>
+      </Routes>
+    </Suspense>
   );
 };

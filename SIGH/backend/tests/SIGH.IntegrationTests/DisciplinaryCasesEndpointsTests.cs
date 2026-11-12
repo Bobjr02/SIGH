@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
+using SIGH.Api.Contracts.Auth;
 using Microsoft.Extensions.DependencyInjection;
 using SIGH.Api.Contracts.Disciplinary;
 using SIGH.Application.Authentication.Login;
@@ -53,7 +54,7 @@ public class DisciplinaryCasesEndpointsTests : IntegrationTestBase
 
         var loginRequest = new LoginRequest(email, DefaultPassword);
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
-        var loginResult = await loginResponse.Content.ReadFromJsonAsync<Result<LoginResponse>>();
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<Result<LoginHttpResponse>>();
         var entry = (loginResult!.Data!.AccessToken, loginResult.Data.User.Id);
         _factory.TokenCache[email] = entry;
         return entry;
@@ -441,7 +442,7 @@ public class DisciplinaryCasesEndpointsTests : IntegrationTestBase
         // Arrange
         var loginRequest = new LoginRequest("unprivileged@sigh.com", "Admin@123456");
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
-        var loginResult = await loginResponse.Content.ReadFromJsonAsync<Result<LoginResponse>>();
+        var loginResult = await loginResponse.Content.ReadFromJsonAsync<Result<LoginHttpResponse>>();
 
         var unprivilegedClient = Factory.CreateClient();
         unprivilegedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginResult!.Data!.AccessToken);

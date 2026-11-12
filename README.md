@@ -114,11 +114,18 @@ O Swagger estará acessível em: `http://localhost:5000/swagger` ou `https://loc
 #### Troca de senha no primeiro acesso
 Usuários com troca de senha pendente recebem um access token com a claim `pwd_change_required: "true"`.
 Com ele, qualquer endpoint autenticado responde **403** (ProblemDetails com `"code": "PASSWORD_CHANGE_REQUIRED"`),
-exceto `POST /api/v1/auth/change-password`, `POST /api/v1/auth/logout` e `POST /api/v1/auth/refresh`.
+exceto `POST /api/v1/auth/change-password`, `POST /api/v1/auth/logout`, `POST /api/v1/auth/refresh` e `GET /api/v1/auth/me`.
 
-Depois de `change-password`, todos os refresh tokens anteriores do usuário são revogados e a resposta traz um
-**novo par de tokens** (`accessToken`, `refreshToken`, `expiresInMinutes`) já sem a claim; o cliente deve trocar os
-tokens que tinha pelos novos. O access token antigo continua restrito até expirar.
+Depois de `change-password`, todos os refresh tokens anteriores do usuário são revogados; a resposta traz um novo
+`accessToken` já sem a claim e o novo refresh token vai no cookie. O access token antigo continua restrito até expirar.
+
+#### Refresh token em cookie
+O refresh token **nunca** aparece no corpo das respostas: `login`, `refresh` e `change-password` o gravam no cookie
+`sigh_rt` (`HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`, com a expiração do refresh token).
+`POST /auth/refresh` lê o cookie e ignora o corpo; `POST /auth/logout` revoga o token e apaga o cookie.
+`GET /auth/me` devolve o usuário com perfis e permissões efetivas lidas do banco.
+
+Origens de CORS: `Cors:AllowedOrigins` (lista). Em dev o front usa o proxy do Vite e não precisa de CORS.
 
 #### Testes
 ```bash
@@ -128,11 +135,19 @@ dotnet test tests/SIGH.IntegrationTests   # requer Docker: sobe um SQL Server vi
 ```
 
 ### 4. Executando o Frontend (React + Vite)
+O frontend é um projeto independente em `SIGH/frontend` (o antigo scaffold do AI Studio na raiz foi removido).
 ```bash
-npm install
-npm run dev
+cd SIGH/frontend
+npm ci
+npm run dev        # http://localhost:3000, com proxy de /api para a API em http://localhost:5000
 ```
-A aplicação web estará acessível em: `http://localhost:3000`.
+Outros comandos: `npm run typecheck`, `npm test` (Vitest + Testing Library + msw), `npm run build`,
+`npm run check:bundle` (falha se o chunk de entrada passar de 500 kB) e `npm run e2e` (Playwright, local; veja
+`SIGH/frontend/e2e/README.md`).
+
+O access token fica só em memória; ao recarregar a página a sessão é restaurada com `POST /auth/refresh` (cookie)
+e `GET /auth/me`. As permissões do front (`src/auth/permissions.ts`) espelham `PermissionCodes.All` via
+`src/auth/permission-codes.json`; um teste no backend e outro no front falham se as listas divergirem.
 
 ---
 

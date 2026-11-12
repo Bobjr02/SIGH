@@ -22,6 +22,7 @@ import { NotificationFiltersPanel } from '../components/NotificationFiltersPanel
 import { NotificationItem } from '../components/NotificationItem';
 import { NotificationFilters } from '../types';
 import { useAuthContext } from '../../../contexts/AuthContext';
+import { PERMISSIONS } from '../../../auth/permissions';
 
 const defaultFilters: NotificationFilters = {
   pageNumber: 1,
@@ -35,7 +36,7 @@ const defaultFilters: NotificationFilters = {
 
 export const NotificationsPage: React.FC = () => {
   const { hasPermission } = useAuthContext();
-  const canManage = hasPermission('Notifications.Manage');
+  const canManage = hasPermission(PERMISSIONS.NOTIFICATIONS_MANAGE);
 
   const [filters, setFilters] = useState<NotificationFilters>(defaultFilters);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);

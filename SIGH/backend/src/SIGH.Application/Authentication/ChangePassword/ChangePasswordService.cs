@@ -121,11 +121,13 @@ public class ChangePasswordService : IChangePasswordService
         var accessToken = _jwtTokenGenerator.GenerateToken(user, roles, permissions);
         var rawRefreshToken = _refreshTokenGenerator.GenerateRefreshToken();
 
+        var refreshTokenExpiresAt = now.AddDays(_tokenOptions.RefreshTokenExpirationInDays);
+
         await _userRepository.AddRefreshTokenAsync(new RefreshTokenEntity
         {
             UserId = user.Id,
             TokenHash = _tokenHasher.HashToken(rawRefreshToken),
-            ExpiresAt = now.AddDays(_tokenOptions.RefreshTokenExpirationInDays),
+            ExpiresAt = refreshTokenExpiresAt,
             IpAddress = request.IpAddress,
             UserAgent = request.UserAgent
         }, cancellationToken);
@@ -137,6 +139,7 @@ public class ChangePasswordService : IChangePasswordService
             "Senha alterada com sucesso.",
             accessToken,
             rawRefreshToken,
-            _jwtOptions.ExpiryInMinutes > 0 ? _jwtOptions.ExpiryInMinutes : 60);
+            _jwtOptions.ExpiryInMinutes > 0 ? _jwtOptions.ExpiryInMinutes : 60,
+            refreshTokenExpiresAt);
     }
 }

@@ -20,11 +20,11 @@ public class DatabaseSeederTests
     private static SighDbContext CreateContext(string dbName) =>
         new(new DbContextOptionsBuilder<SighDbContext>().UseInMemoryDatabase(dbName).Options);
 
-    private static DatabaseSeeder CreateSeeder(SighDbContext context, string? adminPassword)
+    private static DatabaseSeeder CreateSeeder(SighDbContext context, string? adminPassword, string adminEmail = AdminEmail)
     {
         var settings = new Dictionary<string, string?>
         {
-            ["Seed:AdminEmail"] = AdminEmail,
+            ["Seed:AdminEmail"] = adminEmail,
             ["Seed:DefaultCompanyName"] = "Empresa Teste",
             ["Seed:AdminPassword"] = adminPassword
         };
@@ -106,5 +106,23 @@ public class DatabaseSeederTests
         (await context.Users.AnyAsync()).Should().BeFalse();
         (await context.Permissions.CountAsync()).Should().Be(PermissionCodes.All.Count);
         (await context.Companies.AnyAsync(c => c.Id == DatabaseSeeder.DefaultCompanyId)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SeedAsync_WhenAdminEmailChangesAfterAdminWasSeeded_DoesNotCreateSecondAdmin()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(dbName))
+        {
+            await CreateSeeder(context, adminPassword: "Senha@Inicial1").SeedAsync();
+        }
+
+        await using (var context = CreateContext(dbName))
+        {
+            var act = () => CreateSeeder(context, adminPassword: "Senha@Inicial1", adminEmail: "outro.admin@sigh.com.br").SeedAsync();
+
+            await act.Should().NotThrowAsync();
+            (await context.Users.Select(u => u.Email).ToListAsync()).Should().Equal(AdminEmail);
+        }
     }
 }

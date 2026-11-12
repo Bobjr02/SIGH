@@ -67,6 +67,7 @@ public static class DependencyInjection
         services.AddScoped<ISighAuthorizationService, AuthorizationService>();
 
         // Registro de serviços de infraestrutura
+        services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAuthorizedCompanyProvider, AuthorizedCompanyProvider>();
         services.AddScoped<IEmailService, NullEmailService>();

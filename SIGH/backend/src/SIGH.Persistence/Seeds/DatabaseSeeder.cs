@@ -192,6 +192,22 @@ public sealed class DatabaseSeeder
         if (exists)
             return;
 
+        // O admin do seed usa um CPF fixo (índice único). Se ele já foi criado com outro e-mail
+        // (Seed:AdminEmail mudou), não tenta criar um segundo: o startup quebraria com violação de índice.
+        var existingSeedAdminEmail = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.Cpf == AdminCpf)
+            .Select(u => u.Email)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingSeedAdminEmail is not null)
+        {
+            _logger.LogWarning(
+                "Seed: o administrador inicial já existe com o e-mail {ExistingEmail}; {Email} (Seed:AdminEmail) NÃO foi criado.",
+                existingSeedAdminEmail, email);
+            return;
+        }
+
         var password = _configuration["Seed:AdminPassword"];
         if (string.IsNullOrWhiteSpace(password))
         {

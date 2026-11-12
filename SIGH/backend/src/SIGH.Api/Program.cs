@@ -72,12 +72,17 @@ try
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<SighDbContext>("Database");
 
-    // Configuração do CORS para o Frontend
+    // CORS: origens vêm de Cors:AllowedOrigins. Em desenvolvimento o front usa o proxy do Vite
+    // (mesma origem), então a lista pode ficar vazia; sem origens configuradas, nenhuma é liberada.
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()?
+        .Where(origin => !string.IsNullOrWhiteSpace(origin))
+        .ToArray() ?? Array.Empty<string>();
+
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowFrontend", policy =>
         {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
+            policy.WithOrigins(allowedOrigins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();

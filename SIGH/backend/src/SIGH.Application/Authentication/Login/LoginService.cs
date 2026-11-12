@@ -153,7 +153,6 @@ public class LoginService : ILoginService
             user.Id,
             user.FullName,
             user.Email,
-            user.Cpf,
             user.Status.ToString(),
             user.MustChangePassword,
             roles,
@@ -165,7 +164,8 @@ public class LoginService : ILoginService
             rawRefreshToken,
             _jwtOptions.ExpiryInMinutes > 0 ? _jwtOptions.ExpiryInMinutes : 60,
             user.MustChangePassword,
-            userDto
+            userDto,
+            refreshTokenEntity.ExpiresAt
         );
     }
 }

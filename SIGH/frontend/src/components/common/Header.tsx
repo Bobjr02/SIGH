@@ -1,129 +1,103 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Box,
-  Button,
-  IconButton,
-  Tooltip,
-  Drawer,
-  List,
-  ListItem,
-  ListItemText,
-  Switch,
-  Divider,
-} from '@mui/material';
-import { Shield, BookOpen, Gavel, PlusCircle, Settings, CheckCheck, XCircle } from 'lucide-react';
+import { AppBar, Toolbar, Typography, Box, Button, IconButton, Tooltip } from '@mui/material';
+import { Shield, BookOpen, Gavel, PlusCircle, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { ALL_DISCIPLINARY_PERMISSIONS } from '../../contexts/AuthContext';
+import { PERMISSIONS, type PermissionCode } from '../../auth/permissions';
 import { NotificationBadge } from '../../features/notifications/components/NotificationBadge';
+
+interface MenuItem {
+  label: string;
+  path: string;
+  /** Prefixo usado para destacar o item ativo. */
+  activePrefix: string;
+  permission: PermissionCode;
+  icon?: React.ReactNode;
+}
+
+export const MENU_ITEMS: MenuItem[] = [
+  {
+    label: 'Processos',
+    path: '/disciplinary/cases',
+    activePrefix: '/disciplinary/cases',
+    permission: PERMISSIONS.DISCIPLINARY_CASES_VIEW,
+    icon: <Gavel size={18} />,
+  },
+  {
+    label: 'Dashboard',
+    path: '/disciplinary/reports/dashboard',
+    activePrefix: '/disciplinary/reports/dashboard',
+    permission: PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_DASHBOARD,
+  },
+  {
+    label: 'Relatórios',
+    path: '/disciplinary/reports/cases',
+    activePrefix: '/disciplinary/reports/cases',
+    permission: PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_CASES,
+  },
+  {
+    label: 'Medidas',
+    path: '/disciplinary/reports/measures',
+    activePrefix: '/disciplinary/reports/measures',
+    permission: PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_MEASURES,
+  },
+  {
+    label: 'Histórico',
+    path: '/disciplinary/reports/employees/history',
+    activePrefix: '/disciplinary/reports/employees',
+    permission: PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY,
+  },
+  {
+    label: 'Tipos de Infração',
+    path: '/disciplinary/infraction-types',
+    activePrefix: '/disciplinary/infraction-types',
+    permission: PERMISSIONS.DISCIPLINARY_INFRACTION_TYPES_VIEW,
+    icon: <BookOpen size={18} />,
+  },
+];
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { permissions, setPermissions, resetAllPermissions, clearAllPermissions } = useAuth();
+  const { user, hasPermission, logout } = useAuth();
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const handleTogglePermission = (perm: string) => {
-    if (permissions.includes(perm)) {
-      setPermissions(permissions.filter((p) => p !== perm));
-    } else {
-      setPermissions([...permissions, perm]);
-    }
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   return (
-    <>
-      <AppBar position="static" color="primary" elevation={1}>
-        <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Box
-            sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }}
-            onClick={() => navigate('/disciplinary/cases')}
-          >
-            <Shield size={28} color="#d97706" />
-            <Typography variant="h6" component="div" sx={{ fontWeight: 700, letterSpacing: '0.02em' }}>
-              SIGH
-            </Typography>
-          </Box>
+    <AppBar position="static" color="primary" elevation={1}>
+      <Toolbar sx={{ justifyContent: 'space-between', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }} onClick={() => navigate('/')}>
+          <Shield size={28} color="#d97706" />
+          <Typography variant="h6" component="div" sx={{ fontWeight: 700, letterSpacing: '0.02em' }}>
+            SIGH
+          </Typography>
+        </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Button
-              color="inherit"
-              startIcon={<Gavel size={18} />}
-              onClick={() => navigate('/disciplinary/cases')}
-              sx={{
-                fontWeight: location.pathname.startsWith('/disciplinary/cases') ? 700 : 500,
-                borderBottom: location.pathname.startsWith('/disciplinary/cases') ? '2px solid #ffffff' : 'none',
-                borderRadius: 0,
-              }}
-            >
-              Processos
-            </Button>
+        <Box component="nav" aria-label="Menu principal" sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          {MENU_ITEMS.filter((item) => hasPermission(item.permission)).map((item) => {
+            const active = location.pathname.startsWith(item.activePrefix);
+            return (
+              <Button
+                key={item.path}
+                color="inherit"
+                startIcon={item.icon}
+                onClick={() => navigate(item.path)}
+                aria-current={active ? 'page' : undefined}
+                sx={{
+                  fontWeight: active ? 700 : 500,
+                  borderBottom: active ? '2px solid #ffffff' : 'none',
+                  borderRadius: 0,
+                }}
+              >
+                {item.label}
+              </Button>
+            );
+          })}
 
-            <Button
-              color="inherit"
-              onClick={() => navigate('/disciplinary/reports/dashboard')}
-              sx={{
-                fontWeight: location.pathname.startsWith('/disciplinary/reports/dashboard') ? 700 : 500,
-                borderBottom: location.pathname.startsWith('/disciplinary/reports/dashboard') ? '2px solid #ffffff' : 'none',
-                borderRadius: 0,
-              }}
-            >
-              Dashboard
-            </Button>
-
-            <Button
-              color="inherit"
-              onClick={() => navigate('/disciplinary/reports/cases')}
-              sx={{
-                fontWeight: location.pathname.startsWith('/disciplinary/reports/cases') ? 700 : 500,
-                borderBottom: location.pathname.startsWith('/disciplinary/reports/cases') ? '2px solid #ffffff' : 'none',
-                borderRadius: 0,
-              }}
-            >
-              Relatórios
-            </Button>
-
-            <Button
-              color="inherit"
-              onClick={() => navigate('/disciplinary/reports/measures')}
-              sx={{
-                fontWeight: location.pathname.startsWith('/disciplinary/reports/measures') ? 700 : 500,
-                borderBottom: location.pathname.startsWith('/disciplinary/reports/measures') ? '2px solid #ffffff' : 'none',
-                borderRadius: 0,
-              }}
-            >
-              Medidas
-            </Button>
-
-            <Button
-              color="inherit"
-              onClick={() => navigate('/disciplinary/reports/employees/history')}
-              sx={{
-                fontWeight: location.pathname.startsWith('/disciplinary/reports/employees') ? 700 : 500,
-                borderBottom: location.pathname.startsWith('/disciplinary/reports/employees') ? '2px solid #ffffff' : 'none',
-                borderRadius: 0,
-              }}
-            >
-              Histórico
-            </Button>
-
-            <Button
-              color="inherit"
-              startIcon={<BookOpen size={18} />}
-              onClick={() => navigate('/disciplinary/infraction-types')}
-              sx={{
-                fontWeight: location.pathname.startsWith('/disciplinary/infraction-types') ? 700 : 500,
-                borderBottom: location.pathname.startsWith('/disciplinary/infraction-types') ? '2px solid #ffffff' : 'none',
-                borderRadius: 0,
-              }}
-            >
-              Tipos de Infração
-            </Button>
-
+          {hasPermission(PERMISSIONS.DISCIPLINARY_CASES_CREATE) && (
             <Button
               variant="contained"
               color="secondary"
@@ -134,80 +108,26 @@ export const Header: React.FC = () => {
             >
               Novo Processo
             </Button>
+          )}
 
-            <NotificationBadge />
+          {hasPermission(PERMISSIONS.NOTIFICATIONS_VIEW) && <NotificationBadge />}
 
-            {import.meta.env.DEV && (
-              <Tooltip title="Simular Permissões / Auditoria (DEV)">
-                <IconButton color="inherit" onClick={() => setDrawerOpen(true)} sx={{ ml: 1 }}>
-                  <Settings size={20} />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
-        </Toolbar>
-      </AppBar>
-
-      {/* Drawer de Auditoria/Permissões (Apenas DEV) */}
-      {import.meta.env.DEV && (
-        <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-          <Box sx={{ width: 340, p: 2.5 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              Simulador de Permissões (Modo Dev)
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Ligue ou desligue permissões para auditar o comportamento da interface e bloqueio de ações.
-            </Typography>
-
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-              <Button
-                size="small"
-                variant="outlined"
-                color="success"
-                startIcon={<CheckCheck size={16} />}
-                onClick={resetAllPermissions}
-                fullWidth
-              >
-                Marcar Todas
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                color="error"
-                startIcon={<XCircle size={16} />}
-                onClick={clearAllPermissions}
-                fullWidth
-              >
-                Desmarcar Todas
-              </Button>
+          {user && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 1 }}>
+              <UserRound size={18} />
+              <Typography variant="body2" sx={{ fontWeight: 600 }} data-testid="current-user-name">
+                {user.fullName}
+              </Typography>
             </Box>
+          )}
 
-            <Divider sx={{ my: 2 }} />
-
-            <List>
-              {ALL_DISCIPLINARY_PERMISSIONS.filter((p, i, self) => self.indexOf(p) === i).map((perm) => {
-                const isChecked = permissions.includes(perm);
-                return (
-                  <ListItem key={perm} sx={{ px: 0, py: 0.5 }}>
-                    <ListItemText
-                      primary={perm.replace('Disciplinary.', '')}
-                      slotProps={{
-                        primary: { sx: { fontSize: '0.8rem', fontWeight: 600 } },
-                      }}
-                    />
-                    <Switch
-                      edge="end"
-                      size="small"
-                      checked={isChecked}
-                      onChange={() => handleTogglePermission(perm)}
-                    />
-                  </ListItem>
-                );
-              })}
-            </List>
-          </Box>
-        </Drawer>
-      )}
-    </>
+          <Tooltip title="Sair">
+            <IconButton color="inherit" onClick={handleLogout} aria-label="Sair">
+              <LogOut size={20} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 };

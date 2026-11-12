@@ -8,9 +8,9 @@ using SIGH.Api.Contracts.Auth;
 using SIGH.Application.Authentication.ChangePassword;
 using SIGH.Application.Authentication.Login;
 using SIGH.Application.Authentication.Logout;
-using SIGH.Application.Authentication.RefreshToken;
 using SIGH.Application.Common.Authorization;
 using SIGH.Application.Common.Models;
+using SIGH.IntegrationTests.Infrastructure;
 using Xunit;
 
 namespace SIGH.IntegrationTests;
@@ -56,67 +56,95 @@ public class PasswordChangeEnforcementTests : IntegrationTestBase
     [Fact]
     public async Task PendingUser_CanRefreshAndLogout()
     {
-        var login = await LoginAsync(CustomWebApplicationFactory.SeedAdminEmail, CustomWebApplicationFactory.SeedAdminPassword);
-        using var anonymousClient = Factory.CreateClient();
+        using var client = Factory.CreateClient();
+        var (_, _) = await AuthTestHelpers.LoginAsync(client, CustomWebApplicationFactory.SeedAdminEmail, CustomWebApplicationFactory.SeedAdminPassword);
 
-        var refreshResponse = await anonymousClient.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenRequest(login.RefreshToken));
+        var refreshResponse = await client.PostAsync("/api/v1/auth/refresh", null);
         refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var refreshed = (await refreshResponse.Content.ReadFromJsonAsync<Result<RefreshTokenResponse>>())!.Data!;
+        var refreshed = (await refreshResponse.Content.ReadFromJsonAsync<Result<RefreshHttpResponse>>())!.Data!;
 
         // A senha ainda não foi trocada: o token renovado continua restrito.
         ReadToken(refreshed.AccessToken).Claims.Should().Contain(c => c.Type == SighClaimTypes.PasswordChangeRequired);
 
-        using var client = CreateClient(refreshed.AccessToken);
-        var logoutResponse = await client.PostAsJsonAsync("/api/v1/auth/logout", new LogoutHttpRequest(refreshed.RefreshToken));
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", refreshed.AccessToken);
+        var logoutResponse = await client.PostAsync("/api/v1/auth/logout", null);
         logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         (await logoutResponse.Content.ReadFromJsonAsync<Result<LogoutResponse>>())!.Success.Should().BeTrue();
+        RefreshCookie.From(logoutResponse)!.IsDeletion.Should().BeTrue();
     }
 
     [Fact]
     public async Task PendingUser_ChangesPassword_ThenReceivesUnrestrictedTokensAndCanAccessApi()
     {
-        var login = await LoginAsync(CustomWebApplicationFactory.SeedAdminEmail, CustomWebApplicationFactory.SeedAdminPassword);
-        using var pendingClient = CreateClient(login.AccessToken);
+        using var client = Factory.CreateClient();
+        var (login, oldCookie) = await AuthTestHelpers.LoginAsync(client, CustomWebApplicationFactory.SeedAdminEmail, CustomWebApplicationFactory.SeedAdminPassword);
+        login.MustChangePassword.Should().BeTrue();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
 
         // Troca de senha (liberada para o usuário pendente).
-        var changeResponse = await pendingClient.PostAsJsonAsync(
+        var changeResponse = await client.PostAsJsonAsync(
             "/api/v1/auth/change-password",
             new ChangePasswordHttpRequest(CustomWebApplicationFactory.SeedAdminPassword, NewPassword));
 
         changeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var changed = (await changeResponse.Content.ReadFromJsonAsync<Result<ChangePasswordResponse>>())!.Data!;
+        var changeJson = await changeResponse.Content.ReadAsStringAsync();
+        changeJson.Should().NotContain("refreshToken");
+        var changed = JsonSerializer.Deserialize<Result<ChangePasswordHttpResponse>>(changeJson, new JsonSerializerOptions(JsonSerializerDefaults.Web))!.Data!;
         changed.Success.Should().BeTrue();
         changed.AccessToken.Should().NotBeNullOrWhiteSpace();
-        changed.RefreshToken.Should().NotBeNullOrWhiteSpace();
+
+        // Novo refresh token no cookie, com os mesmos atributos.
+        var newCookie = RefreshCookie.From(changeResponse);
+        newCookie.Should().NotBeNull();
+        newCookie!.Value.Should().NotBe(oldCookie.Value);
+        newCookie.Has("httponly").Should().BeTrue();
+        newCookie.Get("path").Should().Be("/api/v1/auth");
 
         var newToken = ReadToken(changed.AccessToken);
         newToken.Claims.Should().NotContain(c => c.Type == SighClaimTypes.PasswordChangeRequired);
         newToken.Claims.Should().NotContain(c => c.Type == "cpf");
 
         // Com o novo token, o acesso funciona.
-        using var client = CreateClient(changed.AccessToken);
-        (await client.GetAsync("/api/v1/users")).StatusCode.Should().Be(HttpStatusCode.OK);
-
-        // O refresh token emitido antes da troca foi revogado.
-        using var anonymousClient = Factory.CreateClient();
-        var oldRefresh = await anonymousClient.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenRequest(login.RefreshToken));
-        oldRefresh.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var apiClient = CreateClient(changed.AccessToken);
+        (await apiClient.GetAsync("/api/v1/users")).StatusCode.Should().Be(HttpStatusCode.OK);
 
         // O token antigo (com a claim) continua restrito até expirar.
+        using var pendingClient = CreateClient(login.AccessToken);
         (await pendingClient.GetAsync("/api/v1/users")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
+        // O refresh token emitido antes da troca foi revogado...
+        using var replayClient = AuthTestHelpers.CreateClientWithoutCookieJar(Factory, refreshToken: oldCookie.Value);
+        (await replayClient.PostAsync("/api/v1/auth/refresh", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
         // Novo login com a nova senha já não exige troca.
-        var relogin = await LoginAsync(CustomWebApplicationFactory.SeedAdminEmail, NewPassword);
+        using var reloginClient = Factory.CreateClient();
+        var (relogin, _) = await AuthTestHelpers.LoginAsync(reloginClient, CustomWebApplicationFactory.SeedAdminEmail, NewPassword);
         relogin.MustChangePassword.Should().BeFalse();
         ReadToken(relogin.AccessToken).Claims.Should().NotContain(c => c.Type == SighClaimTypes.PasswordChangeRequired);
     }
 
-    private async Task<LoginResponse> LoginAsync(string email, string password)
+    [Fact]
+    public async Task ChangePassword_NewCookieRefreshes()
     {
         using var client = Factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(email, password));
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        return (await response.Content.ReadFromJsonAsync<Result<LoginResponse>>())!.Data!;
+        var (login, _) = await AuthTestHelpers.LoginAsync(client, CustomWebApplicationFactory.SeedAdminEmail, CustomWebApplicationFactory.SeedAdminPassword);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", login.AccessToken);
+
+        (await client.PostAsJsonAsync("/api/v1/auth/change-password",
+            new ChangePasswordHttpRequest(CustomWebApplicationFactory.SeedAdminPassword, NewPassword)))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // O cookie jar agora tem o cookie emitido pelo change-password.
+        var refresh = await client.PostAsync("/api/v1/auth/refresh", null);
+        refresh.StatusCode.Should().Be(HttpStatusCode.OK);
+        var refreshed = (await refresh.Content.ReadFromJsonAsync<Result<RefreshHttpResponse>>())!.Data!;
+        ReadToken(refreshed.AccessToken).Claims.Should().NotContain(c => c.Type == SighClaimTypes.PasswordChangeRequired);
+    }
+
+    private async Task<LoginHttpResponse> LoginAsync(string email, string password)
+    {
+        using var client = Factory.CreateClient();
+        return (await AuthTestHelpers.LoginAsync(client, email, password)).Body;
     }
 
     private HttpClient CreateClient(string accessToken)

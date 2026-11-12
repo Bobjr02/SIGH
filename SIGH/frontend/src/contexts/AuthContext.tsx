@@ -1,121 +1,131 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserSession } from '../types';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { authApi, type CurrentUser } from '../auth/authApi';
+import { tokenStore } from '../auth/tokenStore';
+import { refreshAccessToken, setAuthEventHandlers } from '../services/api';
 
-export const ALL_DISCIPLINARY_PERMISSIONS = [
-  'Disciplinary.Cases.Create',
-  'Disciplinary.Cases.View',
-  'Disciplinary.Cases.Read',
-  'Disciplinary.Cases.Open',
-  'Disciplinary.Cases.StartInvestigation',
-  'Disciplinary.Cases.SubmitForDecision',
-  'Disciplinary.Cases.RecordDecision',
-  'Disciplinary.Cases.ApproveDecision',
-  'Disciplinary.Cases.RejectDecision',
-  'Disciplinary.Cases.AddOccurrence',
-  'Disciplinary.Cases.AddEmployee',
-  'Disciplinary.Cases.AddEvidence',
-  'Disciplinary.Cases.ApplyMeasure',
-  'Disciplinary.Cases.Cancel',
-  'Disciplinary.Cases.Conclude',
-  'Disciplinary.InfractionTypes.Create',
-  'Disciplinary.InfractionTypes.View',
-  'Disciplinary.InfractionTypes.Read',
-  'Disciplinary.InfractionTypes.Update',
-  'Disciplinary.InfractionTypes.Activate',
-  'Disciplinary.InfractionTypes.Deactivate',
-  'Disciplinary.Reports.ViewDashboard',
-  'Disciplinary.Reports.ViewCases',
-  'Disciplinary.Reports.ViewMeasures',
-  'Disciplinary.Reports.ViewEmployeeHistory',
-  'Disciplinary.Reports.Export',
-  'Notifications.View',
-  'Notifications.Read',
-  'Notifications.Manage',
-];
+export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 interface AuthContextType {
-  user: UserSession | null;
+  status: AuthStatus;
+  user: CurrentUser | null;
   isAuthenticated: boolean;
   permissions: string[];
   hasPermission: (permission: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
-  setPermissions: (permissions: string[]) => void;
-  resetAllPermissions: () => void;
-  clearAllPermissions: () => void;
+  /** Autentica e carrega o usuário de GET /auth/me. */
+  login: (email: string, password: string) => Promise<CurrentUser>;
+  /** Troca a senha, passa a usar o novo access token e recarrega o usuário. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<CurrentUser>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'sigh_user_permissions';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user] = useState<UserSession>({
-    id: '11111111-1111-1111-1111-111111111111',
-    name: 'Gestor Disciplinar',
-    email: 'gestor@sigh.com.br',
-    role: 'AdminDisciplinar',
-  });
+  const queryClient = useQueryClient();
+  const [status, setStatus] = useState<AuthStatus>('loading');
+  const [user, setUser] = useState<CurrentUser | null>(null);
 
-  const [permissions, setPermissionsState] = useState<string[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        // Fallback
-      }
-    }
-    return ALL_DISCIPLINARY_PERMISSIONS;
-  });
+  const endSession = useCallback(() => {
+    tokenStore.clear();
+    queryClient.clear();
+    setUser(null);
+    setStatus('unauthenticated');
+  }, [queryClient]);
 
+  const loadUser = useCallback(async () => {
+    const me = await authApi.me();
+    setUser(me);
+    setStatus('authenticated');
+    return me;
+  }, []);
+
+  // Restauração de sessão: o access token não sobrevive ao reload; o cookie HttpOnly sim.
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(permissions));
-  }, [permissions]);
+    let cancelled = false;
 
-  const hasPermission = (permission: string): boolean => {
-    if (permissions.includes(permission)) return true;
-    // Map View to Read fallback
-    if (permission === 'Disciplinary.Cases.View' && permissions.includes('Disciplinary.Cases.Read')) return true;
-    if (permission === 'Disciplinary.Cases.Read' && permissions.includes('Disciplinary.Cases.View')) return true;
-    if (permission === 'Disciplinary.InfractionTypes.View' && permissions.includes('Disciplinary.InfractionTypes.Read')) return true;
-    if (permission === 'Disciplinary.InfractionTypes.Read' && permissions.includes('Disciplinary.InfractionTypes.View')) return true;
-    if (permission === 'Notifications.View' && permissions.includes('Notifications.Read')) return true;
-    if (permission === 'Notifications.Read' && permissions.includes('Notifications.View')) return true;
-    return false;
-  };
+    refreshAccessToken()
+      .then(() => (cancelled ? null : authApi.me()))
+      .then((me) => {
+        if (cancelled || !me) return;
+        setUser(me);
+        setStatus('authenticated');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        tokenStore.clear();
+        setUser(null);
+        setStatus('unauthenticated');
+      });
 
-  const hasAnyPermission = (perms: string[]): boolean => {
-    return perms.some((p) => hasPermission(p));
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const setPermissions = (perms: string[]) => {
-    setPermissionsState(perms);
-  };
-
-  const resetAllPermissions = () => {
-    setPermissionsState(ALL_DISCIPLINARY_PERMISSIONS);
-  };
-
-  const clearAllPermissions = () => {
-    setPermissionsState([]);
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: true,
-        permissions,
-        hasPermission,
-        hasAnyPermission,
-        setPermissions,
-        resetAllPermissions,
-        clearAllPermissions,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  // O interceptor do axios avisa quando o refresh falha ou a API exige troca de senha.
+  // As rotas reagem ao estado: ProtectedRoute leva para /login ou /change-password.
+  useEffect(
+    () =>
+      setAuthEventHandlers({
+        onSessionExpired: endSession,
+        onPasswordChangeRequired: () =>
+          setUser((current) => (current ? { ...current, mustChangePassword: true } : current)),
+      }),
+    [endSession],
   );
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const result = await authApi.login(email, password);
+      tokenStore.set(result.accessToken);
+      try {
+        return await loadUser();
+      } catch (error) {
+        endSession();
+        throw error;
+      }
+    },
+    [endSession, loadUser],
+  );
+
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      const result = await authApi.changePassword(currentPassword, newPassword);
+      tokenStore.set(result.accessToken);
+      return loadUser();
+    },
+    [loadUser],
+  );
+
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Mesmo que a API falhe (token expirado, rede), a sessão local termina.
+    } finally {
+      endSession();
+    }
+  }, [endSession]);
+
+  const value = useMemo<AuthContextType>(() => {
+    const permissions = user?.permissions ?? [];
+    const hasPermission = (permission: string) => permissions.includes(permission);
+    return {
+      status,
+      user,
+      isAuthenticated: status === 'authenticated' && user !== null,
+      permissions,
+      hasPermission,
+      hasAnyPermission: (perms: string[]) => perms.some(hasPermission),
+      login,
+      changePassword,
+      logout,
+    };
+  }, [status, user, login, changePassword, logout]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuthContext = (): AuthContextType => {
