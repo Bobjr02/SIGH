@@ -32,5 +32,13 @@ COPY --from=build /app/publish .
 #   ConnectionStrings__DefaultConnection, JwtOptions__SecretKey, JwtOptions__Issuer, JwtOptions__Audience
 ENV ASPNETCORE_URLS=http://+:3000
 EXPOSE 3000
+
+# Storage de evidências fora do diretório da aplicação (/app), gravável pelo usuário sem root.
+# Em produção, monte um volume nomeado aqui: o Docker copia o dono (APP_UID) do diretório da
+# imagem para o volume vazio na primeira montagem, então a API consegue gravar sem root.
+RUN mkdir -p /var/lib/sigh/evidences && chown -R $APP_UID:$APP_UID /var/lib/sigh && chmod 750 /var/lib/sigh/evidences
+ENV Storage__Local__RootPath=/var/lib/sigh/evidences
+VOLUME ["/var/lib/sigh/evidences"]
+
 USER $APP_UID
 ENTRYPOINT ["dotnet", "SIGH.Api.dll"]
