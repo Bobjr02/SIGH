@@ -1,17 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { http } from 'msw';
+import { delay, http } from 'msw';
 import { server } from '../../test/server';
-import { API, makeUser, meReturns, problem, refreshFails, refreshSucceeds, renderApp } from '../../test/auth';
+import {
+  API,
+  makeUser,
+  meReturns,
+  problem,
+  refreshFailResponse,
+  refreshFails,
+  refreshOkResponse,
+  renderApp,
+} from '../../test/auth';
 import { tokenStore } from '../tokenStore';
 
 describe('session restore on app load', () => {
   it('restores the session with POST /auth/refresh + GET /auth/me, showing a loader and never the login page', async () => {
     let refreshCalls = 0;
     server.use(
-      http.post(`${API}/auth/refresh`, async (info) => {
+      http.post(`${API}/auth/refresh`, async () => {
         refreshCalls += 1;
-        return refreshSucceeds('restored-token', 30).resolver(info);
+        await delay(30);
+        return refreshOkResponse('restored-token');
       }),
       meReturns(makeUser({ fullName: 'Maria Gestora' }), 'restored-token'),
     );
@@ -40,10 +50,10 @@ describe('session restore on app load', () => {
   it('goes to /login when the refresh works but /auth/me fails', async () => {
     let refreshCalls = 0;
     server.use(
-      http.post(`${API}/auth/refresh`, async (info) => {
+      http.post(`${API}/auth/refresh`, () => {
         refreshCalls += 1;
         // primeira chamada (restauração) funciona; o retry do interceptor após o 401 do /me falha
-        return refreshCalls === 1 ? refreshSucceeds('t1').resolver(info) : refreshFails().resolver(info);
+        return refreshCalls === 1 ? refreshOkResponse('t1') : refreshFailResponse();
       }),
       http.get(`${API}/auth/me`, () => problem(401, 'Usuário não encontrado.')),
     );

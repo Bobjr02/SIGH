@@ -26,14 +26,17 @@ export const ok = <T,>(data: T, init?: ResponseInit) => HttpResponse.json({ succ
 export const problem = (status: number, detail: string, extra: Record<string, unknown> = {}) =>
   HttpResponse.json({ status, title: 'Erro', detail, ...extra }, { status });
 
+export const refreshOkResponse = (accessToken: string) => ok({ accessToken, expiresInMinutes: 60 });
+export const refreshFailResponse = () => problem(401, 'Sessão ausente ou expirada.');
+
 /** POST /auth/refresh sem cookie válido. */
-export const refreshFails = () => http.post(`${API}/auth/refresh`, () => problem(401, 'Sessão ausente ou expirada.'));
+export const refreshFails = () => http.post(`${API}/auth/refresh`, () => refreshFailResponse());
 
 /** POST /auth/refresh com sucesso, devolvendo o token informado. */
 export const refreshSucceeds = (accessToken = 'restored-token', wait = 0) =>
   http.post(`${API}/auth/refresh`, async () => {
     if (wait) await delay(wait);
-    return ok({ accessToken, expiresInMinutes: 60 });
+    return refreshOkResponse(accessToken);
   });
 
 /** GET /auth/me que só aceita o token esperado. */
