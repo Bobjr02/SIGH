@@ -1,12 +1,24 @@
+using Microsoft.Extensions.Logging;
 using SIGH.Application.Interfaces;
 
 namespace SIGH.Infrastructure.Email;
 
-public class NullEmailService : IEmailService
+/// <summary>
+/// Usado com Email:Enabled=false: não envia nada (as mensagens da outbox são marcadas como enviadas).
+/// O startup registra um aviso quando este serviço está ativo.
+/// </summary>
+public sealed class NullEmailService : IEmailSender
 {
-    public Task SendEmailAsync(string to, string subject, string body, CancellationToken cancellationToken = default)
+    private readonly ILogger<NullEmailService> _logger;
+
+    public NullEmailService(ILogger<NullEmailService> logger)
     {
-        // Implementação neutra no-op
+        _logger = logger;
+    }
+
+    public Task SendAsync(OutgoingEmail email, CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Email:Enabled=false: e-mail \"{Subject}\" não enviado.", email.Subject);
         return Task.CompletedTask;
     }
 }

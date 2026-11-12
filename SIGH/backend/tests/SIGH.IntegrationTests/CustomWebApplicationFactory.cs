@@ -50,6 +50,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// <summary>Relógio da API (IDateTimeProvider). Volta ao tempo real a cada reset do banco.</summary>
     public TestClock Clock { get; } = new();
 
+    public const string PublicBaseUrl = "https://sigh.test";
+
     /// <summary>Raiz do storage de evidências desta execução (diretório temporário, fora da aplicação).</summary>
     public string StorageRoot { get; } = Path.Combine(Path.GetTempPath(), "sigh-it-storage", Guid.NewGuid().ToString("N"));
 
@@ -93,7 +95,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 // O schema é criado uma vez por execução em SqlServerTestDatabase.
                 ["Database:ApplyMigrationsOnStartup"] = "false",
                 ["BackgroundWorkerOptions:Enabled"] = "false",
-                ["Storage:Local:RootPath"] = StorageRoot
+                ["Storage:Local:RootPath"] = StorageRoot,
+                ["App:PublicBaseUrl"] = PublicBaseUrl,
+                // Os testes leem os e-mails direto da outbox; o worker de envio fica desligado.
+                ["Email:Enabled"] = "false",
+                ["Email:Outbox:DispatcherEnabled"] = "false",
+                // Limitadores são em memória e compartilhados pelos testes do mesmo host;
+                // PasswordRecoveryTests cobre o limite com um host próprio.
+                ["RateLimits:ForgotPassword:PermitLimit"] = "1000",
+                ["RateLimits:ResetPassword:PermitLimit"] = "1000"
             });
         });
     }

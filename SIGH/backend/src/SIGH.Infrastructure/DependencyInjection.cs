@@ -71,7 +71,23 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IRequestContext, HttpRequestContext>();
         services.AddScoped<IAuthorizedCompanyProvider, AuthorizedCompanyProvider>();
-        services.AddScoped<IEmailService, NullEmailService>();
+        // E-mail: SMTP (MailKit) com Email:Enabled=true; senão NullEmailService (aviso no startup).
+        services.AddOptions<EmailOptions>()
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .Validate(o => !o.Enabled || (!string.IsNullOrWhiteSpace(o.Smtp.Host) && !string.IsNullOrWhiteSpace(o.From)),
+                "Email:Enabled=true exige Email:Smtp:Host e Email:From.")
+            .ValidateOnStart();
+        services.AddOptions<AppOptions>()
+            .Bind(configuration.GetSection(AppOptions.SectionName))
+            .Validate(o => string.IsNullOrWhiteSpace(o.PublicBaseUrl) || Uri.TryCreate(o.PublicBaseUrl, UriKind.Absolute, out _),
+                "App:PublicBaseUrl deve ser uma URL absoluta (ex.: https://sigh.empresa.com.br).")
+            .ValidateOnStart();
+        if (configuration.GetValue<bool>($"{EmailOptions.SectionName}:Enabled"))
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        else
+            services.AddScoped<IEmailSender, NullEmailService>();
+        services.AddScoped<SIGH.Application.Email.EmailOutboxProcessor>();
+        services.AddHostedService<EmailOutboxDispatcher>();
         services.AddSingleton<SIGH.Application.Interfaces.Storage.IFileStorage, LocalFileStorage>();
         services.AddSingleton<SIGH.Application.Interfaces.Storage.IMalwareScanner, NoOpMalwareScanner>();
         services.AddScoped<INotificationService, NotificationService>();

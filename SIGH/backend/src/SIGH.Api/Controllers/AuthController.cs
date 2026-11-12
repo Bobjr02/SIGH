@@ -135,7 +135,13 @@ public class AuthController : BaseController
         return OkResult(result);
     }
 
+    /// <summary>
+    /// Sempre a mesma resposta genérica, exista ou não o e-mail (sem enumeração). O link vai por e-mail
+    /// (outbox), com token de uso único válido por Auth:PasswordResetTokenMinutes.
+    /// </summary>
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("ForgotPasswordRateLimit")]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     [ProducesResponseType(typeof(Result<ForgotPasswordResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<Result<ForgotPasswordResponse>>> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
@@ -143,7 +149,10 @@ public class AuthController : BaseController
         return OkResult(result, "Se o e-mail estiver cadastrado, as instruções de recuperação serão enviadas.");
     }
 
+    /// <summary>Redefine a senha com o token do link. Revoga todas as sessões e refresh tokens do usuário.</summary>
     [HttpPost("reset-password")]
+    [EnableRateLimiting("ResetPasswordRateLimit")]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     [ProducesResponseType(typeof(Result<ResetPasswordResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Result<ResetPasswordResponse>>> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)

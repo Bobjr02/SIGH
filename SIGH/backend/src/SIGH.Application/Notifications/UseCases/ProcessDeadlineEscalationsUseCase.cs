@@ -19,6 +19,7 @@ public class ProcessDeadlineEscalationsUseCase : IProcessDeadlineEscalationsUseC
     private readonly IApplicationDbContext _context;
     private readonly NotificationReminderOptions _reminderOptions;
     private readonly ILogger<ProcessDeadlineEscalationsUseCase> _logger;
+    private readonly SIGH.Application.Email.IDeadlineAlertEmailer? _deadlineAlerts;
 
     public ProcessDeadlineEscalationsUseCase(
         IDeadlineMonitoringQueryRepository queryRepository,
@@ -26,8 +27,10 @@ public class ProcessDeadlineEscalationsUseCase : IProcessDeadlineEscalationsUseC
         IDateTimeProvider dateTimeProvider,
         IApplicationDbContext context,
         IOptions<NotificationReminderOptions> reminderOptions,
-        ILogger<ProcessDeadlineEscalationsUseCase> logger)
+        ILogger<ProcessDeadlineEscalationsUseCase> logger,
+        SIGH.Application.Email.IDeadlineAlertEmailer? deadlineAlerts = null)
     {
+        _deadlineAlerts = deadlineAlerts;
         _queryRepository = queryRepository;
         _notificationRepository = notificationRepository;
         _dateTimeProvider = dateTimeProvider;
@@ -127,6 +130,7 @@ public class ProcessDeadlineEscalationsUseCase : IProcessDeadlineEscalationsUseC
                         metadata: $"SourceEntity={item.SourceEntity};SourceId={item.Id};EscalationLevel={nextLevel}");
 
                     await _notificationRepository.AddAsync(notification, cancellationToken);
+                        if (_deadlineAlerts is not null) await _deadlineAlerts.EnqueueAsync(notification, cancellationToken);
 
                     if (existingRecipientLog != null)
                     {

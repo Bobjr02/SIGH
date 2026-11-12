@@ -68,6 +68,21 @@ try
                 QueueLimit = 0
             });
         });
+
+        // Recuperação de senha: limite próprio por IP (RateLimits:ForgotPassword / RateLimits:ResetPassword).
+        // Dificulta usar o endpoint para disparar e-mails em massa ou adivinhar tokens.
+        foreach (var (policy, section, defaultPermits) in new[]
+                 {
+                     ("ForgotPasswordRateLimit", "RateLimits:ForgotPassword", 5),
+                     ("ResetPasswordRateLimit", "RateLimits:ResetPassword", 10)
+                 })
+        {
+            var permits = builder.Configuration.GetValue($"{section}:PermitLimit", defaultPermits);
+            var window = TimeSpan.FromMinutes(builder.Configuration.GetValue($"{section}:WindowMinutes", 15));
+            options.AddPolicy(policy, httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = permits, Window = window, QueueLimit = 0 }));
+        }
     });
 
     // Response Compression

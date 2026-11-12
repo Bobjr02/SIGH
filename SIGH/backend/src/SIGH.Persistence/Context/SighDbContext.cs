@@ -23,6 +23,8 @@ public class SighDbContext : DbContext, IApplicationDbContext
     public DbSet<PasswordHistory> PasswordHistories => Set<PasswordHistory>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<EmailOutboxMessage> EmailOutbox => Set<EmailOutboxMessage>();
 
     // Módulo de Funcionários
     public DbSet<Company> Companies => Set<Company>();

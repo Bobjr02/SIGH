@@ -19,9 +19,6 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
             .NotEmpty().WithMessage("CPF é obrigatório.")
             .Length(11).WithMessage("CPF deve conter exatamente 11 dígitos numéricos.");
 
-        RuleFor(x => x.InitialPassword)
-            .NotEmpty().WithMessage("A senha inicial é obrigatória.");
-
         RuleFor(x => x.RoleIds)
             .NotEmpty().WithMessage("Atribua ao menos um perfil (Role) para o usuário.");
     }
