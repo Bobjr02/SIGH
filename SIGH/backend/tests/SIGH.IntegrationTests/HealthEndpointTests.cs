@@ -7,11 +7,12 @@ using Xunit;
 
 namespace SIGH.IntegrationTests;
 
-public class HealthEndpointTests : IClassFixture<CustomWebApplicationFactory>
+public class HealthEndpointTests : IntegrationTestBase
 {
     private readonly HttpClient _client;
 
     public HealthEndpointTests(CustomWebApplicationFactory factory)
+        : base(factory)
     {
         _client = factory.CreateClient();
     }

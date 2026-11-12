@@ -22,12 +22,13 @@ using Xunit;
 
 namespace SIGH.IntegrationTests;
 
-public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicationFactory>
+public class DisciplinaryCasesEndpointsTests : IntegrationTestBase
 {
     private readonly HttpClient _client;
     private readonly CustomWebApplicationFactory _factory;
 
     public DisciplinaryCasesEndpointsTests(CustomWebApplicationFactory factory)
+        : base(factory)
     {
         _factory = factory;
         _client = factory.CreateClient();
@@ -72,7 +73,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
     private async Task<(Guid CaseId, Guid DecisionId, Guid EmployeeId)> ArrangeCaseWithRecordedDecisionAsync(HttpClient deciderClient)
     {
         // Fixture local: Company + ManagementUnit + JobTitle + Employee reais, persistidos
-        // no mesmo banco InMemory da factory, para uso na etapa Add Employee.
+        // no mesmo SQL Server da factory, para uso na etapa Add Employee.
         Employee employee;
         Company company;
         using (var scope = _factory.Services.CreateScope())
@@ -425,7 +426,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
     public async Task DisciplinaryCaseEndpoints_Unauthenticated_Returns401Unauthorized()
     {
         // Arrange
-        var anonymousClient = new CustomWebApplicationFactory().CreateClient();
+        var anonymousClient = Factory.CreateClient();
 
         // Act
         var response = await anonymousClient.GetAsync("/api/v1/disciplinary-cases");
@@ -442,7 +443,7 @@ public class DisciplinaryCasesEndpointsTests : IClassFixture<CustomWebApplicatio
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
         var loginResult = await loginResponse.Content.ReadFromJsonAsync<Result<LoginResponse>>();
 
-        var unprivilegedClient = new CustomWebApplicationFactory().CreateClient();
+        var unprivilegedClient = Factory.CreateClient();
         unprivilegedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginResult!.Data!.AccessToken);
 
         // Act 1: Get Cases

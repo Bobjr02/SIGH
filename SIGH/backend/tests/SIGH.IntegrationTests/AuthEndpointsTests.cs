@@ -8,11 +8,12 @@ using Xunit;
 
 namespace SIGH.IntegrationTests;
 
-public class AuthEndpointsTests : IClassFixture<CustomWebApplicationFactory>
+public class AuthEndpointsTests : IntegrationTestBase
 {
     private readonly HttpClient _client;
 
     public AuthEndpointsTests(CustomWebApplicationFactory factory)
+        : base(factory)
     {
         _client = factory.CreateClient();
     }
