@@ -5,11 +5,13 @@ on:
     branches: [ main, master, release/*, develop ]
     paths:
       - 'SIGH/backend/**'
+      - 'SIGH/frontend/src/auth/permission-codes.json'
       - '.github/workflows/backend-ci.yml'
   pull_request:
     branches: [ main, master, develop ]
     paths:
       - 'SIGH/backend/**'
+      - 'SIGH/frontend/src/auth/permission-codes.json'
       - '.github/workflows/backend-ci.yml'
   workflow_dispatch:
 
