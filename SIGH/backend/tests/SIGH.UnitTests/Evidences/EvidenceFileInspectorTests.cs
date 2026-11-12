@@ -155,3 +155,43 @@ public class EvidenceFileInspectorTests
 
     private static byte[] Concat(params byte[][] parts) => parts.SelectMany(p => p).ToArray();
 }
+
+public class EvidenceTypeCompatibilityTests
+{
+    private static DetectedFileType Detect(byte[] content, string name)
+    {
+        using var stream = new MemoryStream(content);
+        return EvidenceFileInspector.Validate(stream, name).Type!;
+    }
+
+    private static readonly byte[] Pdf = System.Text.Encoding.ASCII.GetBytes("%PDF-1.7\n%%EOF");
+    private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01];
+    private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52];
+    private static readonly byte[] Mp4 = [0x00, 0x00, 0x00, 0x20, .. "ftypisom"u8.ToArray(), 0x00, 0x00, 0x02, 0x00];
+
+    [Theory]
+    [InlineData(EvidenceType.Document, "pdf", true)]
+    [InlineData(EvidenceType.Document, "jpg", true)]
+    [InlineData(EvidenceType.Document, "png", true)]
+    [InlineData(EvidenceType.Document, "mp4", false)]
+    [InlineData(EvidenceType.Image, "jpg", true)]
+    [InlineData(EvidenceType.Image, "pdf", false)]
+    [InlineData(EvidenceType.Video, "mp4", true)]
+    [InlineData(EvidenceType.Video, "jpg", false)]
+    [InlineData(EvidenceType.Other, "pdf", true)]
+    [InlineData(EvidenceType.Other, "mp4", true)]
+    [InlineData(EvidenceType.Text, "pdf", false)]
+    [InlineData(EvidenceType.Text, "jpg", false)]
+    public void IsAllowedFor_FollowsTheEvidenceTypeRules(EvidenceType evidenceType, string sample, bool expected)
+    {
+        var detected = sample switch
+        {
+            "pdf" => Detect(Pdf, "a.pdf"),
+            "jpg" => Detect(Jpeg, "a.jpg"),
+            "png" => Detect(Png, "a.png"),
+            _ => Detect(Mp4, "a.mp4"),
+        };
+
+        EvidenceFileInspector.IsAllowedFor(evidenceType, detected).Should().Be(expected);
+    }
+}

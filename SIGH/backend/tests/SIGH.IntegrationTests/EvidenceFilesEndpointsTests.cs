@@ -83,6 +83,51 @@ public class EvidenceFilesEndpointsTests : IntegrationTestBase
         evidence.FileUploadedByName.Should().Be("Administrador do Sistema");
     }
 
+    // JPEG mínimo (SOI + APP0/JFIF + EOI).
+    private static readonly byte[] JpegBytes =
+        [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xD9];
+
+    [Fact]
+    public async Task JpgPhotoOfADocument_IsAcceptedOnADocumentEvidence()
+    {
+        using var admin = await CreateClientAsync("admin@sigh.com");
+        var caseId = await CreateCaseAsync(admin);
+        var evidenceId = await CreateFileEvidenceAsync(admin, caseId, EvidenceType.Document);
+
+        var response = await UploadAsync(admin, caseId, evidenceId, JpegBytes, "atestado-fotografado.jpg", "image/jpeg");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        (await response.Content.ReadFromJsonAsync<Result<EvidenceFileDto>>())!.Data!.ContentType.Should().Be("image/jpeg");
+    }
+
+    [Fact]
+    public async Task VideoOnADocumentEvidence_IsStillRejected()
+    {
+        using var admin = await CreateClientAsync("admin@sigh.com");
+        var caseId = await CreateCaseAsync(admin);
+        var evidenceId = await CreateFileEvidenceAsync(admin, caseId, EvidenceType.Document);
+        byte[] mp4 = [0x00, 0x00, 0x00, 0x20, .. "ftypisom"u8.ToArray(), 0x00, 0x00, 0x02, 0x00];
+
+        (await UploadAsync(admin, caseId, evidenceId, mp4, "video.mp4")).StatusCode.Should().Be(HttpStatusCode.UnsupportedMediaType);
+    }
+
+    [Fact]
+    public async Task UploadToATextEvidence_IsRejectedWithAClearMessage()
+    {
+        using var admin = await CreateClientAsync("admin@sigh.com");
+        var caseId = await CreateCaseAsync(admin);
+        var created = await admin.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/evidences",
+            new AddEvidenceHttpRequest(EvidenceType.Text, "Depoimento", DateTimeOffset.UtcNow, Description: "Relato digitado pela testemunha."));
+        created.StatusCode.Should().Be(HttpStatusCode.OK);
+        var evidenceId = (await created.Content.ReadFromJsonAsync<Result<AddEvidenceResponse>>())!.Data!.Id;
+
+        var response = await UploadAsync(admin, caseId, evidenceId, PdfBytes, "depoimento.pdf");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>())!.Detail
+            .Should().Contain("Texto não recebem arquivo");
+    }
+
     [Fact]
     public async Task ExeRenamedToPdf_IsRejectedAndNothingIsStored()
     {

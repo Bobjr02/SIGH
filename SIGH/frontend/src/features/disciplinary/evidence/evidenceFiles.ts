@@ -36,8 +36,34 @@ const extensionOf = (fileName: string) => {
   return dot >= 0 ? fileName.slice(dot + 1).toLowerCase() : '';
 };
 
+/**
+ * O arquivo (pelo tipo da extensão) serve para este tipo de evidência? Mesma regra do servidor:
+ * Document aceita documentos e imagens (o RH fotografa documentos com o celular); Image, Video e
+ * Audio só o próprio tipo; Other qualquer formato permitido; Text nunca recebe arquivo.
+ */
+export const evidenceAcceptsKind = (evidenceType: EvidenceType, kind: EvidenceType): boolean => {
+  switch (evidenceType) {
+    case EvidenceType.Text:
+    case EvidenceType.Undefined:
+      return false;
+    case EvidenceType.Other:
+      return true;
+    case EvidenceType.Document:
+      return kind === EvidenceType.Document || kind === EvidenceType.Image;
+    default:
+      return kind === evidenceType;
+  }
+};
+
+/** Tipos de evidência que recebem arquivo (Text é só texto digitado). */
+export const evidenceTypeAcceptsFile = (evidenceType: EvidenceType) =>
+  evidenceType !== EvidenceType.Text && evidenceType !== EvidenceType.Undefined;
+
 /** Validação no cliente (extensão, tamanho e coerência com o tipo da evidência). Devolve a mensagem de erro ou null. */
 export const validateEvidenceFile = (file: File, evidenceType: EvidenceType): string | null => {
+  if (!evidenceTypeAcceptsFile(evidenceType)) {
+    return 'Evidências do tipo Texto não recebem arquivo: o conteúdo delas é o próprio texto registrado.';
+  }
   const kind = EVIDENCE_FILE_EXTENSIONS[extensionOf(file.name)];
   if (kind === undefined) {
     return `Formato não permitido. Envie: ${Object.keys(EVIDENCE_FILE_EXTENSIONS).join(', ')}.`;
@@ -46,8 +72,10 @@ export const validateEvidenceFile = (file: File, evidenceType: EvidenceType): st
   if (file.size > MAX_EVIDENCE_FILE_BYTES) {
     return `O arquivo tem ${formatBytes(file.size)}; o máximo é ${formatBytes(MAX_EVIDENCE_FILE_BYTES)}.`;
   }
-  if (evidenceType !== EvidenceType.Other && kind !== evidenceType) {
-    return `Esta evidência é do tipo ${EVIDENCE_TYPE_LABELS[evidenceType]}; o arquivo selecionado é ${EVIDENCE_TYPE_LABELS[kind]}.`;
+  if (!evidenceAcceptsKind(evidenceType, kind)) {
+    return evidenceType === EvidenceType.Document
+      ? 'Evidências do tipo Documento aceitam PDF, DOCX, XLSX ou imagens (JPG, PNG, WEBP).'
+      : `Esta evidência é do tipo ${EVIDENCE_TYPE_LABELS[evidenceType]}; o arquivo selecionado é ${EVIDENCE_TYPE_LABELS[kind]}.`;
   }
   return null;
 };

@@ -107,7 +107,7 @@ public sealed class UploadEvidenceFileUseCase : IUploadEvidenceFileUseCase
         if (detected is null)
             return Result<EvidenceFileDto>.Failure(error!, EvidenceErrors.UnsupportedFile);
 
-        if (evidence.EvidenceType != EvidenceType.Other && evidence.EvidenceType != detected.Kind)
+        if (!EvidenceFileInspector.IsAllowedFor(evidence.EvidenceType, detected))
             return Result<EvidenceFileDto>.Failure(
                 $"O arquivo ({detected.Description}) não corresponde ao tipo desta evidência ({evidence.EvidenceType}).", EvidenceErrors.UnsupportedFile);
 

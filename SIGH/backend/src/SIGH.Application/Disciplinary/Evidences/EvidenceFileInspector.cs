@@ -92,6 +92,20 @@ public static class EvidenceFileInspector
     }
 
     /// <summary>
+    /// O arquivo detectado serve para este tipo de evidência?
+    /// Document aceita PDF/DOCX/XLSX e também imagens (o RH fotografa documentos com o celular);
+    /// Image, Video e Audio aceitam só o próprio tipo; Other aceita qualquer formato permitido;
+    /// Text nunca recebe arquivo.
+    /// </summary>
+    public static bool IsAllowedFor(EvidenceType evidenceType, DetectedFileType detected) => evidenceType switch
+    {
+        EvidenceType.Text or EvidenceType.Undefined => false,
+        EvidenceType.Other => true,
+        EvidenceType.Document => detected.Kind is EvidenceType.Document or EvidenceType.Image,
+        _ => detected.Kind == evidenceType
+    };
+
+    /// <summary>
     /// Valida o arquivo: extensão permitida, conteúdo reconhecido e coerente com a extensão.
     /// Devolve o tipo detectado ou a mensagem de erro.
     /// </summary>

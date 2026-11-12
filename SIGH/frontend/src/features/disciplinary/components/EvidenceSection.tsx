@@ -31,6 +31,7 @@ import {
   formatBytes,
   shortHash,
   validateEvidenceFile,
+  evidenceTypeAcceptsFile,
 } from '../evidence/evidenceFiles';
 import { DisciplinaryCaseStatus, EvidenceType, type EvidenceDto } from '../types';
 
@@ -161,7 +162,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
                       </IconButton>
                     </Tooltip>
                   )}
-                  {!ev.hasFile && ev.evidenceType !== EvidenceType.Text && canAdd && !closed && (
+                  {!ev.hasFile && evidenceTypeAcceptsFile(ev.evidenceType) && canAdd && !closed && (
                     <Button size="small" startIcon={<Paperclip size={16} />} onClick={() => setUploadFor(ev)}>
                       Anexar arquivo
                     </Button>

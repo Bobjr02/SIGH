@@ -195,7 +195,7 @@ public class DisciplinaryEvidence : AuditableEntity
             throw new BusinessRuleValidationException("Não é possível anexar arquivo a uma evidência removida.");
 
         if (EvidenceType == EvidenceType.Text)
-            throw new BusinessRuleValidationException("Evidências textuais não recebem arquivo.");
+            throw new BusinessRuleValidationException("Evidências do tipo Texto não recebem arquivo: o conteúdo delas é o próprio texto registrado (por exemplo, um depoimento digitado).");
 
         if (HasFile)
             throw new BusinessRuleValidationException("Esta evidência já possui arquivo. Um arquivo enviado não pode ser substituído.");
