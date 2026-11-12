@@ -1,11 +1,29 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using SIGH.Application.Interfaces;
 
 namespace SIGH.Infrastructure.Authentication;
 
-public class CurrentUserService : ICurrentUserService
+/// <summary>
+/// Usuário autenticado da requisição atual, lido das claims do access token.
+/// Fora de uma requisição HTTP (background workers, seed no startup) não há usuário: UserId é null.
+/// </summary>
+public sealed class CurrentUserService : ICurrentUserService
 {
-    // Placeholder para usuário autenticado (será preenchido na integração JWT/HttpContext)
-    public Guid? UserId => null;
-    public string? UserEmail => null;
-    public bool IsAuthenticated => false;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public CurrentUserService(IHttpContextAccessor httpContextAccessor)
+    {
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    private ClaimsPrincipal? User =>
+        _httpContextAccessor.HttpContext?.User is { Identity.IsAuthenticated: true } user ? user : null;
+
+    public Guid? UserId =>
+        Guid.TryParse(User?.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) ? userId : null;
+
+    public string? UserEmail => User?.FindFirstValue(ClaimTypes.Email);
+
+    public bool IsAuthenticated => User is not null;
 }
