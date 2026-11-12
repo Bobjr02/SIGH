@@ -123,18 +123,21 @@ public static class EntityAuditBuilder
                     break;
 
                 case AuditActions.Deleted:
-                    oldValues[name] = sensitive ? AuditPolicy.Redacted : property.OriginalValue;
+                    oldValues[name] = Mask(sensitive, property.OriginalValue);
                     break;
 
                 default:
                     if (!property.IsModified || Equals(property.OriginalValue, property.CurrentValue))
                         continue;
-                    oldValues[name] = sensitive ? AuditPolicy.Redacted : property.OriginalValue;
-                    newValues[name] = sensitive ? AuditPolicy.Redacted : property.CurrentValue;
+                    oldValues[name] = Mask(sensitive, property.OriginalValue);
+                    newValues[name] = Mask(sensitive, property.CurrentValue);
                     break;
             }
         }
 
         return (oldValues, newValues);
     }
+
+    // Um valor sensível ausente continua null: assim a trilha mostra que o campo passou a ter valor.
+    private static object? Mask(bool sensitive, object? value) => sensitive && value is not null ? AuditPolicy.Redacted : value;
 }
