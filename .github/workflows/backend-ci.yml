@@ -36,6 +36,11 @@ jobs:
       - name: Build Solution (Release)
         run: dotnet build SIGH/backend/SIGH.sln --configuration Release --no-restore
 
+      # O tool manifest fica em SIGH/backend/.config, por isso o passo roda a partir de SIGH/backend.
+      - name: Check EF Core Model vs Migrations
+        working-directory: SIGH/backend
+        run: dotnet tool restore && dotnet ef migrations has-pending-model-changes -p src/SIGH.Persistence -s src/SIGH.Api
+
       - name: Run Unit Tests
         run: |
           dotnet test SIGH/backend/tests/SIGH.UnitTests/SIGH.UnitTests.csproj \

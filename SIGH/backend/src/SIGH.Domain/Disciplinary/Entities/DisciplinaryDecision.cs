@@ -120,17 +120,34 @@ public class DisciplinaryDecision : AuditableEntity
         if (Status != DecisionStatus.PendingApproval && Status != DecisionStatus.Draft)
             throw new BusinessRuleValidationException("A decisão só pode ser aprovada se estiver em rascunho ou pendente de aprovação.");
 
+        EnsureReviewerIsNotDecider(approvedByUserId, "aprovar");
+
         ApprovedByUserId = approvedByUserId;
         ApprovedAt = approvedAt;
         Status = DecisionStatus.Approved;
     }
 
-    internal void Reject(string reason)
+    internal void Reject(Guid rejectedByUserId, string reason)
     {
+        if (rejectedByUserId == Guid.Empty)
+            throw new BusinessRuleValidationException("O usuário responsável pela rejeição é obrigatório.");
+
         if (Status != DecisionStatus.PendingApproval && Status != DecisionStatus.Draft)
             throw new BusinessRuleValidationException("A decisão não está em um estado que permita rejeição.");
 
+        EnsureReviewerIsNotDecider(rejectedByUserId, "rejeitar");
+
         Status = DecisionStatus.Rejected;
+    }
+
+    /// <summary>
+    /// Segregação de funções: quem registrou a decisão não pode revisá-la (aprovar ou rejeitar).
+    /// </summary>
+    private void EnsureReviewerIsNotDecider(Guid reviewerUserId, string action)
+    {
+        if (reviewerUserId == DecidedByUserId)
+            throw new BusinessRuleValidationException(
+                $"O usuário que registrou a decisão não pode {action} a própria decisão.");
     }
 
     internal void Invalidate(string reason)

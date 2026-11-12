@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using SIGH.Api.Contracts.Auth;
 using SIGH.Application.Authentication.ChangePassword;
 using SIGH.Application.Authentication.ForgotPassword;
 using SIGH.Application.Authentication.Login;
@@ -62,10 +63,9 @@ public class AuthController : BaseController
     [Authorize]
     [ProducesResponseType(typeof(Result<LogoutResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<Result<LogoutResponse>>> Logout([FromBody] LogoutRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<LogoutResponse>>> Logout([FromBody] LogoutHttpRequest request, CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
-        var updatedRequest = request with { UserId = userId };
+        var updatedRequest = request.ToApplicationRequest(GetUserId());
         var result = await _logoutService.LogoutAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Logout realizado com sucesso.");
     }
@@ -110,10 +110,9 @@ public class AuthController : BaseController
     [ProducesResponseType(typeof(Result<ChangePasswordResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<Result<ChangePasswordResponse>>> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<ChangePasswordResponse>>> ChangePassword([FromBody] ChangePasswordHttpRequest request, CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
-        var updatedRequest = request with { UserId = userId };
+        var updatedRequest = request.ToApplicationRequest(GetUserId());
         var result = await _changePasswordService.ChangePasswordAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Senha alterada com sucesso.");
     }

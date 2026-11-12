@@ -36,7 +36,7 @@ public class UsersController : BaseController
     }
 
     [HttpPost]
-    [Permission("Users.Create")]
+    [Permission(PermissionCodes.Users.Create)]
     [ProducesResponseType(typeof(Result<CreateUserResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -48,7 +48,7 @@ public class UsersController : BaseController
     }
 
     [HttpPatch("{id:guid}/status")]
-    [Permission("Users.ChangeStatus")]
+    [Permission(PermissionCodes.Users.ChangeStatus)]
     [ProducesResponseType(typeof(Result<ChangeUserStatusResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -60,24 +60,20 @@ public class UsersController : BaseController
     }
 
     [HttpPost("{id:guid}/unlock")]
-    [Permission("Users.Unlock")]
+    [Permission(PermissionCodes.Users.Unlock)]
     [ProducesResponseType(typeof(Result<UnlockUserResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Result<UnlockUserResponse>>> UnlockUser([FromRoute] Guid id, [FromBody] UnlockUserRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<UnlockUserResponse>>> UnlockUser([FromRoute] Guid id, CancellationToken cancellationToken)
     {
-        var authenticatedUserId = GetUserId();
-        var updatedRequest = request with
-        {
-            UserId = id,
-            UnlockedByUserId = authenticatedUserId
-        };
+        // O usuário alvo vem da rota e o ator vem exclusivamente do token.
+        var updatedRequest = new UnlockUserRequest(id, GetUserId());
         var result = await _unlockUserService.UnlockUserAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Usuário desbloqueado com sucesso.");
     }
 
     [HttpGet]
-    [Permission("Users.View")]
+    [Permission(PermissionCodes.Users.View)]
     [ProducesResponseType(typeof(Result<PagedList<UserSummaryDto>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<Result<PagedList<UserSummaryDto>>>> GetUsers([FromQuery] GetUsersQuery query, CancellationToken cancellationToken)
     {
@@ -86,7 +82,7 @@ public class UsersController : BaseController
     }
 
     [HttpGet("{id:guid}", Name = nameof(GetUserById))]
-    [Permission("Users.View")]
+    [Permission(PermissionCodes.Users.View)]
     [ProducesResponseType(typeof(Result<UserDetailDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<Result<UserDetailDto>>> GetUserById([FromRoute] Guid id, CancellationToken cancellationToken)

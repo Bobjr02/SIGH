@@ -46,7 +46,7 @@ public class RejectDecisionUseCase : IRejectDecisionUseCase
 
         try
         {
-            disciplinaryCase.RejectDecision(request.Reason);
+            disciplinaryCase.RejectDecision(request.RejectedByUserId, request.Reason);
             await _context.SaveChangesAsync(cancellationToken);
 
             var response = new RejectDecisionResponse(

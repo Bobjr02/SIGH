@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIGH.Application.Common.Models;
 using SIGH.Application.Interfaces;
-using SIGH.Application.Notifications.Common;
 using SIGH.Application.Notifications.DTOs;
 using SIGH.Application.Notifications.Queries;
 using SIGH.Application.Notifications.UseCases;
@@ -46,7 +45,7 @@ public class NotificationsController : BaseController
     /// Consulta paginada das notificações do usuário autenticado.
     /// </summary>
     [HttpGet]
-    [Permission(NotificationPermissions.View)]
+    [Permission(PermissionCodes.Notifications.View)]
     [ProducesResponseType(typeof(Result<PagedResult<NotificationDto>>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -95,7 +94,7 @@ public class NotificationsController : BaseController
     /// Retorna todas as notificações não lidas do usuário autenticado.
     /// </summary>
     [HttpGet("unread")]
-    [Permission(NotificationPermissions.View)]
+    [Permission(PermissionCodes.Notifications.View)]
     [ProducesResponseType(typeof(Result<IEnumerable<NotificationDto>>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -126,7 +125,7 @@ public class NotificationsController : BaseController
     /// Retorna a contagem de notificações não lidas do usuário autenticado.
     /// </summary>
     [HttpGet("unread/count")]
-    [Permission(NotificationPermissions.View)]
+    [Permission(PermissionCodes.Notifications.View)]
     [ProducesResponseType(typeof(Result<int>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -157,7 +156,7 @@ public class NotificationsController : BaseController
     /// Marca uma notificação específica do usuário autenticado como lida.
     /// </summary>
     [HttpPut("{id:guid}/read")]
-    [Permission(NotificationPermissions.Read)]
+    [Permission(PermissionCodes.Notifications.Read)]
     [ProducesResponseType(typeof(Result<NotificationDto>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -195,7 +194,7 @@ public class NotificationsController : BaseController
     /// Marca todas as notificações do usuário autenticado como lidas.
     /// </summary>
     [HttpPut("read-all")]
-    [Permission(NotificationPermissions.Read)]
+    [Permission(PermissionCodes.Notifications.Read)]
     [ProducesResponseType(typeof(Result<int>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
@@ -226,7 +225,7 @@ public class NotificationsController : BaseController
     /// Executa manualmente o processamento de lembretes recorrentes e escalonamento de prazos.
     /// </summary>
     [HttpPost("process-deadlines")]
-    [Permission(NotificationPermissions.Manage)]
+    [Permission(PermissionCodes.Notifications.Manage)]
     [ProducesResponseType(typeof(Result<DeadlineProcessingResultDto>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 400)]
     [ProducesResponseType(typeof(ProblemDetails), 401)]
