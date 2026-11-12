@@ -64,14 +64,10 @@ public class UsersController : BaseController
     [ProducesResponseType(typeof(Result<UnlockUserResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Result<UnlockUserResponse>>> UnlockUser([FromRoute] Guid id, [FromBody] UnlockUserRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<Result<UnlockUserResponse>>> UnlockUser([FromRoute] Guid id, CancellationToken cancellationToken)
     {
-        var authenticatedUserId = GetUserId();
-        var updatedRequest = request with
-        {
-            UserId = id,
-            UnlockedByUserId = authenticatedUserId
-        };
+        // O usuário alvo vem da rota e o ator vem exclusivamente do token.
+        var updatedRequest = new UnlockUserRequest(id, GetUserId());
         var result = await _unlockUserService.UnlockUserAsync(updatedRequest, cancellationToken);
         return OkResult(result, "Usuário desbloqueado com sucesso.");
     }
