@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
 import { tokenStore } from '../auth/tokenStore';
+import { crossTab } from '../auth/crossTab';
 
 declare module 'axios' {
   interface AxiosRequestConfig {
@@ -54,19 +55,31 @@ interface RefreshResult {
 
 let refreshInFlight: Promise<string> | null = null;
 
+const requestNewAccessToken = async (): Promise<string> => {
+  const response = await api.post<RefreshResult>('/v1/auth/refresh', null, { withCredentials: true, skipAuthRefresh: true });
+  const token = response.data.data?.accessToken;
+  if (!token) throw new Error('Resposta de refresh sem access token.');
+  return token;
+};
+
 /**
- * Renova o access token com o cookie HttpOnly sigh_rt. Single-flight: chamadas simultâneas
- * compartilham a mesma requisição, porque o backend rotaciona o refresh token a cada uso
- * e um segundo refresh com o cookie antigo seria tratado como reutilização.
+ * Renova o access token com o cookie HttpOnly sigh_rt.
+ * - Single-flight na aba: chamadas simultâneas compartilham a mesma requisição.
+ * - Entre abas: o refresh roda com o lock "sigh-refresh"; se, enquanto esperava o lock, outra aba
+ *   renovou e publicou o token no BroadcastChannel, ele é reaproveitado sem nova requisição
+ *   (o backend rotaciona o refresh token a cada uso).
  */
 export const refreshAccessToken = (): Promise<string> => {
   if (!refreshInFlight) {
-    refreshInFlight = api
-      .post<RefreshResult>('/v1/auth/refresh', null, { withCredentials: true, skipAuthRefresh: true })
-      .then((response) => {
-        const token = response.data.data?.accessToken;
-        if (!token) throw new Error('Resposta de refresh sem access token.');
+    const tokenBeforeWaiting = tokenStore.get();
+    refreshInFlight = crossTab
+      .withRefreshLock(async () => {
+        const current = tokenStore.get();
+        if (current && current !== tokenBeforeWaiting) return current;
+
+        const token = await requestNewAccessToken();
         tokenStore.set(token);
+        crossTab.publish({ type: 'token', accessToken: token });
         return token;
       })
       .catch((error: unknown) => {
@@ -79,6 +92,20 @@ export const refreshAccessToken = (): Promise<string> => {
   }
   return refreshInFlight;
 };
+
+// Mensagens das outras abas.
+crossTab.subscribe((message) => {
+  if (message.type === 'token') {
+    // Só aproveita o token se esta aba tem sessão (ou está renovando): uma aba deslogada não
+    // deve "entrar" sozinha.
+    if (tokenStore.get() !== null || refreshInFlight !== null) tokenStore.set(message.accessToken);
+    return;
+  }
+  if (message.type === 'logout') {
+    tokenStore.clear();
+    handlers.onSessionExpired();
+  }
+});
 
 api.interceptors.request.use((config) => {
   const token = tokenStore.get();

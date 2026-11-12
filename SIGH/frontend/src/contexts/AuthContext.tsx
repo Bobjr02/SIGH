@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi, type CurrentUser } from '../auth/authApi';
 import { tokenStore } from '../auth/tokenStore';
+import { crossTab } from '../auth/crossTab';
 import { refreshAccessToken, setAuthEventHandlers } from '../services/api';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -106,6 +107,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Mesmo que a API falhe (token expirado, rede), a sessão local termina.
     } finally {
       endSession();
+      // As outras abas usam o mesmo cookie, que acabou de ser revogado: elas também saem.
+      crossTab.publish({ type: 'logout' });
     }
   }, [endSession]);
 
