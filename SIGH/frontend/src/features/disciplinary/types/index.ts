@@ -308,34 +308,29 @@ export interface GetDisciplinaryCasesQuery {
 }
 
 // Request Payload DTOs das Ações de Processo
+// O usuário que executa a ação nunca é enviado: o backend o obtém do token autenticado.
 export interface OpenCaseRequest {
-  openedByUserId?: string;
   justification?: string;
 }
 
 export interface StartInvestigationRequest {
-  investigatorUserId?: string;
   notes?: string;
 }
 
 export interface SubmitCaseForDecisionRequest {
-  submittedByUserId?: string;
   summaryNotes?: string;
 }
 
 export interface RecordDecisionRequest {
   decisionType: DecisionType;
   description: string;
-  decidedByUserId?: string;
 }
 
 export interface ApproveDecisionRequest {
-  approvedByUserId?: string;
   notes?: string;
 }
 
 export interface RejectDecisionRequest {
-  rejectedByUserId?: string;
   justification: string;
 }
 
@@ -345,7 +340,6 @@ export interface AddOccurrenceRequest {
   location?: string;
   infractionTypeId?: string;
   severity?: InfractionSeverity;
-  reportedByUserId?: string;
 }
 
 export interface AddEmployeeRequest {
@@ -362,7 +356,6 @@ export interface AddEvidenceRequest {
   locationReference?: string;
   collectedAt: string;
   occurrenceId?: string;
-  collectedByUserId?: string;
 }
 
 export interface ApplyMeasureRequest {
@@ -372,15 +365,12 @@ export interface ApplyMeasureRequest {
   decisionId?: string;
   startDate: string;
   endDate?: string;
-  appliedByUserId?: string;
 }
 
 export interface CancelCaseRequest {
-  cancelledByUserId?: string;
   justification: string;
 }
 
 export interface ConcludeCaseRequest {
-  concludedByUserId?: string;
   summaryNotes: string;
 }
