@@ -24,6 +24,7 @@ public static class DependencyInjection
                 b => b.MigrationsAssembly(typeof(SighDbContext).Assembly.FullName)));
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<SighDbContext>());
+        services.AddScoped<SIGH.Persistence.Seeds.DatabaseSeeder>();
 
         // Registro de repositórios
         services.AddScoped<IUserRepository, UserRepository>();
