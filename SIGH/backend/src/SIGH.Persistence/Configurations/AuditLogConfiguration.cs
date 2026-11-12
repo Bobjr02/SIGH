@@ -31,6 +31,11 @@ public class AuditLogConfiguration : AuditableEntityConfiguration<AuditLog>
         builder.Property(al => al.CorrelationId)
             .HasMaxLength(100);
 
+        // Consultas da trilha: por entidade (linha do tempo de um processo) e por período.
+        builder.HasIndex(al => new { al.Entity, al.EntityId });
+        builder.HasIndex(al => al.CreatedAt);
+        builder.HasIndex(al => al.UserId);
+
         builder.HasOne(al => al.User)
             .WithMany()
             .HasForeignKey(al => al.UserId)

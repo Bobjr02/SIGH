@@ -1079,7 +1079,11 @@ namespace SIGH.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("UserId");
+
+                    b.HasIndex("Entity", "EntityId");
 
                     b.ToTable("AuditLogs", (string)null);
                 });

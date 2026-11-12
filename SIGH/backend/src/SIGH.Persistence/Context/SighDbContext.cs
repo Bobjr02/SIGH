@@ -5,12 +5,14 @@ using SIGH.Application.Interfaces;
 using SIGH.Domain.Common;
 using SIGH.Domain.Disciplinary.Entities;
 using SIGH.Domain.Notifications.Entities;
+using SIGH.Persistence.Auditing;
 
 namespace SIGH.Persistence.Context;
 
 public class SighDbContext : DbContext, IApplicationDbContext
 {
     private readonly ICurrentUserService? _currentUserService;
+    private readonly IRequestContext? _requestContext;
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
@@ -42,10 +44,14 @@ public class SighDbContext : DbContext, IApplicationDbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
 
-    public SighDbContext(DbContextOptions<SighDbContext> options, ICurrentUserService? currentUserService = null)
+    public SighDbContext(
+        DbContextOptions<SighDbContext> options,
+        ICurrentUserService? currentUserService = null,
+        IRequestContext? requestContext = null)
         : base(options)
     {
         _currentUserService = currentUserService;
+        _requestContext = requestContext;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -68,23 +74,48 @@ public class SighDbContext : DbContext, IApplicationDbContext
         }
     }
 
-    public override int SaveChanges()
+    // As sobrecargas sem "acceptAllChangesOnSuccess" chamam estas, então todo SaveChanges passa por aqui.
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        ApplyAuditAndSoftDelete();
-        return base.SaveChanges();
+        PrepareForSave();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
-        ApplyAuditAndSoftDelete();
-        return base.SaveChangesAsync(cancellationToken);
+        PrepareForSave();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
-    private void ApplyAuditAndSoftDelete()
+    private void PrepareForSave()
     {
+        EnsureAuditLogIsInsertOnly();
+
         var now = DateTimeOffset.UtcNow;
         var currentUserId = _currentUserService?.UserId;
 
+        ApplyAuditAndSoftDelete(now, currentUserId);
+
+        var auditLogs = EntityAuditBuilder.Build(
+            ChangeTracker, now, currentUserId,
+            _requestContext?.IpAddress, _requestContext?.UserAgent, _requestContext?.CorrelationId);
+
+        if (auditLogs.Count > 0)
+            AuditLogs.AddRange(auditLogs);
+    }
+
+    /// <summary>A trilha de auditoria só recebe inserções: alterar ou excluir um AuditLog é erro de programação.</summary>
+    private void EnsureAuditLogIsInsertOnly()
+    {
+        var tampered = ChangeTracker.Entries<AuditLog>()
+            .Any(e => e.State is EntityState.Modified or EntityState.Deleted);
+
+        if (tampered)
+            throw new InvalidOperationException("AuditLogs é somente inserção: registros de auditoria não podem ser alterados nem excluídos.");
+    }
+
+    private void ApplyAuditAndSoftDelete(DateTimeOffset now, Guid? currentUserId)
+    {
         foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
         {
             switch (entry.State)

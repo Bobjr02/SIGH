@@ -69,6 +69,7 @@ public static class DependencyInjection
         // Registro de serviços de infraestrutura
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IRequestContext, HttpRequestContext>();
         services.AddScoped<IAuthorizedCompanyProvider, AuthorizedCompanyProvider>();
         services.AddScoped<IEmailService, NullEmailService>();
         services.AddScoped<IStorageService, LocalStorageService>();
