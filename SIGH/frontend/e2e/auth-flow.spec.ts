@@ -10,6 +10,7 @@ const required = (name: string): string => {
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'admin@sigh.com.br';
 const ADMIN_PASSWORD = required('E2E_ADMIN_PASSWORD');
+// A troca usa E2E_NEW_PASSWORD; os demais specs (projeto "app") entram com ela.
 const NEW_PASSWORD = required('E2E_NEW_PASSWORD');
 
 const storageSnapshot = (page: Page) =>

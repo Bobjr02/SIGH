@@ -1,39 +1,38 @@
 # E2E local (Playwright)
 
-Fluxo coberto em `auth-flow.spec.ts`: login do admin → troca obrigatória de senha → lista de
-processos → recarregar a página continua logado → logout. Também verifica que o cookie `sigh_rt`
-é HttpOnly/Secure/SameSite=Strict com `Path=/api/v1/auth` e que o refresh token não aparece em
-corpo de resposta nem em `localStorage`/`sessionStorage`.
+Roda só localmente (ainda fora do CI). Specs:
 
-Ainda **não roda no CI**: precisa de SQL Server, API e front de pé.
+| Spec | O que cobre |
+| --- | --- |
+| `auth-flow.spec.ts` | login do admin recém-semeado → troca obrigatória de senha → lista de processos → reload mantém a sessão → logout; cookie `sigh_rt` HttpOnly/Secure/SameSite=Strict; refresh token fora de corpo e de storage |
+| `two-tabs.spec.ts` | duas abas recarregando juntas não derrubam a sessão (com Web Locks e sem eles, exercitando a janela de tolerância do backend); logout numa aba leva a outra para `/login` |
+| `evidence.spec.ts` | processo + evidência; upload de PDF real; `.exe` renomeado para `.pdf` rejeitado; download com SHA-256 igual ao gravado; registros de auditoria (criação, alteração, download) sem dados sensíveis |
+| `password-reset.spec.ts` | "esqueci a senha": o e-mail chega ao Mailpit e o link redefine a senha (uso único) |
+
+## Como funciona
+
+- O `playwright.config.ts` gera um banco novo `SIGH_E2E_<timestamp>`, sobe a API com
+  `dotnet run` apontando para ele (as migrations e o seed criam tudo) e sobe o Vite.
+- O `globalSetup` garante o Mailpit (`docker compose up -d mailpit`).
+- O `globalTeardown` **apaga o banco desta execução ao final, mesmo se os testes falharem**
+  (só nomes `SIGH_E2E_*`; `E2E_KEEP_DB=1` mantém o banco para investigar).
+- A connection string base e a senha inicial do admin vêm dos user-secrets da API
+  (`ConnectionStrings:DefaultConnection`, `Seed:AdminPassword`); nada é versionado.
 
 ## Pré-requisitos
 
-1. SQL Server do `docker-compose.yml` rodando.
-2. User-secrets da API configurados (`ConnectionStrings:DefaultConnection`, `JwtOptions:SecretKey`,
-   `Seed:AdminPassword`).
-3. Um admin **recém-criado pelo seed** (com `MustChangePassword = true`). Depois de uma execução o
-   admin já trocou a senha; para repetir, aponte a API para um banco novo (o seed cria tudo). Exemplo,
-   sem apagar nada do banco de dev:
-
-   ```bash
-   cd SIGH/backend/src/SIGH.Api
-   CS=$(dotnet user-secrets list | sed -n 's/^ConnectionStrings:DefaultConnection = //p')
-   export ConnectionStrings__DefaultConnection=$(echo "$CS" | sed -E "s/Database=[^;]*/Database=SIGH_E2E_$(date +%s)/")
-   dotnet run --launch-profile http
-   ```
-
-4. Navegador do Playwright: `npx playwright install --with-deps chromium`.
+1. SQL Server do `docker-compose.yml` rodando (container `sigh-sqlserver`).
+2. User-secrets da API configurados (veja o README principal).
+3. Portas 5000 e 3000 livres (a API do e2e não reaproveita uma API já de pé).
+4. Navegador: `npx playwright install --with-deps chromium`.
 
 ## Rodar
 
 ```bash
 cd SIGH/frontend
-export E2E_ADMIN_PASSWORD="$(dotnet user-secrets list --project ../backend/src/SIGH.Api | sed -n 's/^Seed:AdminPassword = //p')"
-export E2E_NEW_PASSWORD='<uma senha que atenda à política de complexidade>'
-# opcional: E2E_ADMIN_EMAIL (padrão admin@sigh.com.br), E2E_BASE_URL (padrão http://localhost:3000)
 npm run e2e
 ```
 
-O Playwright sobe o Vite (`npm run dev`, com proxy de `/api` para `http://localhost:5000`) se ele
-ainda não estiver rodando.
+Variáveis opcionais: `E2E_NEW_PASSWORD` (senha que o admin define; padrão aleatória),
+`E2E_ADMIN_EMAIL`, `E2E_BASE_URL`, `E2E_MAILPIT_URL`, `E2E_BASE_CONNECTION_STRING`,
+`E2E_SQL_CONTAINER`, `E2E_KEEP_DB=1`.
