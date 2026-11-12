@@ -8,6 +8,8 @@ using SIGH.Infrastructure;
 using SIGH.Infrastructure.Logging;
 using SIGH.Persistence;
 using SIGH.Persistence.Context;
+using SIGH.Persistence.Seeds;
+using Microsoft.EntityFrameworkCore;
 
 // Configuração do Bootstrap Logger com Serilog
 Log.Logger = new LoggerConfiguration()
@@ -119,6 +121,24 @@ try
     });
 
     var app = builder.Build();
+
+    // Migrations + seed na inicialização (habilitado em Development).
+    // Provedores não relacionais (ex.: InMemory nos testes) são ignorados.
+    if (app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
+    {
+        await using var scope = app.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<SighDbContext>();
+
+        if (dbContext.Database.IsRelational())
+        {
+            Log.Information("Aplicando migrations do banco de dados...");
+            await dbContext.Database.MigrateAsync();
+
+            var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+            await seeder.SeedAsync();
+            Log.Information("Migrations e seed aplicados com sucesso.");
+        }
+    }
 
     // Middlewares em Ordem de Execução
     app.UseMiddleware<CorrelationIdMiddleware>();
