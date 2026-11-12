@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "check:bundle": "node scripts/check-bundle-size.mjs 500"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
