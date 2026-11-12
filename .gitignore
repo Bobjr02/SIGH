@@ -42,3 +42,8 @@ logs/
 *.mdf
 *.ldf
 mssql-data/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
