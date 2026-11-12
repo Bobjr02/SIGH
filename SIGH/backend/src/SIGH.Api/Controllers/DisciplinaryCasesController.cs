@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SIGH.Api.Contracts.Disciplinary;
 using SIGH.Application.Common.Models;
 using SIGH.Application.Disciplinary.DisciplinaryCases.AddEmployee;
 using SIGH.Application.Disciplinary.DisciplinaryCases.AddEvidence;
@@ -92,10 +93,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(Result<CreateDisciplinaryCaseResponse>), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<Result<CreateDisciplinaryCaseResponse>>> Create(
-        [FromBody] CreateDisciplinaryCaseRequest request,
+        [FromBody] CreateDisciplinaryCaseHttpRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _createDisciplinaryCaseUseCase.ExecuteAsync(request, cancellationToken);
+        var applicationRequest = request.ToApplicationRequest(GetUserId());
+        var result = await _createDisciplinaryCaseUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToCreatedActionResult(nameof(GetById), new { id = result.Data?.Id }, result);
     }
 
@@ -143,7 +145,6 @@ public class DisciplinaryCasesController : BaseController
     /// <description>Transiciona o status do processo disciplinar de Rascunho (Draft) para Aberto (Open).</description>
     [HttpPost("{id:guid}/open")]
     [Permission("Disciplinary.Cases.Open")]
-    [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<OpenCaseResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<OpenCaseResponse>), StatusCodes.Status400BadRequest)]
@@ -152,14 +153,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<OpenCaseResponse>>> Open(
         [FromRoute] Guid id,
-        [FromBody] OpenCaseRequest? request,
         CancellationToken cancellationToken)
     {
-        var userId = request?.OpenedByUserId != null && request.OpenedByUserId != Guid.Empty
-            ? request.OpenedByUserId
-            : GetUserId();
-        var updatedRequest = new OpenCaseRequest(id, userId);
-        var result = await _openCaseUseCase.ExecuteAsync(updatedRequest, cancellationToken);
+        // Sem corpo: o processo vem da rota e o ator vem exclusivamente do token.
+        var applicationRequest = new OpenCaseRequest(id, GetUserId());
+        var result = await _openCaseUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
     }
 
@@ -169,7 +167,6 @@ public class DisciplinaryCasesController : BaseController
     /// <description>Inicia a fase de investigação de um processo disciplinar aberto.</description>
     [HttpPost("{id:guid}/start-investigation")]
     [Permission("Disciplinary.Cases.StartInvestigation")]
-    [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<StartInvestigationResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<StartInvestigationResponse>), StatusCodes.Status400BadRequest)]
@@ -178,14 +175,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<StartInvestigationResponse>>> StartInvestigation(
         [FromRoute] Guid id,
-        [FromBody] StartInvestigationRequest? request,
         CancellationToken cancellationToken)
     {
-        var userId = request?.InvestigatorUserId != null && request.InvestigatorUserId != Guid.Empty
-            ? request.InvestigatorUserId
-            : GetUserId();
-        var updatedRequest = new StartInvestigationRequest(id, userId);
-        var result = await _startInvestigationUseCase.ExecuteAsync(updatedRequest, cancellationToken);
+        // Sem corpo: o processo vem da rota e o ator vem exclusivamente do token.
+        var applicationRequest = new StartInvestigationRequest(id, GetUserId());
+        var result = await _startInvestigationUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
     }
 
@@ -195,7 +189,6 @@ public class DisciplinaryCasesController : BaseController
     /// <description>Encaminha o processo sob investigação para a etapa de julgamento/decisão.</description>
     [HttpPost("{id:guid}/submit-for-decision")]
     [Permission("Disciplinary.Cases.SubmitForDecision")]
-    [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<SubmitCaseForDecisionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<SubmitCaseForDecisionResponse>), StatusCodes.Status400BadRequest)]
@@ -204,14 +197,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<SubmitCaseForDecisionResponse>>> SubmitForDecision(
         [FromRoute] Guid id,
-        [FromBody] SubmitCaseForDecisionRequest? request,
         CancellationToken cancellationToken)
     {
-        var userId = request?.SubmittedByUserId != null && request.SubmittedByUserId != Guid.Empty
-            ? request.SubmittedByUserId
-            : GetUserId();
-        var updatedRequest = new SubmitCaseForDecisionRequest(id, userId);
-        var result = await _submitCaseForDecisionUseCase.ExecuteAsync(updatedRequest, cancellationToken);
+        // Sem corpo: o processo vem da rota e o ator vem exclusivamente do token.
+        var applicationRequest = new SubmitCaseForDecisionRequest(id, GetUserId());
+        var result = await _submitCaseForDecisionUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
     }
 
@@ -221,7 +211,6 @@ public class DisciplinaryCasesController : BaseController
     /// <description>Aprova a decisão registrada para o processo disciplinar.</description>
     [HttpPost("{id:guid}/approve-decision")]
     [Permission("Disciplinary.Cases.ApproveDecision")]
-    [Consumes("application/json")]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<ApproveDecisionResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<ApproveDecisionResponse>), StatusCodes.Status400BadRequest)]
@@ -230,14 +219,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<ApproveDecisionResponse>>> ApproveDecision(
         [FromRoute] Guid id,
-        [FromBody] ApproveDecisionRequest? request,
         CancellationToken cancellationToken)
     {
-        var userId = request?.ApprovedByUserId != null && request.ApprovedByUserId != Guid.Empty
-            ? request.ApprovedByUserId
-            : GetUserId();
-        var updatedRequest = new ApproveDecisionRequest(id, userId);
-        var result = await _approveDecisionUseCase.ExecuteAsync(updatedRequest, cancellationToken);
+        // Sem corpo: o processo vem da rota e o ator vem exclusivamente do token.
+        var applicationRequest = new ApproveDecisionRequest(id, GetUserId());
+        var result = await _approveDecisionUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
     }
 
@@ -256,14 +242,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<RejectDecisionResponse>>> RejectDecision(
         [FromRoute] Guid id,
-        [FromBody] RejectDecisionRequest request,
+        [FromBody] RejectDecisionHttpRequest request,
         CancellationToken cancellationToken)
     {
-        var userId = request.RejectedByUserId != Guid.Empty
-            ? request.RejectedByUserId
-            : GetUserId();
-        var updatedRequest = request with { DisciplinaryCaseId = id, RejectedByUserId = userId };
-        var result = await _rejectDecisionUseCase.ExecuteAsync(updatedRequest, cancellationToken);
+        var applicationRequest = request.ToApplicationRequest(id, GetUserId());
+        var result = await _rejectDecisionUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
     }
 
@@ -282,12 +265,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<AddOccurrenceResponse>>> AddOccurrence(
         [FromRoute] Guid id,
-        [FromBody] AddOccurrenceRequest request,
+        [FromBody] AddOccurrenceHttpRequest request,
         CancellationToken cancellationToken)
     {
-        var userId = request.ReportedByUserId != Guid.Empty ? request.ReportedByUserId : GetUserId();
-        var updatedRequest = request with { DisciplinaryCaseId = id, ReportedByUserId = userId };
-        var result = await _addOccurrenceUseCase.ExecuteAsync(updatedRequest, cancellationToken);
+        var applicationRequest = request.ToApplicationRequest(id, GetUserId());
+        var result = await _addOccurrenceUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
     }
 
@@ -329,12 +311,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<AddEvidenceResponse>>> AddEvidence(
         [FromRoute] Guid id,
-        [FromBody] AddEvidenceRequest request,
+        [FromBody] AddEvidenceHttpRequest request,
         CancellationToken cancellationToken)
     {
-        var userId = request.CollectedByUserId != Guid.Empty ? request.CollectedByUserId : GetUserId();
-        var updatedRequest = request with { DisciplinaryCaseId = id, CollectedByUserId = userId };
-        var result = await _addEvidenceUseCase.ExecuteAsync(updatedRequest, cancellationToken);
+        var applicationRequest = request.ToApplicationRequest(id, GetUserId());
+        var result = await _addEvidenceUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
     }
 
@@ -353,12 +334,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<RecordDecisionResponse>>> RecordDecision(
         [FromRoute] Guid id,
-        [FromBody] RecordDecisionRequest request,
+        [FromBody] RecordDecisionHttpRequest request,
         CancellationToken cancellationToken)
     {
-        var userId = request.DecidedByUserId != Guid.Empty ? request.DecidedByUserId : GetUserId();
-        var updatedRequest = request with { DisciplinaryCaseId = id, DecidedByUserId = userId };
-        var result = await _recordDecisionUseCase.ExecuteAsync(updatedRequest, cancellationToken);
+        var applicationRequest = request.ToApplicationRequest(id, GetUserId());
+        var result = await _recordDecisionUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
     }
 
@@ -377,12 +357,11 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<ApplyMeasureResponse>>> ApplyMeasure(
         [FromRoute] Guid id,
-        [FromBody] ApplyMeasureRequest request,
+        [FromBody] ApplyMeasureHttpRequest request,
         CancellationToken cancellationToken)
     {
-        var userId = request.AppliedByUserId != Guid.Empty ? request.AppliedByUserId : GetUserId();
-        var updatedRequest = request with { DisciplinaryCaseId = id, AppliedByUserId = userId };
-        var result = await _applyMeasureUseCase.ExecuteAsync(updatedRequest, cancellationToken);
+        var applicationRequest = request.ToApplicationRequest(id, GetUserId());
+        var result = await _applyMeasureUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
     }
 

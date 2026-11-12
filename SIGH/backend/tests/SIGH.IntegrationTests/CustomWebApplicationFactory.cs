@@ -17,6 +17,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _dbName = Guid.NewGuid().ToString();
 
+    /// <summary>
+    /// Cache de tokens por e-mail, compartilhado entre os testes da mesma fixture.
+    /// Evita estourar o rate limit do endpoint de login (10 req/min por IP).
+    /// </summary>
+    public System.Collections.Concurrent.ConcurrentDictionary<string, (string AccessToken, Guid UserId)> TokenCache { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
@@ -157,6 +163,28 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         db.UserRoles.Add(new UserRole(Guid.NewGuid())
         {
             UserId = adminUser.Id,
+            RoleId = adminRole.Id
+        });
+
+        // Segundo usuário com o mesmo perfil: necessário para fluxos que exigem
+        // segregação de funções (quem registra a decisão não pode aprová-la).
+        var approverUser = new User(Guid.NewGuid())
+        {
+            FullName = "Aprovador do Sistema",
+            Email = "approver@sigh.com",
+            Cpf = "55566677788",
+            PasswordHash = passwordHash,
+            Status = UserStatus.Active,
+            MustChangePassword = false,
+            FailedLoginAttempts = 0,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        db.Users.Add(approverUser);
+
+        db.UserRoles.Add(new UserRole(Guid.NewGuid())
+        {
+            UserId = approverUser.Id,
             RoleId = adminRole.Id
         });
 

@@ -1,8 +1,10 @@
 using System.Reflection;
+using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using SIGH.Api.Contracts.Disciplinary;
 using SIGH.Api.Controllers;
 using SIGH.Application.Common.Models;
 using SIGH.Application.Disciplinary.DisciplinaryCases.AddEmployee;
@@ -46,6 +48,7 @@ public class DisciplinaryCasesControllerTests
     private readonly Mock<IConcludeDisciplinaryCaseUseCase> _concludeCaseUseCaseMock = new();
 
     private readonly DisciplinaryCasesController _controller;
+    private readonly Guid _actorUserId = Guid.NewGuid();
 
     public DisciplinaryCasesControllerTests()
     {
@@ -65,18 +68,28 @@ public class DisciplinaryCasesControllerTests
             _applyMeasureUseCaseMock.Object,
             _cancelCaseUseCaseMock.Object,
             _concludeCaseUseCaseMock.Object);
+
+        // Usuário autenticado: o ator de todas as ações deve vir deste token.
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    new[] { new Claim(ClaimTypes.NameIdentifier, _actorUserId.ToString()) },
+                    "TestAuth"))
+            }
+        };
     }
 
     [Fact]
     public async Task Create_WhenSuccessful_ShouldReturnCreatedAtAction()
     {
         // Arrange
-        var request = new CreateDisciplinaryCaseRequest(
+        var request = new CreateDisciplinaryCaseHttpRequest(
             CaseNumber: "PROC-2026-001",
             CompanyId: Guid.NewGuid(),
             Title: "Insubordinação grave",
-            Description: "Descrição do processo disciplinar.",
-            CreatedByUserId: Guid.NewGuid());
+            Description: "Descrição do processo disciplinar.");
 
         var response = new CreateDisciplinaryCaseResponse(
             Id: Guid.NewGuid(),
@@ -86,12 +99,14 @@ public class DisciplinaryCasesControllerTests
             Status: DisciplinaryCaseStatus.Draft,
             Priority: DisciplinaryCasePriority.Normal,
             OpenedAt: DateTimeOffset.UtcNow,
-            OpenedByUserId: request.CreatedByUserId,
+            OpenedByUserId: _actorUserId,
             ResponsibleEmployeeId: null,
             DueDate: null);
 
         _createUseCaseMock
-            .Setup(x => x.ExecuteAsync(request, It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(
+                It.Is<CreateDisciplinaryCaseRequest>(r => r.CaseNumber == request.CaseNumber && r.CreatedByUserId == _actorUserId),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<CreateDisciplinaryCaseResponse>.Ok(response));
 
         // Act
@@ -168,15 +183,14 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var response = new OpenCaseResponse(caseId, DisciplinaryCaseStatus.Open, DateTimeOffset.UtcNow);
 
         _openCaseUseCaseMock
-            .Setup(x => x.ExecuteAsync(It.Is<OpenCaseRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(It.Is<OpenCaseRequest>(r => r.DisciplinaryCaseId == caseId && r.OpenedByUserId == _actorUserId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<OpenCaseResponse>.Ok(response));
 
         // Act
-        var actionResult = await _controller.Open(caseId, new OpenCaseRequest(caseId, userId), CancellationToken.None);
+        var actionResult = await _controller.Open(caseId, CancellationToken.None);
 
         // Assert
         var okResult = actionResult.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -188,15 +202,14 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var response = new StartInvestigationResponse(caseId, DisciplinaryCaseStatus.UnderInvestigation);
 
         _startInvestigationUseCaseMock
-            .Setup(x => x.ExecuteAsync(It.Is<StartInvestigationRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(It.Is<StartInvestigationRequest>(r => r.DisciplinaryCaseId == caseId && r.InvestigatorUserId == _actorUserId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<StartInvestigationResponse>.Ok(response));
 
         // Act
-        var actionResult = await _controller.StartInvestigation(caseId, new StartInvestigationRequest(caseId, userId), CancellationToken.None);
+        var actionResult = await _controller.StartInvestigation(caseId, CancellationToken.None);
 
         // Assert
         var okResult = actionResult.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -208,15 +221,14 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var response = new SubmitCaseForDecisionResponse(caseId, DisciplinaryCaseStatus.AwaitingDecision);
 
         _submitCaseForDecisionUseCaseMock
-            .Setup(x => x.ExecuteAsync(It.Is<SubmitCaseForDecisionRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(It.Is<SubmitCaseForDecisionRequest>(r => r.DisciplinaryCaseId == caseId && r.SubmittedByUserId == _actorUserId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<SubmitCaseForDecisionResponse>.Ok(response));
 
         // Act
-        var actionResult = await _controller.SubmitForDecision(caseId, new SubmitCaseForDecisionRequest(caseId, userId), CancellationToken.None);
+        var actionResult = await _controller.SubmitForDecision(caseId, CancellationToken.None);
 
         // Assert
         var okResult = actionResult.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -228,15 +240,14 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var response = new ApproveDecisionResponse(caseId, Guid.NewGuid(), DisciplinaryCaseStatus.Decided, DecisionStatus.Approved, DateTimeOffset.UtcNow);
 
         _approveDecisionUseCaseMock
-            .Setup(x => x.ExecuteAsync(It.Is<ApproveDecisionRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(It.Is<ApproveDecisionRequest>(r => r.DisciplinaryCaseId == caseId && r.ApprovedByUserId == _actorUserId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<ApproveDecisionResponse>.Ok(response));
 
         // Act
-        var actionResult = await _controller.ApproveDecision(caseId, new ApproveDecisionRequest(caseId, userId), CancellationToken.None);
+        var actionResult = await _controller.ApproveDecision(caseId, CancellationToken.None);
 
         // Assert
         var okResult = actionResult.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -248,12 +259,11 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var request = new RejectDecisionRequest(caseId, userId, "Falta fundamentação legal.");
+        var request = new RejectDecisionHttpRequest("Falta fundamentação legal.");
         var response = new RejectDecisionResponse(caseId, Guid.NewGuid(), DisciplinaryCaseStatus.UnderInvestigation, DecisionStatus.Rejected, request.Reason);
 
         _rejectDecisionUseCaseMock
-            .Setup(x => x.ExecuteAsync(It.Is<RejectDecisionRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(It.Is<RejectDecisionRequest>(r => r.DisciplinaryCaseId == caseId && r.RejectedByUserId == _actorUserId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<RejectDecisionResponse>.Ok(response));
 
         // Act
@@ -269,11 +279,11 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new AddOccurrenceRequest(caseId, DateTimeOffset.UtcNow, "Falta não justificada", Guid.NewGuid(), Guid.NewGuid(), InfractionSeverity.Moderate);
+        var request = new AddOccurrenceHttpRequest(DateTimeOffset.UtcNow, "Falta não justificada", Guid.NewGuid(), InfractionSeverity.Moderate);
         var response = new AddOccurrenceResponse(Guid.NewGuid(), caseId, request.InfractionTypeId, request.Severity, OccurrenceStatus.Reported);
 
         _addOccurrenceUseCaseMock
-            .Setup(x => x.ExecuteAsync(It.Is<AddOccurrenceRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(It.Is<AddOccurrenceRequest>(r => r.DisciplinaryCaseId == caseId && r.ReportedByUserId == _actorUserId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AddOccurrenceResponse>.Ok(response));
 
         // Act
@@ -309,11 +319,9 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new AddEvidenceRequest(
-            caseId,
+        var request = new AddEvidenceHttpRequest(
             EvidenceType.Document,
             "Relatório de catraca",
-            Guid.NewGuid(),
             DateTimeOffset.UtcNow,
             StorageReference: "evidences/relatorio-catraca.pdf",
             OriginalFileName: "relatorio-catraca.pdf",
@@ -322,7 +330,7 @@ public class DisciplinaryCasesControllerTests
         var response = new AddEvidenceResponse(Guid.NewGuid(), caseId, request.EvidenceType, EvidenceStatus.PendingVerification, request.CollectedAt);
 
         _addEvidenceUseCaseMock
-            .Setup(x => x.ExecuteAsync(It.Is<AddEvidenceRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(It.Is<AddEvidenceRequest>(r => r.DisciplinaryCaseId == caseId && r.CollectedByUserId == _actorUserId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<AddEvidenceResponse>.Ok(response));
 
         // Act
@@ -338,12 +346,10 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new RecordDecisionRequest(
-            caseId,
+        var request = new RecordDecisionHttpRequest(
             DecisionType.Suspension,
             "Suspensão por três dias.",
-            "A apuração confirmou os fatos que fundamentam a suspensão.",
-            Guid.NewGuid());
+            "A apuração confirmou os fatos que fundamentam a suspensão.");
         var response = new RecordDecisionResponse(
             Guid.NewGuid(),
             caseId,
@@ -352,12 +358,12 @@ public class DisciplinaryCasesControllerTests
             request.Reasoning,
             DecisionStatus.Draft,
             DateTimeOffset.UtcNow,
-            request.DecidedByUserId,
+            _actorUserId,
             null,
             null);
 
         _recordDecisionUseCaseMock
-            .Setup(x => x.ExecuteAsync(It.Is<RecordDecisionRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(It.Is<RecordDecisionRequest>(r => r.DisciplinaryCaseId == caseId && r.DecidedByUserId == _actorUserId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<RecordDecisionResponse>.Ok(response));
 
         // Act
@@ -373,7 +379,7 @@ public class DisciplinaryCasesControllerTests
     {
         // Arrange
         var caseId = Guid.NewGuid();
-        var request = new ApplyMeasureRequest(caseId, Guid.NewGuid(), Guid.NewGuid(), DisciplinaryMeasureType.Suspension, "Suspenso por 3 dias", DateTimeOffset.UtcNow, Guid.NewGuid());
+        var request = new ApplyMeasureHttpRequest(Guid.NewGuid(), Guid.NewGuid(), DisciplinaryMeasureType.Suspension, "Suspenso por 3 dias", DateTimeOffset.UtcNow);
         var response = new ApplyMeasureResponse(
             Guid.NewGuid(),
             caseId,
@@ -383,13 +389,13 @@ public class DisciplinaryCasesControllerTests
             request.Reason,
             request.EffectiveFrom,
             request.EffectiveUntil,
-            request.AppliedByUserId,
+            _actorUserId,
             DateTimeOffset.UtcNow,
             DisciplinaryMeasureStatus.Applied,
             request.Notes);
 
         _applyMeasureUseCaseMock
-            .Setup(x => x.ExecuteAsync(It.Is<ApplyMeasureRequest>(r => r.DisciplinaryCaseId == caseId), It.IsAny<CancellationToken>()))
+            .Setup(x => x.ExecuteAsync(It.Is<ApplyMeasureRequest>(r => r.DisciplinaryCaseId == caseId && r.AppliedByUserId == _actorUserId), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<ApplyMeasureResponse>.Ok(response));
 
         // Act
