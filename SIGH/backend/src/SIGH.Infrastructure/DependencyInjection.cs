@@ -90,6 +90,7 @@ public static class DependencyInjection
         services.AddHostedService<EmailOutboxDispatcher>();
         services.AddSingleton<SIGH.Application.Interfaces.Storage.IFileStorage, LocalFileStorage>();
         services.AddSingleton<SIGH.Application.Interfaces.Storage.IMalwareScanner, NoOpMalwareScanner>();
+        services.AddSingleton<SIGH.Application.Employees.Import.IHrSpreadsheetReader, SIGH.Infrastructure.Import.ExcelHrSpreadsheetReader>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IDeadlineCalculator, DeadlineCalculator>();
         services.AddSingleton<IBackgroundJobScheduler, BackgroundJobScheduler>();

@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<SIGH.Application.Security.ISecurityAuditLogger, SIGH.Persistence.Auditing.SecurityAuditLogger>();
         services.AddScoped<SIGH.Application.Audit.IAuditLogQueryService, AuditLogQueryService>();
         services.AddScoped<SIGH.Application.Email.IEmailOutbox, SIGH.Persistence.Email.EmailOutbox>();
+        services.AddScoped<SIGH.Application.Employees.Import.IEmployeeImportStore, SIGH.Persistence.Repositories.Employees.EmployeeImportStore>();
         services.AddScoped<SIGH.Application.Email.IEmailOutboxStore, SIGH.Persistence.Email.EmailOutboxStore>();
 
         // Registro de repositórios
