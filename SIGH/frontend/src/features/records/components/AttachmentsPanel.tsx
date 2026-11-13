@@ -45,6 +45,8 @@ export const AttachmentsPanel: React.FC<AttachmentsPanelProps> = ({ recordId, ev
       await refresh();
     } catch (e) {
       setError(recordErrorMessage(e, 'Não foi possível anexar o arquivo.'));
+      // O anexo pode ter sido criado sem o arquivo (recusado pelo servidor): a lista mostra "Sem arquivo".
+      await refresh();
     } finally {
       setBusy(false);
     }

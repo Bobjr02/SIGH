@@ -2,8 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
-import { ADMIN_EMAIL, adminPassword, apiToken, authed, loginUi } from './support/helpers';
-import { queryE2EScalar } from './support/e2eDatabase';
+import { ADMIN_EMAIL, adminPassword, apiToken, authed, createUserApi, isoDay, loginUi, logoutUi } from './support/helpers';
 import { sapFile, syntheticCpf, type SapRow } from './support/xlsx';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -53,56 +52,41 @@ const importFile = async (page: Page, name: string, rows: SapRow[], { mass }: { 
   return preview;
 };
 
-/** Processo com uma suspensão de 3 dias aplicada ao funcionário (decisão aprovada por outro usuário). */
+/**
+ * Suspensão de 3 dias registrada pelo auxiliar (RH – Registro) e aprovada pelo encarregado (RH – Aprovador)
+ * pelo fluxo de medidas: o mesmo caminho do dia a dia do RH.
+ */
 const arrangeSuspension = async (request: APIRequestContext, employeeId: string) => {
-  const admin = authed(await apiToken(request));
-  const post = async (url: string, data: unknown, headers = admin) => {
-    const r = await request.post(url, { headers, data });
-    expect(r.ok(), `${url}: ${await r.text()}`).toBeTruthy();
-    return (await r.json()).data;
-  };
+  const admin = await apiToken(request);
+  const stamp = Date.now();
+  const registrar = await createUserApi(request, admin, { fullName: 'Auxiliar E2E', email: `aux.emp.${stamp}@sigh.local`, cpf: syntheticCpf('401000008'), roles: ['HrRegistrar'] });
+  const approver = await createUserApi(request, admin, { fullName: 'Encarregado E2E', email: `enc.emp.${stamp}@sigh.local`, cpf: syntheticCpf('401000009'), roles: ['HrApprover'] });
 
-  // Aprovador: outro usuário com o perfil Administrator (segregação de funções).
-  const roleId = queryE2EScalar("SELECT CAST(Id AS nvarchar(36)) FROM Roles WHERE Name = 'Administrator'");
-  const approverEmail = `aprovador.${Date.now()}@sigh.local`;
-  const approverInitial = `Apr#${Date.now()}Aa`;
-  await post('/api/v1/users', { fullName: 'Aprovador E2E', email: approverEmail, cpf: syntheticCpf('401000009'), initialPassword: approverInitial, roleIds: [roleId] });
-  const first = await apiToken(request, approverEmail, approverInitial);
-  const changed = await post('/api/v1/auth/change-password', { currentPassword: approverInitial, newPassword: `${approverInitial}9z` }, authed(first));
-  const approver = authed(changed.accessToken);
+  const infraction = await request.post('/api/v1/infraction-types', {
+    headers: authed(admin),
+    data: { code: `E2E${stamp % 100000}`, name: 'Falta não justificada (E2E)', defaultSeverity: 2 },
+  });
+  expect(infraction.ok(), await infraction.text()).toBeTruthy();
 
-  const infraction = await post('/api/v1/infraction-types', { code: `E2E${Date.now() % 100000}`, name: 'Falta não justificada (E2E)', defaultSeverity: 2 });
-  const created = await post('/api/v1/disciplinary-cases', {
-    caseNumber: `E2E-EMP-${Date.now()}`.slice(0, 20),
-    companyId: '00000000-0000-0000-0000-000000000001',
-    title: 'Faltas reiteradas (e2e)',
-    description: 'Processo criado pelo e2e de funcionários.',
+  const registered = await request.post('/api/v1/disciplinary-records', {
+    headers: authed(registrar.token),
+    data: {
+      employeeId,
+      infractionTypeId: (await infraction.json()).data.id,
+      measureType: 4,
+      occurrenceDates: [isoDay(-1)],
+      measureDate: isoDay(0),
+      suspensionStart: isoDay(0),
+      suspensionEnd: isoDay(2),
+      description: 'Faltou três dias sem justificativa.',
+    },
   });
-  const caseId: string = created.id;
-  await post(`/api/v1/disciplinary-cases/${caseId}/open`, {});
-  await post(`/api/v1/disciplinary-cases/${caseId}/occurrences`, {
-    occurrenceDate: new Date().toISOString(), description: 'Faltou três dias sem justificativa.', infractionTypeId: infraction.id, severity: 2,
-  });
-  await post(`/api/v1/disciplinary-cases/${caseId}/employees`, { disciplinaryCaseId: caseId, employeeId, role: 1, isPrimarySubject: true });
-  await post(`/api/v1/disciplinary-cases/${caseId}/start-investigation`, {});
-  await post(`/api/v1/disciplinary-cases/${caseId}/submit-for-decision`, {});
-  const decision = await post(`/api/v1/disciplinary-cases/${caseId}/decisions`, {
-    decisionType: 4, summary: 'Suspensão de 3 dias.', reasoning: 'As faltas foram comprovadas na apuração.',
-  });
-  await post(`/api/v1/disciplinary-cases/${caseId}/approve-decision`, {}, approver);
+  expect(registered.status(), await registered.text()).toBe(201);
+  const recordId = (await registered.json()).data.record.summary.id as string;
 
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  const until = new Date(today.getTime() + 2 * 24 * 3600 * 1000);
-  await post(`/api/v1/disciplinary-cases/${caseId}/measures`, {
-    disciplinaryDecisionId: decision.decisionId, employeeId, measureType: 4, reason: 'Suspensão por faltas.',
-    effectiveFrom: today.toISOString(), effectiveUntil: until.toISOString(),
-  });
-
-  const evidence = await post(`/api/v1/disciplinary-cases/${caseId}/evidences`, {
-    evidenceType: 1, title: 'Atestado fotografado', description: 'Foto do documento.', collectedAt: new Date().toISOString(),
-  });
-  return { caseId, evidenceId: evidence.id as string };
+  const approved = await request.post(`/api/v1/disciplinary-records/${recordId}/approve`, { headers: authed(approver.token) });
+  expect(approved.ok(), await approved.text()).toBeTruthy();
+  return { recordId, registrar };
 };
 
 // JPEG mínimo válido (SOI + APP0/JFIF + EOI).
@@ -140,7 +124,7 @@ test('SAP import (initial + update), employee with decision support, and a JPG p
   const token = await apiToken(request, ADMIN_EMAIL, adminPassword());
   const list = await (await request.get('/api/v1/employees?searchTerm=60090001', { headers: authed(token) })).json();
   const ana = list.data.items[0];
-  const { caseId, evidenceId } = await arrangeSuspension(request, ana.id);
+  const { recordId, registrar } = await arrangeSuspension(request, ana.id);
 
   await page.goto(`/employees/${ana.id}`);
   const box = page.getByRole('region', { name: 'Apoio à decisão' });
@@ -149,13 +133,14 @@ test('SAP import (initial + update), employee with decision support, and a JPG p
   await expect(box.getByRole('list', { name: 'Medidas por motivo' })).toContainText('Falta não justificada (E2E): 1');
   await expect(page.getByTestId('timeline-item').first()).toBeVisible();
 
-  // 4. Foto JPG de um documento anexada a uma evidência do tipo Document.
-  await page.goto(`/disciplinary/cases/${caseId}`);
-  const row = page.getByTestId(`evidence-row-${evidenceId}`);
-  await row.getByRole('button', { name: /anexar arquivo/i }).click();
-  await page.getByLabel('Arquivo da evidência').setInputFiles({ name: 'atestado.jpg', mimeType: 'image/jpeg', buffer: jpeg() });
-  await page.getByRole('button', { name: 'Enviar arquivo' }).click();
-  await expect(row.getByText('atestado.jpg')).toBeVisible();
+  // 4. Foto JPG do documento assinado anexada à medida aprovada (pelo auxiliar, que pode anexar).
+  await logoutUi(page);
+  await loginUi(page, registrar.email, registrar.password);
+  await page.goto(`/medidas/${recordId}`);
+  const attachments = page.getByRole('region', { name: 'Anexos' });
+  await attachments.getByLabel('Título do anexo').fill('Atestado fotografado');
+  await attachments.getByTestId('attachment-input').setInputFiles({ name: 'atestado.jpg', mimeType: 'image/jpeg', buffer: jpeg() });
+  await expect(attachments.getByTestId('attachment').filter({ hasText: 'atestado.jpg' })).toBeVisible();
 
   // Resultado da importação para o relatório.
   const out = path.resolve(HERE, '../test-results');

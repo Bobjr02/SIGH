@@ -34,7 +34,7 @@ test('admin: login, mandatory password change, cases list, reload keeps the sess
 
   // 2. Troca obrigatória de senha: qualquer outra rota volta para /change-password
   await expect(page).toHaveURL(/\/change-password$/);
-  await page.goto('/disciplinary/cases');
+  await page.goto('/medidas');
   await expect(page).toHaveURL(/\/change-password$/);
 
   await page.getByLabel('Senha atual').fill(ADMIN_PASSWORD);
@@ -44,13 +44,13 @@ test('admin: login, mandatory password change, cases list, reload keeps the sess
   await expect(page).not.toHaveURL(/\/change-password$/);
   await expect(page.getByTestId('current-user-name')).toBeVisible();
 
-  // 3. Lista de processos (a chamada à API tem que funcionar com o token novo)
-  const listResponse = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/disciplinary-cases');
-  await page.getByRole('navigation', { name: 'Menu principal' }).getByRole('button', { name: 'Processos' }).click();
-  await expect(page).toHaveURL(/\/disciplinary\/cases$/);
+  // 3. Lista de medidas (a chamada à API tem que funcionar com o token novo)
+  const listResponse = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/disciplinary-records');
+  await page.getByRole('navigation', { name: 'Menu principal' }).getByRole('button', { name: 'Medidas', exact: true }).click();
+  await expect(page).toHaveURL(/\/medidas$/);
   expect((await listResponse).status()).toBe(200);
   await expect(page.getByRole('heading', { name: /403/ })).toHaveCount(0);
-  await expect(page.getByText(/Processos Disciplinares/i).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Medidas' })).toBeVisible();
 
   // O cookie do refresh token é HttpOnly, Secure, SameSite=Strict e restrito a /api/v1/auth.
   const rt = (await context.cookies()).find((c) => c.name === 'sigh_rt');
@@ -70,18 +70,18 @@ test('admin: login, mandatory password change, cases list, reload keeps the sess
   page.on('framenavigated', (frame) => {
     if (frame === page.mainFrame() && frame.url().includes('/login')) visitedLogin.push(frame.url());
   });
-  const reloadListResponse = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/disciplinary-cases');
+  const reloadListResponse = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/disciplinary-records');
   await page.reload();
-  await expect(page).toHaveURL(/\/disciplinary\/cases$/);
+  await expect(page).toHaveURL(/\/medidas$/);
   expect((await reloadListResponse).status()).toBe(200);
   await expect(page.getByTestId('current-user-name')).toBeVisible();
-  await expect(page.getByText(/Processos Disciplinares/i).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Medidas' })).toBeVisible();
   expect(visitedLogin).toEqual([]);
 
   // 5. Logout: volta para o login, o cookie some e recarregar não restaura a sessão
   await page.getByRole('button', { name: 'Sair' }).click();
   await expect(page).toHaveURL(/\/login$/);
   expect((await context.cookies()).find((c) => c.name === 'sigh_rt')).toBeUndefined();
-  await page.goto('/disciplinary/cases');
+  await page.goto('/medidas');
   await expect(page).toHaveURL(/\/login$/);
 });

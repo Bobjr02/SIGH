@@ -61,3 +61,62 @@ export const pdfBytes = () =>
 
 /** Cabeçalho de executável Windows (MZ...PE). */
 export const exeBytes = () => Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0xb8, 0x00, 0x50, 0x45]);
+
+export interface E2EUser {
+  email: string;
+  password: string;
+  token: string;
+  id: string;
+}
+
+/** Ids dos perfis de sistema (por nome estável: Administrator, HrRegistrar, HrApprover, Legal, Manager). */
+export const roleIds = async (request: APIRequestContext, adminToken: string, names: string[]) => {
+  const roles: Array<{ id: string; name: string }> = (await (await request.get('/api/v1/roles', { headers: authed(adminToken) })).json()).data;
+  return names.map((n) => {
+    const role = roles.find((r) => r.name === n);
+    if (!role) throw new Error(`Perfil ${n} não encontrado.`);
+    return role.id;
+  });
+};
+
+export const unitIds = async (request: APIRequestContext, adminToken: string, codes: string[]) => {
+  const units: Array<{ id: string; code: string }> = (await (await request.get('/api/v1/management-units', { headers: authed(adminToken) })).json()).data;
+  return codes.map((c) => units.find((u) => u.code === c)!.id);
+};
+
+/**
+ * Cria um usuário pela API do admin (perfis e gerências reais) e já faz a troca obrigatória de senha,
+ * devolvendo a senha final e um access token.
+ */
+export const createUserApi = async (
+  request: APIRequestContext,
+  adminToken: string,
+  { fullName, email, cpf, roles, units = [] }: { fullName: string; email: string; cpf: string; roles: string[]; units?: string[] },
+): Promise<E2EUser> => {
+  const initialPassword = `Ini#${Date.now()}Aa`;
+  const created = await request.post('/api/v1/users', {
+    headers: authed(adminToken),
+    data: { fullName, email, cpf, initialPassword, roleIds: await roleIds(request, adminToken, roles), managementUnitIds: await unitIds(request, adminToken, units) },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const id = (await created.json()).data.id as string;
+
+  const first = await apiToken(request, email, initialPassword);
+  const password = `${initialPassword}9z`;
+  const changed = await request.post('/api/v1/auth/change-password', { headers: authed(first), data: { currentPassword: initialPassword, newPassword: password } });
+  expect(changed.ok(), await changed.text()).toBeTruthy();
+  return { email, password, token: (await changed.json()).data.accessToken as string, id };
+};
+
+/** Data local "yyyy-MM-dd", com deslocamento em dias. */
+export const isoDay = (offsetDays = 0) => {
+  const d = new Date(Date.now() + offsetDays * 86_400_000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+/** Sai do navegador (limpa o cookie de refresh) para entrar com outro usuário. */
+export const logoutUi = async (page: Page) => {
+  await page.getByRole('button', { name: 'Sair' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+};
