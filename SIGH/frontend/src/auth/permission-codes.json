@@ -13,6 +13,7 @@
   "Employees.Reactivate",
   "Employees.LinkUser",
   "Employees.UnlinkUser",
+  "Employees.Import",
   "Disciplinary.Cases.View",
   "Disciplinary.Cases.Create",
   "Disciplinary.Cases.Open",

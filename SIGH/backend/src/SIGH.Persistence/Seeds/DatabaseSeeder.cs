@@ -21,7 +21,10 @@ public sealed class DatabaseSeeder
     /// </summary>
     public static readonly Guid DefaultCompanyId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
-    private const string FallbackCompanyName = "Empresa Padrão";
+    // Instalação de empresa única: todos os funcionários pertencem à empresa padrão.
+    private const string FallbackCompanyName = "Usina Serra Grande S.A.";
+    // Nome antigo do seed: renomeado automaticamente para o nome configurado.
+    private const string LegacyCompanyName = "Empresa Padrão";
     private const string AdminFullName = "Administrador do Sistema";
     private const string AdminCpf = "00000000000";
 
@@ -47,6 +50,9 @@ public sealed class DatabaseSeeder
         var permissions = await EnsurePermissionsAsync(cancellationToken);
         var adminRole = await EnsureAdministratorRoleAsync(permissions, cancellationToken);
         await EnsureDefaultCompanyAsync(cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        await EnsureManagementUnitsAsync(cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
         await EnsureAdminUserAsync(adminRole, cancellationToken);
@@ -154,26 +160,66 @@ public sealed class DatabaseSeeder
 
     private async Task EnsureDefaultCompanyAsync(CancellationToken cancellationToken)
     {
-        var exists = await _context.Companies
-            .IgnoreQueryFilters()
-            .AnyAsync(c => c.Id == DefaultCompanyId, cancellationToken);
-
-        if (exists)
-            return;
-
         var name = _configuration["Seed:DefaultCompanyName"];
         if (string.IsNullOrWhiteSpace(name))
         {
             _logger.LogWarning(
-                "Seed: 'Seed:DefaultCompanyName' não configurado. A empresa padrão será criada com o nome '{Name}'.",
+                "Seed: 'Seed:DefaultCompanyName' não configurado. A empresa padrão usa o nome '{Name}'.",
                 FallbackCompanyName);
             name = FallbackCompanyName;
+        }
+
+        var existing = await _context.Companies
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(c => c.Id == DefaultCompanyId, cancellationToken);
+
+        if (existing is not null)
+        {
+            // Só troca o nome legado do seed; um nome alterado por alguém é preservado.
+            if (existing.Name == LegacyCompanyName && name != LegacyCompanyName)
+            {
+                existing.UpdateName(name);
+                _logger.LogInformation("Seed: empresa padrão renomeada para {Name}.", name);
+            }
+            return;
         }
 
         var company = new Company(DefaultCompanyId);
         company.UpdateName(name);
         await _context.Companies.AddAsync(company, cancellationToken);
         _logger.LogInformation("Seed: empresa padrão {CompanyId} criada.", DefaultCompanyId);
+    }
+
+    /// <summary>
+    /// Gerências (Chave Organização do SAP) de Seed:ManagementUnits (código e nome). Só cria as que
+    /// faltam: nomes já existentes nunca são sobrescritos, para continuarem editáveis.
+    /// </summary>
+    private async Task EnsureManagementUnitsAsync(CancellationToken cancellationToken)
+    {
+        var configured = _configuration.GetSection("Seed:ManagementUnits").GetChildren()
+            .Select(s => (Code: s["Code"]?.Trim(), Name: s["Name"]?.Trim()))
+            .Where(x => !string.IsNullOrEmpty(x.Code) && !string.IsNullOrEmpty(x.Name))
+            .ToList();
+        if (configured.Count == 0)
+            return;
+
+        var existingCodes = await _context.ManagementUnits
+            .IgnoreQueryFilters()
+            .Where(m => m.CompanyId == DefaultCompanyId && m.Code != null)
+            .Select(m => m.Code!)
+            .ToListAsync(cancellationToken);
+
+        var created = 0;
+        foreach (var (code, name) in configured)
+        {
+            if (existingCodes.Contains(code!, StringComparer.OrdinalIgnoreCase))
+                continue;
+            await _context.ManagementUnits.AddAsync(ManagementUnit.Create(DefaultCompanyId, name!, code), cancellationToken);
+            created++;
+        }
+
+        if (created > 0)
+            _logger.LogInformation("Seed: {Count} gerências criadas.", created);
     }
 
     private async Task EnsureAdminUserAsync(Role adminRole, CancellationToken cancellationToken)

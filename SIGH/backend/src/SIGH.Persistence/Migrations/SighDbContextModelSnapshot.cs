@@ -787,6 +787,9 @@ namespace SIGH.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<int?>("Group")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -820,6 +823,10 @@ namespace SIGH.Persistence.Migrations
                     b.Property<Guid?>("SupervisorId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Team")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateOnly?>("TerminationDate")
                         .HasColumnType("date");
 
@@ -852,7 +859,7 @@ namespace SIGH.Persistence.Migrations
                     b.HasIndex("Cpf")
                         .IsUnique()
                         .HasDatabaseName("IX_Employees_Cpf")
-                        .HasFilter("[IsDeleted] = 0");
+                        .HasFilter("[IsDeleted] = 0 AND [Status] <> 5");
 
                     b.HasIndex("DepartmentId")
                         .HasDatabaseName("IX_Employees_DepartmentId");
@@ -894,6 +901,87 @@ namespace SIGH.Persistence.Migrations
                         .HasDatabaseName("IX_Employees_ManagementUnitId_Status");
 
                     b.ToTable("Employees", (string)null);
+                });
+
+            modelBuilder.Entity("SIGH.Domain.Employees.Entities.EmployeeImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("AppliedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("AppliedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CreatedCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ErrorCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("FileSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("IssuesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("MassTerminationConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PlanFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("PreviewedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("PreviewedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ReactivatedCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TerminatedByAbsenceCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TerminatedCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UnchangedCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UpdatedCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WarningCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileSha256");
+
+                    b.HasIndex("PreviewedAt");
+
+                    b.ToTable("EmployeeImportBatches", (string)null);
                 });
 
             modelBuilder.Entity("SIGH.Domain.Employees.Entities.JobTitle", b =>
