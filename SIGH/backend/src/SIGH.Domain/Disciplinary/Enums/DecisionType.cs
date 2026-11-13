@@ -8,5 +8,6 @@ public enum DecisionType
     FormalWarning = 3,
     Suspension = 4,
     TerminationRecommendation = 5,
-    Other = 6
+    Other = 6,
+    JustCauseTermination = 7
 }

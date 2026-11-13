@@ -44,6 +44,10 @@ public class UserConfiguration : AuditableEntityConfiguration<User>
             .HasDefaultValue(true)
             .IsRequired();
 
+        builder.Property(u => u.SecurityStamp)
+            .HasMaxLength(64)
+            .IsRequired();
+
         builder.Property(u => u.FailedLoginAttempts)
             .HasDefaultValue(0)
             .IsRequired();

@@ -26,6 +26,8 @@ public static class AuditPolicy
         typeof(Employee),
         typeof(User),
         typeof(UserRole),
+        typeof(UserManagementUnit),
+        typeof(ManagementUnit),
         typeof(Role),
         typeof(Permission),
         typeof(RolePermission),
@@ -47,6 +49,8 @@ public static class AuditPolicy
         "StorageReference",
         // Dado pessoal: a auditoria registra que o CPF mudou, sem o valor.
         "Cpf",
+        // Valor aleatório que invalida tokens: a auditoria registra só que mudou.
+        "SecurityStamp",
     };
 
     /// <summary>

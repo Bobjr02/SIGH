@@ -48,6 +48,7 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
             .HasMaxLength(4000);
 
         builder.HasIndex(n => new { n.CompanyId, n.UserId, n.IsRead });
+        builder.HasIndex(n => n.DisciplinaryCaseId);
         builder.HasIndex(n => new { n.CompanyId, n.UserId, n.CreatedAt });
     }
 }

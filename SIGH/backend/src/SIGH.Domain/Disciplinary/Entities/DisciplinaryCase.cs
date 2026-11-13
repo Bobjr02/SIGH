@@ -27,6 +27,7 @@ public class DisciplinaryCase : AuditableEntity
     public DateTimeOffset? CancelledAt { get; private set; }
     public string? CancellationReason { get; private set; }
     public string? ConclusionSummary { get; private set; }
+    public DisciplinaryCaseKind Kind { get; private set; } = DisciplinaryCaseKind.Process;
 
     public DisciplinaryDecision? Decision => _decisions.FirstOrDefault(d => d.Status == DecisionStatus.Draft || d.Status == DecisionStatus.PendingApproval || d.Status == DecisionStatus.Approved);
     public Guid? DecisionId => Decision?.Id;
@@ -52,7 +53,8 @@ public class DisciplinaryCase : AuditableEntity
         DisciplinaryCasePriority priority = DisciplinaryCasePriority.Normal,
         Guid? responsibleEmployeeId = null,
         DateTimeOffset? dueDate = null,
-        DisciplinaryCaseStatus initialStatus = DisciplinaryCaseStatus.Draft)
+        DisciplinaryCaseStatus initialStatus = DisciplinaryCaseStatus.Draft,
+        DisciplinaryCaseKind kind = DisciplinaryCaseKind.Process)
     {
         if (string.IsNullOrWhiteSpace(caseNumber))
             throw new BusinessRuleValidationException("O número do processo disciplinar é obrigatório.");
@@ -110,7 +112,8 @@ public class DisciplinaryCase : AuditableEntity
             Priority = priority,
             ResponsibleEmployeeId = responsibleEmployeeId,
             DueDate = dueDate,
-            Status = initialStatus
+            Status = initialStatus,
+            Kind = kind
         };
     }
 
@@ -219,7 +222,7 @@ public class DisciplinaryCase : AuditableEntity
         Status = DisciplinaryCaseStatus.Decided;
     }
 
-    public void RejectDecision(Guid rejectedByUserId, string reason)
+    public void RejectDecision(Guid rejectedByUserId, string reason, DateTimeOffset? rejectedAt = null)
     {
         EnsureNotCompletedOrCancelled();
 
@@ -235,7 +238,7 @@ public class DisciplinaryCase : AuditableEntity
         if (Decision.Status != DecisionStatus.PendingApproval)
             throw new BusinessRuleValidationException("Apenas decisões pendentes de aprovação podem ser rejeitadas.");
 
-        Decision.Reject(rejectedByUserId, reason);
+        Decision.Reject(rejectedByUserId, reason, rejectedAt);
         Status = DisciplinaryCaseStatus.AwaitingDecision;
     }
 
@@ -470,7 +473,7 @@ public class DisciplinaryCase : AuditableEntity
 
     public void AddEvidence(DisciplinaryEvidence evidence)
     {
-        EnsureNotCompletedOrCancelled();
+        EnsureEvidenceChangesAllowed();
 
         if (evidence == null)
             throw new BusinessRuleValidationException("A evidência é obrigatória.");
@@ -520,7 +523,7 @@ public class DisciplinaryCase : AuditableEntity
     /// <summary>Lança se a evidência não puder receber arquivo (processo encerrado, evidência inexistente ou já com arquivo).</summary>
     public void EnsureEvidenceAcceptsFile(Guid evidenceId)
     {
-        EnsureNotCompletedOrCancelled();
+        EnsureEvidenceChangesAllowed();
 
         var evidence = FindActiveEvidence(evidenceId);
 
@@ -541,7 +544,7 @@ public class DisciplinaryCase : AuditableEntity
         Guid uploadedByUserId,
         DateTimeOffset uploadedAt)
     {
-        EnsureNotCompletedOrCancelled();
+        EnsureEvidenceChangesAllowed();
 
         FindActiveEvidence(evidenceId).AttachFile(storageReference, originalFileName, contentType, fileSize, sha256Hash, uploadedByUserId, uploadedAt);
     }
@@ -549,7 +552,7 @@ public class DisciplinaryCase : AuditableEntity
     /// <summary>Remoção lógica da evidência, com motivo obrigatório. Nada é excluído fisicamente.</summary>
     public void RemoveEvidence(Guid evidenceId, string reason, Guid removedByUserId, DateTimeOffset removedAt)
     {
-        EnsureNotCompletedOrCancelled();
+        EnsureEvidenceChangesAllowed();
 
         FindActiveEvidence(evidenceId).Remove(reason, removedByUserId, removedAt);
     }
@@ -614,6 +617,19 @@ public class DisciplinaryCase : AuditableEntity
             ?? throw new BusinessRuleValidationException("A medida disciplinar informada não pertence a este processo disciplinar.");
 
         measure.Cancel(reason);
+    }
+
+    /// <summary>
+    /// Anexos (a carta assinada, escaneada ou fotografada) podem chegar depois da aprovação de uma medida
+    /// do fluxo simplificado, que conclui o processo. Nunca num processo cancelado; no processo em
+    /// etapas, a regra antiga continua: nada muda depois de concluído.
+    /// </summary>
+    private void EnsureEvidenceChangesAllowed()
+    {
+        if (Status == DisciplinaryCaseStatus.Completed && Kind == DisciplinaryCaseKind.Record)
+            return;
+
+        EnsureNotCompletedOrCancelled();
     }
 
     private void EnsureNotCompletedOrCancelled()

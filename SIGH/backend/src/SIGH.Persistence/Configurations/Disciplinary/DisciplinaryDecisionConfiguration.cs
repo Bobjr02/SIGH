@@ -41,8 +41,13 @@ public class DisciplinaryDecisionConfiguration : IEntityTypeConfiguration<Discip
             .IsRequired()
             .HasConversion<int>();
 
+        builder.Property(d => d.ProposedMeasureType).HasConversion<int?>();
+        builder.Property(d => d.RejectionReason).HasMaxLength(DisciplinaryDomainConstants.ReasonMaxLength);
+        builder.Ignore(d => d.SuspensionDays);
+
         // Indexes
         builder.HasIndex(d => d.DisciplinaryCaseId);
+        builder.HasIndex(d => new { d.ProposedMeasureType, d.Status });
         builder.HasIndex(d => d.Status);
         builder.HasIndex(d => d.DecisionType);
         builder.HasIndex(d => d.DecidedAt);
