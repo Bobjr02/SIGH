@@ -24,6 +24,7 @@ public interface IApplicationDbContext
     DbSet<SIGH.Domain.Entities.RefreshToken> RefreshTokens { get; }
     DbSet<SIGH.Domain.Employees.Entities.ManagementUnit> ManagementUnits { get; }
     DbSet<SIGH.Domain.Employees.Entities.Employee> Employees { get; }
+    DbSet<SIGH.Domain.Employees.Entities.Department> Departments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

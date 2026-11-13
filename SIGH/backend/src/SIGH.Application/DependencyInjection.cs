@@ -55,6 +55,16 @@ public static class DependencyInjection
         services.AddScoped<SIGH.Application.Authentication.PasswordTokens.IPasswordTokenService, SIGH.Application.Authentication.PasswordTokens.PasswordTokenService>();
         services.AddScoped<SIGH.Application.Email.IDeadlineAlertEmailer, SIGH.Application.Email.DeadlineAlertEmailer>();
 
+        services.AddScoped<SIGH.Application.Common.Authorization.ICaseVisibility, SIGH.Application.Common.Authorization.CaseVisibility>();
+
+        // Medidas disciplinares: fachada do fluxo simplificado (registrar → aprovar/rejeitar)
+        services.Configure<SIGH.Application.Disciplinary.Records.RecordsOptions>(configuration.GetSection(SIGH.Application.Disciplinary.Records.RecordsOptions.SectionName));
+        services.AddScoped<SIGH.Application.Disciplinary.Records.RecordNotifier>();
+        services.AddScoped<SIGH.Application.Disciplinary.Records.IRecordNotifier>(sp => sp.GetRequiredService<SIGH.Application.Disciplinary.Records.RecordNotifier>());
+        services.AddScoped<SIGH.Application.Disciplinary.Records.IRecordQueries, SIGH.Application.Disciplinary.Records.RecordQueries>();
+        services.AddScoped<SIGH.Application.Disciplinary.Records.IRecordService, SIGH.Application.Disciplinary.Records.RecordService>();
+        services.AddScoped<SIGH.Application.Disciplinary.Records.IRecordPendingAlertProcessor, SIGH.Application.Disciplinary.Records.RecordPendingAlertProcessor>();
+
         // Evidências: upload, download e remoção lógica
         services.AddScoped<SIGH.Application.Disciplinary.Evidences.IUploadEvidenceFileUseCase, SIGH.Application.Disciplinary.Evidences.UploadEvidenceFileUseCase>();
         services.AddScoped<SIGH.Application.Disciplinary.Evidences.IDownloadEvidenceFileUseCase, SIGH.Application.Disciplinary.Evidences.DownloadEvidenceFileUseCase>();
