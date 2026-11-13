@@ -125,15 +125,19 @@ public class EmployeeQueryService : IEmployeeQueryService
             from d in deptJoin.DefaultIfEmpty()
             join s in _context.Employees on e.SupervisorId equals s.Id into supJoin
             from s in supJoin.DefaultIfEmpty()
-            select new EmployeeQueryRow(
-                e,
-                c != null ? c.Name : null,
-                j != null ? j.Name : null,
-                m != null ? m.Name : null,
-                d != null ? d.Name : null,
-                s != null ? s.FullName : null,
-                m != null ? m.Code : null,
-                d != null ? d.Code : null);
+            // Inicializador de objeto (não construtor): o EF só traduz filtros e ordenações sobre
+            // membros atribuídos assim.
+            select new EmployeeQueryRow
+            {
+                Employee = e,
+                CompanyName = c != null ? c.Name : null,
+                JobTitleName = j != null ? j.Name : null,
+                ManagementUnitName = m != null ? m.Name : null,
+                DepartmentName = d != null ? d.Name : null,
+                SupervisorName = s != null ? s.FullName : null,
+                ManagementUnitCode = m != null ? m.Code : null,
+                DepartmentCode = d != null ? d.Code : null
+            };
 
         if (query.CompanyId.HasValue)
             baseQuery = baseQuery.Where(x => x.Employee.CompanyId == query.CompanyId.Value);
@@ -240,13 +244,28 @@ public class EmployeeQueryService : IEmployeeQueryService
         return new PagedResult<EmployeeListItemResponse>(items, pageNumber, pageSize, totalCount);
     }
 
-    private sealed record EmployeeQueryRow(
-        Employee Employee,
-        string? CompanyName,
-        string? JobTitleName,
-        string? ManagementUnitName,
-        string? DepartmentName,
-        string? SupervisorName,
-        string? ManagementUnitCode,
-        string? DepartmentCode);
+    public async Task<EmployeeFilterOptionsDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default)
+    {
+        var units = await _context.ManagementUnits.AsNoTracking().Where(m => m.IsActive)
+            .OrderBy(m => m.Code).ThenBy(m => m.Name)
+            .Select(m => new OrganizationOptionDto(m.Id, m.Code, m.Name, null))
+            .ToListAsync(cancellationToken);
+        var departments = await _context.Departments.AsNoTracking().Where(d => d.IsActive)
+            .OrderBy(d => d.Name)
+            .Select(d => new OrganizationOptionDto(d.Id, d.Code, d.Name, d.ManagementUnitId))
+            .ToListAsync(cancellationToken);
+        return new EmployeeFilterOptionsDto(units, departments);
+    }
+
+    private sealed class EmployeeQueryRow
+    {
+        public Employee Employee { get; init; } = null!;
+        public string? CompanyName { get; init; }
+        public string? JobTitleName { get; init; }
+        public string? ManagementUnitName { get; init; }
+        public string? DepartmentName { get; init; }
+        public string? SupervisorName { get; init; }
+        public string? ManagementUnitCode { get; init; }
+        public string? DepartmentCode { get; init; }
+    }
 }

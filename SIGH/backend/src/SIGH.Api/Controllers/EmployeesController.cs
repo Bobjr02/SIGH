@@ -381,4 +381,13 @@ public class EmployeesController : BaseController
             ? NotFoundResult<SIGH.Application.Employees.DecisionSupport.EmployeeDecisionSupportDto>("Funcionário não encontrado.")
             : OkResult(summary);
     }
+
+    /// <summary>Gerências (Chave Organização) e setores (Uni.Org) para os filtros da lista.</summary>
+    [HttpGet("filter-options")]
+    [Permission(PermissionCodes.Employees.View)]
+    [ProducesResponseType(typeof(Result<SIGH.Application.Employees.Common.EmployeeFilterOptionsDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<Result<SIGH.Application.Employees.Common.EmployeeFilterOptionsDto>>> GetFilterOptions(
+        [FromServices] SIGH.Application.Employees.Common.IEmployeeQueryService queries,
+        CancellationToken cancellationToken) =>
+        OkResult(await queries.GetFilterOptionsAsync(cancellationToken));
 }
