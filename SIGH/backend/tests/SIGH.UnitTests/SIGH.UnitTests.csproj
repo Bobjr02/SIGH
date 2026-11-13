@@ -30,4 +30,8 @@
     <ProjectReference Include="..\..\src\SIGH.Persistence\SIGH.Persistence.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Gerador de planilhas sintéticas compartilhado com os testes de integração. -->
+    <Compile Include="..\SIGH.IntegrationTests\Infrastructure\HrXlsxBuilder.cs" Link="Employees\Import\HrXlsxBuilder.cs" />
+  </ItemGroup>
 </Project>
