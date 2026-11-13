@@ -224,6 +224,65 @@ de resultados esperados do LEIAME linha a linha.
   medida e medidas nos últimos 6 e 12 meses. Só informativo. O cálculo soma todas as `IEmployeeMeasureSource` (hoje, as
   medidas do SIGH; o histórico importado entra como outra fonte).
 
+#### Medidas disciplinares (fluxo do RH)
+O RH não usa o processo em etapas. O fluxo real é: o auxiliar de escritório **registra** a medida já decidida e
+o encarregado do RH **aprova** ou **rejeita**. A API (`/api/v1/disciplinary-records`) é uma fachada sobre o domínio
+existente: cada operação executa, numa única transação, as etapas reais do `DisciplinaryCase` (criar, abrir, vincular
+o acusado, ocorrências, investigação, decisão submetida; na aprovação: aprovar, criar e aplicar a medida e concluir).
+- Tipos aceitos: advertência verbal, advertência escrita, suspensão (início e fim; os dias contam os dois extremos)
+  e demissão por justa causa. `TerminationRecommendation`, `Guidance` e `Other` não aparecem no registro.
+- Quem registra (ou corrige) nunca aprova a mesma medida; rejeição exige motivo e devolve a medida ao registrante,
+  que corrige (`PUT`) e reenvia, ou cancela com motivo.
+- Funcionário desligado não recebe medida; suspensão sobreposta a outra pendente/aprovada é bloqueada; mesmo
+  funcionário + tipo + data de ocorrência pendente/aprovada devolve `409 POSSIBLE_DUPLICATE` até ser confirmada.
+- **Justa causa não altera o status do funcionário**: o SAP é a fonte da verdade e a próxima importação marca o
+  desligamento.
+- Anexos (carta assinada, escaneada ou fotografada) usam as evidências: com a medida pendente ou aprovada, nunca cancelada.
+- Avisos no sistema e por e-mail (`Records:NotifyByEmail`, padrão `true`); pendências há mais de
+  `Records:PendingApprovalAlertDays` (padrão 3) dias geram um aviso por dia para os aprovadores.
+- As permissões do processo em etapas continuam no código, mas nenhum perfil semeado as recebe (exceto as de
+  evidência); as telas dele saíram do menu e das rotas.
+
+#### Perfis (fixos no seed) e validade
+| Permissão | Administrador | RH – Registro | RH – Aprovador | Jurídico | Gestor |
+|---|:-:|:-:|:-:|:-:|:-:|
+| Users.View / Create / ChangeStatus / Unlock / ManageRoles | ✔ | | | | |
+| ManagementUnits.Manage | ✔ | | | | |
+| Disciplinary.InfractionTypes.* | ✔ | | | | |
+| Employees.View | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Employees.Import | ✔ | | | | |
+| Disciplinary.Records.View | ✔ | ✔ | ✔ | ✔ | ✔ (só as gerências dele) |
+| Disciplinary.Records.ViewAll (escopo total) | ✔ | ✔ | ✔ | ✔ | |
+| Disciplinary.Records.Register | | ✔ | | | |
+| Disciplinary.Records.Approve | | | ✔ | | |
+| Disciplinary.Cases.AddEvidence | | ✔ | ✔ | | |
+| Disciplinary.Cases.RemoveEvidence | | | ✔ | | |
+| Disciplinary.Reports.* (5) | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Notifications.View / Read | ✔ | ✔ | ✔ | | |
+| Audit.View | ✔ | | | ✔ | |
+
+As permissões de cada perfil ficam em `SystemRoles` e o seed as sincroniza a cada inicialização (o que sobra é
+retirado logicamente); não há tela para editá-las. Perfis e gerências de um usuário têm validade opcional
+(`ValidFrom` inclusivo, `ValidUntil` exclusivo; na tela, "até" é o último dia): só vínculos vigentes contam.
+Ninguém altera os próprios perfis, gerências ou status; o último Administrador ativo não pode ser retirado nem
+desativado; o perfil Gestor exige pelo menos uma gerência. Toda atribuição/retirada é auditada
+(`Security.RoleAssigned/RoleRevoked/ManagementUnitAssigned/ManagementUnitRevoked`).
+
+#### Escopo por gerência (no servidor)
+`IAccessScope`: escopo total com `Disciplinary.Records.ViewAll`; senão, as gerências vigentes do usuário. Aplicado
+em funcionários, medidas, processos, relatórios, dashboard, CSV, download de evidências, notificações e trilha de
+auditoria. Fora do escopo: listas sem o registro e detalhe `404` (nunca `403`). Uma medida é visível se o funcionário
+pertence **hoje** a uma gerência do escopo (o histórico acompanha a pessoa); a gerência da época fica em
+`DisciplinaryCaseEmployee.ManagementUnitIdAtTime`. `RouteScopeCoverageTests` falha se surgir uma rota GET sem
+classificação, e `ScopeEnforcementTests` testa cada rota com escopo (gestor da USGA132 × funcionário da USGA131).
+
+#### Perda de acesso imediata
+O access token carrega o `SecurityStamp` do usuário e o próximo início/fim de vigência de perfil ou gerência.
+`SecurityStampMiddleware` responde `401` (`SESSION_REVOKED` ou `ACCESS_CHANGED`) se o stamp mudou (desativação,
+bloqueio, troca/redefinição de senha, perfis, gerências), se o usuário está inativo ou se o instante passou. O cache
+do stamp dura no máximo 30 s (`Auth:SecurityStampCacheSeconds`). A desativação também revoga os refresh tokens; o
+refresh é negado para usuário inativo. O front renova o token e recarrega as permissões.
+
 #### Auditoria
 Toda alteração de processos (e subentidades), evidências, funcionários, usuários, perfis, permissões e tipos de infração
 gera um registro em `AuditLogs` (campos alterados com valor antigo/novo, usuário, data UTC, IP, correlation id). Eventos de
