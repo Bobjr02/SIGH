@@ -29,7 +29,7 @@ export function mapReportQueryParams(params?: Record<string, any>): Record<strin
 export const disciplinaryReportsApi = {
   getDashboard: async (filters?: DashboardFilters): Promise<DisciplinaryDashboardDto> => {
     const params = mapReportQueryParams(filters);
-    const response = await api.get<Result<DisciplinaryDashboardDto>>('/api/v1/disciplinary-reports/dashboard', { params });
+    const response = await api.get<Result<DisciplinaryDashboardDto>>('/v1/disciplinary-reports/dashboard', { params });
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.message || 'Erro ao carregar os indicadores do dashboard.');
     }
@@ -38,7 +38,7 @@ export const disciplinaryReportsApi = {
 
   getCasesReport: async (filters?: CaseReportFilters): Promise<PagedResult<DisciplinaryCaseReportItemDto>> => {
     const params = mapReportQueryParams(filters);
-    const response = await api.get<Result<PagedResult<DisciplinaryCaseReportItemDto>>>('/api/v1/disciplinary-reports/cases', { params });
+    const response = await api.get<Result<PagedResult<DisciplinaryCaseReportItemDto>>>('/v1/disciplinary-reports/cases', { params });
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.message || 'Erro ao carregar o relatório de processos.');
     }
@@ -47,7 +47,7 @@ export const disciplinaryReportsApi = {
 
   exportCasesReportCsv: async (filters?: CaseReportFilters): Promise<Blob> => {
     const params = mapReportQueryParams(filters);
-    const response = await api.get('/api/v1/disciplinary-reports/cases/export', {
+    const response = await api.get('/v1/disciplinary-reports/cases/export', {
       params,
       responseType: 'blob',
     });
@@ -56,7 +56,7 @@ export const disciplinaryReportsApi = {
 
   getMeasuresReport: async (filters?: MeasureReportFilters): Promise<PagedResult<DisciplinaryMeasureSummaryDto>> => {
     const params = mapReportQueryParams(filters);
-    const response = await api.get<Result<PagedResult<DisciplinaryMeasureSummaryDto>>>('/api/v1/disciplinary-reports/measures', { params });
+    const response = await api.get<Result<PagedResult<DisciplinaryMeasureSummaryDto>>>('/v1/disciplinary-reports/measures', { params });
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.message || 'Erro ao carregar o relatório de medidas.');
     }
@@ -65,7 +65,7 @@ export const disciplinaryReportsApi = {
 
   getEmployeeHistory: async (employeeId: string, filters?: EmployeeHistoryFilters): Promise<EmployeeDisciplinaryHistoryDto> => {
     const params = mapReportQueryParams(filters);
-    const response = await api.get<Result<EmployeeDisciplinaryHistoryDto>>(`/api/v1/disciplinary-reports/employees/${employeeId}/history`, { params });
+    const response = await api.get<Result<EmployeeDisciplinaryHistoryDto>>(`/v1/disciplinary-reports/employees/${employeeId}/history`, { params });
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.message || 'Erro ao carregar o histórico disciplinar do funcionário.');
     }

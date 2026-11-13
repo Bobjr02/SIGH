@@ -26,6 +26,12 @@ public class Employee : AuditableEntity
     public DateOnly? TerminationDate { get; private set; }
     public string? TerminationReason { get; private set; }
     public string? Notes { get; private set; }
+    /// <summary>Grupo (Campo/Indústria), vindo do SAP.</summary>
+    public EmployeeGroup? Group { get; private set; }
+    /// <summary>Turma, vinda do SAP.</summary>
+    public string? Team { get; private set; }
+
+    public const int TeamMaxLength = 50;
 
     public bool HasSystemAccess => UserId.HasValue;
 
@@ -223,6 +229,76 @@ public class Employee : AuditableEntity
         AdmissionDate = newAdmissionDate;
         TerminationDate = null;
         TerminationReason = null;
+    }
+
+    /// <summary>
+    /// Funcionário criado pela importação do SAP. Diferente do cadastro manual, pode nascer afastado
+    /// ou desligado (a exportação traz também os desligados).
+    /// </summary>
+    public static Employee CreateFromHrSystem(Guid companyId, string employeeNumber, HrRecord record)
+    {
+        if (companyId == Guid.Empty)
+            throw new BusinessRuleValidationException("O ID da empresa é obrigatório.");
+
+        var employee = new Employee { CompanyId = companyId };
+        employee.SetEmployeeNumber(employeeNumber);
+        employee.ApplyHrRecord(record);
+        return employee;
+    }
+
+    /// <summary>
+    /// Aplica os dados do SAP (fonte da verdade para estes campos): nome, CPF, admissão, cargo, setor,
+    /// gerência, grupo, turma, situação e desligamento.
+    /// </summary>
+    public void ApplyHrRecord(HrRecord record)
+    {
+        if (record.Status is not (EmployeeStatus.Active or EmployeeStatus.OnLeave or EmployeeStatus.Terminated))
+            throw new BusinessRuleValidationException("Situação inválida para um registro do SAP.");
+
+        if (record.Status == EmployeeStatus.Terminated && record.TerminationDate is null)
+            throw new BusinessRuleValidationException("Funcionário desligado exige a data de demissão.");
+
+        if (record.TerminationDate is { } end && end < record.AdmissionDate)
+            throw new BusinessRuleValidationException("Data de demissão não pode ser anterior à data de admissão.");
+
+        var team = string.IsNullOrWhiteSpace(record.Team) ? null : record.Team.Trim();
+        if (team?.Length > TeamMaxLength)
+            throw new BusinessRuleValidationException($"A turma deve ter no máximo {TeamMaxLength} caracteres.");
+
+        SetFullName(record.FullName);
+        SetCpf(record.Cpf);
+        SetAdmissionDate(record.AdmissionDate);
+        SetOrganizationalAssignment(record.JobTitleId, record.ManagementUnitId, record.DepartmentId);
+        Group = record.Group;
+        Team = team;
+        Status = record.Status;
+
+        if (record.Status == EmployeeStatus.Terminated)
+        {
+            TerminationDate = record.TerminationDate;
+            TerminationReason = string.IsNullOrWhiteSpace(record.TerminationReason)
+                ? TerminationReason ?? "Desligamento informado pelo SAP."
+                : record.TerminationReason.Trim();
+        }
+        else
+        {
+            TerminationDate = null;
+            TerminationReason = null;
+        }
+    }
+
+    /// <summary>
+    /// Ausente da exportação do SAP: desliga com a data da importação (nunca apaga). Se a admissão for
+    /// posterior a essa data, usa a própria data de admissão.
+    /// </summary>
+    public void MarkAbsentFromHrSystem(DateOnly importDate, string reason)
+    {
+        if (Status == EmployeeStatus.Terminated)
+            return;
+
+        Status = EmployeeStatus.Terminated;
+        TerminationDate = importDate < AdmissionDate ? AdmissionDate : importDate;
+        TerminationReason = reason.Length > 500 ? reason[..500] : reason;
     }
 
     private void SetEmployeeNumber(string employeeNumber)

@@ -19,6 +19,7 @@ export const PERMISSIONS = {
   EMPLOYEES_REACTIVATE: 'Employees.Reactivate',
   EMPLOYEES_LINK_USER: 'Employees.LinkUser',
   EMPLOYEES_UNLINK_USER: 'Employees.UnlinkUser',
+  EMPLOYEES_IMPORT: 'Employees.Import',
   DISCIPLINARY_CASES_VIEW: 'Disciplinary.Cases.View',
   DISCIPLINARY_CASES_CREATE: 'Disciplinary.Cases.Create',
   DISCIPLINARY_CASES_OPEN: 'Disciplinary.Cases.Open',

@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="Respawn" Version="7.0.0" />
     <PackageReference Include="Testcontainers.MsSql" Version="4.16.0" />
@@ -25,4 +26,8 @@
     <ProjectReference Include="..\..\src\SIGH.Api\SIGH.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Arquivos FICTÍCIOS do pacote de referência (SIGH/docs/referencias/importacao-funcionarios). -->
+    <None Include="Fixtures\Referencias\*.xlsx" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

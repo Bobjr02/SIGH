@@ -36,7 +36,7 @@ export default defineConfig({
     // O resto usa o admin já com a senha nova.
     {
       name: 'app',
-      testMatch: /(two-tabs|evidence|password-reset)\.spec\.ts/,
+      testMatch: /(two-tabs|evidence|password-reset|employees)\.spec\.ts/,
       dependencies: ['first-access'],
       use: { ...devices['Desktop Chrome'] },
     },
@@ -48,7 +48,12 @@ export default defineConfig({
       url: 'http://localhost:5000/health',
       reuseExistingServer: false,
       timeout: 240_000,
-      env: { ConnectionStrings__DefaultConnection: apiConnectionString, ASPNETCORE_ENVIRONMENT: 'Development' },
+      env: {
+        ConnectionStrings__DefaultConnection: apiConnectionString,
+        ASPNETCORE_ENVIRONMENT: 'Development',
+        // Todos os specs fazem login do mesmo IP em poucos minutos; o padrão (10/min) é para produção.
+        RateLimits__Login__PermitLimit: '100',
+      },
       stdout: 'ignore',
       stderr: 'pipe',
     },

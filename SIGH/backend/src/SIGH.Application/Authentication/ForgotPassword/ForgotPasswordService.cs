@@ -1,65 +1,45 @@
-using Microsoft.Extensions.Options;
-using SIGH.Application.Authentication.PasswordTokens;
-using SIGH.Application.Common.Interfaces;
-using SIGH.Application.Email;
-using SIGH.Application.Options;
-using SIGH.Application.Security;
-using SIGH.Domain.Entities;
-using SIGH.Domain.Enums;
-using SIGH.Domain.Repositories;
+using Microsoft.Extensions.Logging;
+using SIGH.Application.Interfaces;
 
 namespace SIGH.Application.Authentication.ForgotPassword;
 
+/// <summary>
+/// "Esqueci a senha" no request: normaliza o e-mail e enfileira o pedido, SEMPRE. Não consulta o banco
+/// nem monta e-mail aqui: o caminho e o tempo da resposta são os mesmos, exista ou não a conta.
+/// O processamento fica com <see cref="PasswordResetRequestProcessor"/> (worker).
+/// </summary>
 public class ForgotPasswordService : IForgotPasswordService
 {
     public const string GenericMessage =
         "Se o e-mail informado estiver cadastrado, você receberá as instruções para redefinir a senha.";
 
-    private readonly IApplicationDbContext _context;
-    private readonly IUserRepository _userRepository;
-    private readonly IPasswordTokenService _tokens;
-    private readonly IEmailOutbox _outbox;
-    private readonly ISecurityAuditLogger _securityAudit;
-    private readonly AppOptions _appOptions;
+    private readonly IPasswordResetRequestQueue _queue;
+    private readonly IRequestContext _requestContext;
+    private readonly IDateTimeProvider _clock;
+    private readonly ILogger<ForgotPasswordService> _logger;
 
     public ForgotPasswordService(
-        IApplicationDbContext context,
-        IUserRepository userRepository,
-        IPasswordTokenService tokens,
-        IEmailOutbox outbox,
-        ISecurityAuditLogger securityAudit,
-        IOptions<AppOptions> appOptions)
+        IPasswordResetRequestQueue queue,
+        IRequestContext requestContext,
+        IDateTimeProvider clock,
+        ILogger<ForgotPasswordService> logger)
     {
-        _context = context;
-        _userRepository = userRepository;
-        _tokens = tokens;
-        _outbox = outbox;
-        _securityAudit = securityAudit;
-        _appOptions = appOptions.Value;
+        _queue = queue;
+        _requestContext = requestContext;
+        _clock = clock;
+        _logger = logger;
     }
 
-    /// <summary>
-    /// Sempre devolve a mesma resposta, exista ou não o e-mail (sem enumeração de usuários). O e-mail
-    /// vai pela outbox: a requisição não espera o SMTP.
-    /// </summary>
-    public async Task<ForgotPasswordResponse> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default)
+    public Task<ForgotPasswordResponse> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken = default)
     {
         var email = (request.Email ?? string.Empty).Trim().ToLowerInvariant();
-        var user = string.IsNullOrEmpty(email) ? null : await _userRepository.GetByEmailAsync(email, cancellationToken);
 
-        // Contas inativas ou suspensas não recebem link (o administrador precisa reativá-las).
-        if (user is not null && user.Status is not (UserStatus.Inactive or UserStatus.Suspended))
+        if (!_queue.TryEnqueue(new PasswordResetRequestJob(email, _requestContext.IpAddress, _clock.UtcNow)))
         {
-            var rawToken = await _tokens.IssueAsync(user.Id, PasswordTokenPurpose.PasswordReset, cancellationToken);
-            var link = _appOptions.BuildUrl($"/reset-password?token={Uri.EscapeDataString(rawToken)}");
-            var minutes = (int)_tokens.LifetimeOf(PasswordTokenPurpose.PasswordReset).TotalMinutes;
-
-            _outbox.Enqueue(user.Email, EmailTemplates.PasswordReset(user.FullName, link, minutes));
-            await _context.SaveChangesAsync(cancellationToken);
-
-            await _securityAudit.RecordAsync(SecurityAuditActions.PasswordResetRequested, user.Id, null, cancellationToken);
+            // Não registra o e-mail informado: pode ser de terceiros.
+            _logger.LogWarning("Fila de pedidos de redefinição de senha cheia: pedido descartado.");
         }
 
-        return new ForgotPasswordResponse(true, GenericMessage);
+        return Task.FromResult(new ForgotPasswordResponse(true, GenericMessage));
     }
 }

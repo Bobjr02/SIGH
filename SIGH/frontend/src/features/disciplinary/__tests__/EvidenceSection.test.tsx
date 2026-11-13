@@ -173,6 +173,41 @@ describe('EvidenceSection', () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['documento-fotografado.jpg', 'image/jpeg'],
+    ['documento.webp', 'image/webp'],
+    ['ata.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  ])('a Document evidence accepts %s (photos of documents included)', async (name, type) => {
+    const upload = vi.spyOn(evidenceApi, 'uploadFile').mockResolvedValue({} as never);
+    const user = userEvent.setup({ applyAccept: false });
+    renderSection({ evidences: [{ ...withoutFile, evidenceType: EvidenceType.Document }] });
+
+    await user.click(screen.getByRole('button', { name: /anexar arquivo/i }));
+    await user.upload(screen.getByLabelText('Arquivo da evidência'), new File([new Uint8Array(30)], name, { type }));
+    await user.click(screen.getByRole('button', { name: 'Enviar arquivo' }));
+
+    await waitFor(() => expect(upload).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('an Image evidence still rejects a PDF', async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    renderSection({ evidences: [{ ...withoutFile, evidenceType: EvidenceType.Image }] });
+
+    await user.click(screen.getByRole('button', { name: /anexar arquivo/i }));
+    await user.upload(screen.getByLabelText('Arquivo da evidência'), pdf('laudo.pdf'));
+
+    expect(await screen.findByText(/é do tipo imagem/i)).toBeInTheDocument();
+  });
+
+  it('a Text evidence never offers a file upload', () => {
+    renderSection({ evidences: [{ ...withoutFile, id: 'ev-text', title: 'Depoimento', evidenceType: EvidenceType.Text }] });
+
+    const row = within(screen.getByTestId('evidence-row-ev-text'));
+    expect(row.getAllByText('Texto').length).toBeGreaterThan(0);
+    expect(row.queryByRole('button', { name: /anexar arquivo/i })).not.toBeInTheDocument();
+  });
+
   it('shows the server error (e.g. signature rejected) and keeps the dialog open', async () => {
     vi.spyOn(api, 'post').mockRejectedValue(
       new AxiosError('415', 'ERR_BAD_REQUEST', undefined, undefined, {

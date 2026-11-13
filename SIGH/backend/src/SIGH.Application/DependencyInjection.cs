@@ -43,10 +43,15 @@ public static class DependencyInjection
         services.AddScoped<ILogoutService, LogoutService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<IForgotPasswordService, ForgotPasswordService>();
+        services.AddSingleton<IPasswordResetRequestQueue, InMemoryPasswordResetRequestQueue>();
+        services.AddScoped<PasswordResetRequestProcessor>();
         services.AddScoped<IResetPasswordService, ResetPasswordService>();
         services.AddScoped<IChangePasswordService, ChangePasswordService>();
         services.AddScoped<SIGH.Application.Authentication.CurrentUser.IGetCurrentUserService, SIGH.Application.Authentication.CurrentUser.GetCurrentUserService>();
         services.AddScoped<ICreateUserService, CreateUserService>();
+        services.Configure<SIGH.Application.Employees.Import.ImportOptions>(configuration.GetSection(SIGH.Application.Employees.Import.ImportOptions.SectionName));
+        services.AddScoped<SIGH.Application.Employees.Import.IEmployeeImportService, SIGH.Application.Employees.Import.EmployeeImportService>();
+        services.AddScoped<SIGH.Application.Employees.DecisionSupport.IEmployeeDecisionSupportService, SIGH.Application.Employees.DecisionSupport.EmployeeDecisionSupportService>();
         services.AddScoped<SIGH.Application.Authentication.PasswordTokens.IPasswordTokenService, SIGH.Application.Authentication.PasswordTokens.PasswordTokenService>();
         services.AddScoped<SIGH.Application.Email.IDeadlineAlertEmailer, SIGH.Application.Email.DeadlineAlertEmailer>();
 

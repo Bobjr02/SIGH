@@ -13,6 +13,8 @@ public abstract class AuditableEntityConfiguration<TEntity> : IEntityTypeConfigu
         builder.Property(e => e.Id).ValueGeneratedNever();
 
         builder.Property(e => e.CreatedAt).IsRequired();
-        builder.Property(e => e.IsDeleted).HasDefaultValue(false);
+        // ValueGeneratedNever: o EF sempre envia o valor (a entidade já nasce com false) e não precisa ler
+        // de volta após o INSERT. Sem isso, cada inserção em lote vira MERGE ... OUTPUT INSERTED.[IsDeleted].
+        builder.Property(e => e.IsDeleted).HasDefaultValue(false).ValueGeneratedNever();
     }
 }

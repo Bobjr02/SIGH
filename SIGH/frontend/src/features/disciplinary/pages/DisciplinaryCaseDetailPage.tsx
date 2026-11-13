@@ -47,6 +47,7 @@ import { AddOccurrenceModal } from '../components/AddOccurrenceModal';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
 import { AddEvidenceModal } from '../components/AddEvidenceModal';
 import { EvidenceSection } from '../components/EvidenceSection';
+import { evidenceTypeAcceptsFile } from '../evidence/evidenceFiles';
 import { CaseAuditTimeline } from '../../audit/components/CaseAuditTimeline';
 import { PERMISSIONS } from '../../../auth/permissions';
 import { RecordDecisionModal } from '../components/RecordDecisionModal';
@@ -221,7 +222,7 @@ export const DisciplinaryCaseDetailPage: React.FC = () => {
       setToast({ open: true, message: 'Evidência registrada.', severity: 'success' });
       setAddEvidenceOpen(false);
       // Evidência de arquivo: abre em seguida o envio do arquivo.
-      if (Number(data.evidenceType) !== EvidenceType.Text) setPendingUploadEvidenceId(created.id);
+      if (evidenceTypeAcceptsFile(Number(data.evidenceType))) setPendingUploadEvidenceId(created.id);
     } catch (err: any) {
       setActionError(extractErrorMessage(err));
     }

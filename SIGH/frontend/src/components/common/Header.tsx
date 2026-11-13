@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Box, Button, IconButton, Tooltip } from '@mui/material';
-import { Shield, BookOpen, Gavel, PlusCircle, LogOut, UserRound, ScrollText } from 'lucide-react';
+import { Shield, BookOpen, Gavel, PlusCircle, LogOut, UserRound, ScrollText, Users } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { PERMISSIONS, type PermissionCode } from '../../auth/permissions';
 import { NotificationBadge } from '../../features/notifications/components/NotificationBadge';
@@ -53,6 +53,13 @@ export const MENU_ITEMS: MenuItem[] = [
     activePrefix: '/disciplinary/infraction-types',
     permission: PERMISSIONS.DISCIPLINARY_INFRACTION_TYPES_VIEW,
     icon: <BookOpen size={18} />,
+  },
+  {
+    label: 'Funcionários',
+    path: '/employees',
+    activePrefix: '/employees',
+    permission: PERMISSIONS.EMPLOYEES_VIEW,
+    icon: <Users size={18} />,
   },
   {
     label: 'Auditoria',

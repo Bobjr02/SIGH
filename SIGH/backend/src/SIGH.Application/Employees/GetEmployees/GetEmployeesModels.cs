@@ -17,7 +17,8 @@ public record GetEmployeesQuery(
     int PageSize = 20,
     string? SortBy = "FullName",
     bool SortDescending = false,
-    string? SearchTerm = null
+    string? SearchTerm = null,
+    EmployeeGroup? Group = null
 )
 {
     public string? EffectiveSearchTerm => !string.IsNullOrWhiteSpace(SearchTerm) ? SearchTerm : Search;
@@ -44,5 +45,9 @@ public record EmployeeListItemResponse(
     Guid? UserId,
     bool HasSystemAccess,
     string? CorporateEmail,
-    DateTimeOffset CreatedAt
+    DateTimeOffset CreatedAt,
+    EmployeeGroup? Group = null,
+    string? Team = null,
+    string? ManagementUnitCode = null,
+    string? DepartmentCode = null
 );

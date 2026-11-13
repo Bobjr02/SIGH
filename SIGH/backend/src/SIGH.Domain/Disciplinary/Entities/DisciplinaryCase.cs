@@ -525,7 +525,7 @@ public class DisciplinaryCase : AuditableEntity
         var evidence = FindActiveEvidence(evidenceId);
 
         if (evidence.EvidenceType == EvidenceType.Text)
-            throw new BusinessRuleValidationException("Evidências textuais não recebem arquivo.");
+            throw new BusinessRuleValidationException("Evidências do tipo Texto não recebem arquivo: o conteúdo delas é o próprio texto registrado (por exemplo, um depoimento digitado).");
 
         if (evidence.HasFile)
             throw new BusinessRuleValidationException("Esta evidência já possui arquivo. Um arquivo enviado não pode ser substituído.");

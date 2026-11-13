@@ -32,6 +32,7 @@ public static class PermissionCodes
         public const string Reactivate = "Employees.Reactivate";
         public const string LinkUser = "Employees.LinkUser";
         public const string UnlinkUser = "Employees.UnlinkUser";
+        public const string Import = "Employees.Import";
     }
 
     public static class DisciplinaryCases
@@ -102,6 +103,7 @@ public static class PermissionCodes
         new(Employees.Reactivate, "Reativar funcionários", "Reativar funcionários desligados ou inativos."),
         new(Employees.LinkUser, "Vincular usuário a funcionário", "Vincular uma conta de usuário a um funcionário."),
         new(Employees.UnlinkUser, "Desvincular usuário de funcionário", "Remover o vínculo entre usuário e funcionário."),
+        new(Employees.Import, "Importar funcionários", "Importar a base de funcionários exportada do SAP (pré-visualizar e confirmar)."),
 
         // Processos disciplinares
         new(DisciplinaryCases.View, "Visualizar processos disciplinares", "Consultar a lista e os detalhes de processos disciplinares."),

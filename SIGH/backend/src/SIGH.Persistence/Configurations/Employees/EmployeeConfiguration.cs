@@ -40,6 +40,12 @@ public class EmployeeConfiguration : AuditableEntityConfiguration<Employee>
             .HasConversion<int>()
             .IsRequired();
 
+        builder.Property(e => e.Group)
+            .HasConversion<int?>();
+
+        builder.Property(e => e.Team)
+            .HasMaxLength(Employee.TeamMaxLength);
+
         builder.Property(e => e.JobTitleId)
             .IsRequired();
 
@@ -99,9 +105,11 @@ public class EmployeeConfiguration : AuditableEntityConfiguration<Employee>
             .OnDelete(DeleteBehavior.Restrict);
 
         // Índices de Unicidade
+        // CPF único entre funcionários não desligados: uma readmissão no SAP gera matrícula nova
+        // para o mesmo CPF, e a matrícula antiga (desligada) continua no histórico.
         builder.HasIndex(e => e.Cpf)
             .IsUnique()
-            .HasFilter("[IsDeleted] = 0")
+            .HasFilter("[IsDeleted] = 0 AND [Status] <> 5")
             .HasDatabaseName("IX_Employees_Cpf");
 
         builder.HasIndex(e => new { e.CompanyId, e.EmployeeNumber })

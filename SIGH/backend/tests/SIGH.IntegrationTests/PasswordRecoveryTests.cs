@@ -36,14 +36,15 @@ public class PasswordRecoveryTests : IntegrationTestBase
     {
         var client = Factory.CreateClient();
 
-        var existing = await client.PostAsJsonAsync("/api/v1/auth/forgot-password", new ForgotPasswordRequest(Email));
+        // A fila é FIFO: quando o e-mail do existente aparecer, o pedido inexistente já foi processado.
         var missing = await client.PostAsJsonAsync("/api/v1/auth/forgot-password", new ForgotPasswordRequest("nao.existe@sigh.com"));
+        var existing = await client.PostAsJsonAsync("/api/v1/auth/forgot-password", new ForgotPasswordRequest(Email));
 
         existing.StatusCode.Should().Be(HttpStatusCode.OK);
         missing.StatusCode.Should().Be(existing.StatusCode);
         (await missing.Content.ReadAsStringAsync()).Should().Be(await existing.Content.ReadAsStringAsync());
 
-        var outbox = await ReadOutboxAsync();
+        var outbox = await WaitForOutboxAsync(1);
         outbox.Should().ContainSingle().Which.To.Should().Be(Email);
     }
 
@@ -55,7 +56,7 @@ public class PasswordRecoveryTests : IntegrationTestBase
 
         (await client.PostAsJsonAsync("/api/v1/auth/forgot-password", new ForgotPasswordRequest(Email))).EnsureSuccessStatusCode();
 
-        var message = (await ReadOutboxAsync()).Should().ContainSingle().Subject;
+        var message = (await WaitForOutboxAsync(1)).Should().ContainSingle().Subject;
         message.Template.Should().Be(EmailTemplates.PasswordResetTemplate);
         message.Subject.Should().Contain("Redefinição de senha");
         var token = ExtractToken(message.TextBody);
@@ -100,7 +101,7 @@ public class PasswordRecoveryTests : IntegrationTestBase
     {
         var client = Factory.CreateClient();
         (await client.PostAsJsonAsync("/api/v1/auth/forgot-password", new ForgotPasswordRequest(Email))).EnsureSuccessStatusCode();
-        var token = ExtractToken((await ReadOutboxAsync()).Single().TextBody);
+        var token = ExtractToken((await WaitForOutboxAsync(1)).Single().TextBody);
 
         Factory.Clock.Advance(TimeSpan.FromMinutes(31)); // padrão: 30 min
 
@@ -115,7 +116,7 @@ public class PasswordRecoveryTests : IntegrationTestBase
         var client = Factory.CreateClient();
         (await client.PostAsJsonAsync("/api/v1/auth/forgot-password", new ForgotPasswordRequest(Email))).EnsureSuccessStatusCode();
         (await client.PostAsJsonAsync("/api/v1/auth/forgot-password", new ForgotPasswordRequest(Email))).EnsureSuccessStatusCode();
-        var messages = (await ReadOutboxAsync()).OrderBy(m => m.CreatedAt).ToList();
+        var messages = (await WaitForOutboxAsync(2)).OrderBy(m => m.CreatedAt).ToList();
         var firstToken = ExtractToken(messages[0].TextBody);
         var secondToken = ExtractToken(messages[1].TextBody);
 
@@ -138,6 +139,20 @@ public class PasswordRecoveryTests : IntegrationTestBase
             statuses.Add((await client.PostAsJsonAsync("/api/v1/auth/forgot-password", new ForgotPasswordRequest($"x{i}@sigh.com"))).StatusCode);
 
         statuses.Should().Equal(HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests);
+    }
+
+    [Fact]
+    public async Task Login_KeepsItsRateLimit()
+    {
+        await using var limited = Factory.WithWebHostBuilder(b => b.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?> { ["RateLimits:Login:PermitLimit"] = "2" })));
+        var client = limited.CreateClient();
+
+        var statuses = new List<HttpStatusCode>();
+        for (var i = 0; i < 3; i++)
+            statuses.Add((await client.PostAsJsonAsync("/api/v1/auth/login", new { email = "ninguem@sigh.com", password = "x" })).StatusCode);
+
+        statuses.Should().Equal(HttpStatusCode.BadRequest, HttpStatusCode.BadRequest, HttpStatusCode.TooManyRequests);
     }
 
     [Fact]
@@ -166,6 +181,19 @@ public class PasswordRecoveryTests : IntegrationTestBase
 
         var (firstLogin, _) = await AuthTestHelpers.LoginAsync(Factory.CreateClient(), "nova.pessoa@sigh.com", NewPassword);
         firstLogin.MustChangePassword.Should().BeFalse("a pessoa já definiu a própria senha pelo link");
+    }
+
+    /// <summary>O e-mail de "esqueci a senha" é gerado pelo worker, fora do request: espera aparecer.</summary>
+    private async Task<List<EmailOutboxMessage>> WaitForOutboxAsync(int expectedCount)
+    {
+        for (var i = 0; i < 100; i++)
+        {
+            var messages = await ReadOutboxAsync();
+            if (messages.Count >= expectedCount)
+                return messages;
+            await Task.Delay(100);
+        }
+        return await ReadOutboxAsync();
     }
 
     private async Task<List<EmailOutboxMessage>> ReadOutboxAsync()

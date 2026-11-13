@@ -12,6 +12,9 @@ const ChangePasswordPage = lazy(() => import('../pages/ChangePasswordPage'));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'));
 const AuditPage = lazy(() => import('../features/audit/pages/AuditPage'));
+const EmployeesListPage = lazy(() => import('../features/employees/pages/EmployeesListPage'));
+const EmployeeDetailPage = lazy(() => import('../features/employees/pages/EmployeeDetailPage'));
+const EmployeeImportPage = lazy(() => import('../features/employees/pages/EmployeeImportPage'));
 const Home = lazy(() => import('../pages/Home').then((m) => ({ default: m.Home })));
 const NotificationsPage = lazy(() =>
   import('../features/notifications/pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })),
@@ -103,6 +106,9 @@ export const AppRoutes: React.FC = () => {
               element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY, <EmployeeDisciplinaryHistoryPage />)}
             />
             <Route path="/audit" element={guard(PERMISSIONS.AUDIT_VIEW, <AuditPage />)} />
+            <Route path="/employees" element={guard(PERMISSIONS.EMPLOYEES_VIEW, <EmployeesListPage />)} />
+            <Route path="/employees/import" element={guard(PERMISSIONS.EMPLOYEES_IMPORT, <EmployeeImportPage />)} />
+            <Route path="/employees/:id" element={guard(PERMISSIONS.EMPLOYEES_VIEW, <EmployeeDetailPage />)} />
             <Route path="*" element={<Navigate to="/disciplinary/cases" replace />} />
           </Route>
         </Route>

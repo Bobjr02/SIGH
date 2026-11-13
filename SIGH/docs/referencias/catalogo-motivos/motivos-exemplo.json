@@ -1,0 +1,33 @@
+{
+  "versao": 1,
+  "observacao": "Exemplo de estrutura. Reproduz os textos atuais das cartas por falta injustificada. O catálogo definitivo (motivos, textos e fundamentos jurídicos) será enviado pelo RH e mantido no sistema pela tela de motivos.",
+  "motivos": [
+    {
+      "codigo": "FALTA_INJUSTIFICADA",
+      "nome": "Faltas injustificadas",
+      "fundamentoLegal": "artigo 482 da C.L.T., letra \"E\" (desídia no desempenho das funções)",
+      "textos": [
+        {
+          "medida": "ADVERTENCIA",
+          "medidasAnteriores": null,
+          "texto": "Verificamos que o Sr (a)., vem faltando ao serviço injustificadamente, por isto, lembramos que o comparecimento ao trabalho é um dos principais deveres do empregado, ao tempo que o (a) advertimos no sentido de que tal prática não volte a acontecer sob pena de sermos obrigados a tomarmos as medidas facultadas em lei.\n\nPeríodo de faltas:\n{{PERIODO_FALTAS}}"
+        },
+        {
+          "medida": "SUSPENSAO",
+          "medidasAnteriores": 1,
+          "texto": "Tendo em vista que apesar da advertência que lhe foi feita anteriormente, o senhor (a) tenha continuado a faltar ao trabalho, sem qualquer justificativa, fica V. S(a)., no período abaixo especificado, suspenso do trabalho por {{DIAS_SUSPENSAO_EXTENSO}}.\n\nPeríodo de suspensão: {{PERIODO_SUSPENSAO}}\n\nLembramos que o comparecimento ao trabalho é um dos principais deveres do empregado, ao tempo em que o (a) advertimos no sentido de que tal prática não volte a acontecer sob pena de sermos obrigados a tomarmos as medidas facultadas em lei."
+        },
+        {
+          "medida": "SUSPENSAO",
+          "medidasAnteriores": null,
+          "texto": "Tendo em vista que apesar de já termos lhe advertido por {{QTD_MEDIDAS_ANTERIORES_EXTENSO}}, e o senhor (a) tenha continuado a faltar ao trabalho, sem qualquer justificativa, fica V. S(a)., no período abaixo especificado, suspenso de suas atividades por {{DIAS_SUSPENSAO_EXTENSO}}.\n\nPeríodo de suspensão: {{PERIODO_SUSPENSAO}}\n\nLembramos que o comparecimento ao trabalho é um dos principais deveres do empregado, ao tempo em que o (a) advertimos no sentido de que tal prática não volte a acontecer sob pena de sermos obrigados a tomarmos as medidas facultadas em lei."
+        },
+        {
+          "medida": "JUSTA_CAUSA",
+          "medidasAnteriores": null,
+          "texto": "Tendo em vista que apesar de já ter sido advertido por {{QTD_MEDIDAS_ANTERIORES_EXTENSO}}, o(a) senhor(a) continuou faltando ao trabalho, sem qualquer justificativa, infringindo desta forma o disposto no {{FUNDAMENTO_LEGAL}}, fica V. S(a)., a partir desta data dispensado(a) por JUSTA CAUSA do nosso quadro de funcionários."
+        }
+      ]
+    }
+  ]
+}

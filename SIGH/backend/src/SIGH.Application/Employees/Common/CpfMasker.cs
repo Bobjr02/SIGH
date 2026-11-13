@@ -13,6 +13,7 @@ public static class CpfMasker
         if (normalized.Length != 11)
             return "***.***.***-**";
 
-        return $"***.***.***-{normalized.Substring(9, 2)}";
+        // Mostra só os 6 dígitos do meio: ***.982.247-**
+        return $"***.{normalized.Substring(3, 3)}.{normalized.Substring(6, 3)}-**";
     }
 }

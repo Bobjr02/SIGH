@@ -32,5 +32,12 @@ public record GetEmployeeByIdResponse(
     string? TerminationReason,
     string? Notes,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt
+    DateTimeOffset? UpdatedAt,
+    /// <summary>CPF completo: só no detalhe (Employees.View). A listagem traz apenas a versão mascarada.</summary>
+    string? Cpf = null,
+    EmployeeGroup? Group = null,
+    string? Team = null,
+    string? ManagementUnitCode = null,
+    string? DepartmentCode = null,
+    string? JobTitleCode = null
 );

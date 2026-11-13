@@ -32,6 +32,7 @@ public class SighDbContext : DbContext, IApplicationDbContext
     public DbSet<Department> Departments => Set<Department>();
     public DbSet<JobTitle> JobTitles => Set<JobTitle>();
     public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<EmployeeImportBatch> EmployeeImportBatches => Set<EmployeeImportBatch>();
 
     // Módulo Disciplinar
     public DbSet<DisciplinaryCase> DisciplinaryCases => Set<DisciplinaryCase>();

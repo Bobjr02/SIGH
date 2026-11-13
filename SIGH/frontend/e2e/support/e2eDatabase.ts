@@ -68,3 +68,18 @@ export const listE2EDatabases = (connectionString = baseConnectionString()): str
   );
   return out.split('\n').map((l) => l.trim()).filter((l) => E2E_DB_PATTERN.test(l));
 };
+
+/** Executa uma consulta escalar no banco DESTA execução do e2e (só SIGH_E2E_*), via sqlcmd no container. */
+export const queryE2EScalar = (sql: string, connectionString = baseConnectionString()): string => {
+  const database = process.env.E2E_DB_NAME ?? '';
+  if (!E2E_DB_PATTERN.test(database)) throw new Error('Consulta permitida só no banco do e2e.');
+  const user = part(connectionString, 'User Id') ?? 'sa';
+  const password = part(connectionString, 'Password')!;
+  const container = process.env.E2E_SQL_CONTAINER ?? 'sigh-sqlserver';
+  const out = execFileSync(
+    'docker',
+    ['exec', '-e', 'SQLCMDPASSWORD', container, '/opt/mssql-tools18/bin/sqlcmd', '-S', 'localhost', '-U', user, '-C', '-d', database, '-h', '-1', '-W', '-b', '-Q', `SET NOCOUNT ON; ${sql}`],
+    { env: { ...process.env, SQLCMDPASSWORD: password }, encoding: 'utf8' },
+  );
+  return out.trim().split('\n')[0]?.trim() ?? '';
+};
