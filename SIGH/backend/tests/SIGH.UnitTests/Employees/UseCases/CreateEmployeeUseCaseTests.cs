@@ -90,7 +90,7 @@ public class CreateEmployeeUseCaseTests
         result.Success.Should().BeTrue();
         result.Data.Should().NotBeNull();
         result.Data!.FullName.Should().Be("João da Silva");
-        result.Data.CpfMasked.Should().Be("***.***.***-25");
+        result.Data.CpfMasked.Should().Be("***.982.247-**");
         result.Data.Status.Should().Be(EmployeeStatus.PendingAdmission);
 
         _employeeRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Employee>(), It.IsAny<CancellationToken>()), Times.Once);

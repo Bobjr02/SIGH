@@ -97,7 +97,7 @@ public class UpdateEmployeeUseCaseTests
         result.Success.Should().BeTrue();
         result.Data.Should().NotBeNull();
         result.Data!.FullName.Should().Be("João da Silva Sauro");
-        result.Data.CpfMasked.Should().Be("***.***.***-25");
+        result.Data.CpfMasked.Should().Be("***.982.247-**");
 
         _contextMock.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }

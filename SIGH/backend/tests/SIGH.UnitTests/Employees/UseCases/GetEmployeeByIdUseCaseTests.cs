@@ -30,7 +30,7 @@ public class GetEmployeeByIdUseCaseTests
             EmployeeNumber: "EMP-001",
             FullName: "João da Silva",
             SocialName: null,
-            CpfMasked: "***.***.***-25",
+            CpfMasked: "***.982.247-**",
             BirthDate: null,
             AdmissionDate: new DateOnly(2025, 1, 1),
             TerminationDate: null,
@@ -66,7 +66,7 @@ public class GetEmployeeByIdUseCaseTests
         result.Success.Should().BeTrue();
         result.Data.Should().NotBeNull();
         result.Data!.FullName.Should().Be("João da Silva");
-        result.Data.CpfMasked.Should().Be("***.***.***-25");
+        result.Data.CpfMasked.Should().Be("***.982.247-**");
         result.Data.CompanyName.Should().Be("Empresa SIGH LTDA");
         result.Data.JobTitleName.Should().Be("Desenvolvedor");
         result.Data.ManagementUnitName.Should().Be("Matriz SP");

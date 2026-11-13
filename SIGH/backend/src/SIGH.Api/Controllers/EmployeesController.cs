@@ -360,4 +360,25 @@ public class EmployeesController : BaseController
                errorCode.EndsWith(".NotFound", StringComparison.OrdinalIgnoreCase) ||
                errorCode.Equals("NotFound", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Quadro de apoio à decisão (só informativo): medidas aplicadas por tipo e por motivo, dias de
+    /// suspensão, última medida e medidas nos últimos 6 e 12 meses. Exige Employees.View e
+    /// Disciplinary.Reports.ViewEmployeeHistory (expõe histórico disciplinar).
+    /// </summary>
+    [HttpGet("{id:guid}/decision-support")]
+    [Permission(PermissionCodes.Employees.View)]
+    [Permission(PermissionCodes.DisciplinaryReports.ViewEmployeeHistory)]
+    [ProducesResponseType(typeof(Result<SIGH.Application.Employees.DecisionSupport.EmployeeDecisionSupportDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result<SIGH.Application.Employees.DecisionSupport.EmployeeDecisionSupportDto>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<Result<SIGH.Application.Employees.DecisionSupport.EmployeeDecisionSupportDto>>> GetDecisionSupport(
+        [FromRoute] Guid id,
+        [FromServices] SIGH.Application.Employees.DecisionSupport.IEmployeeDecisionSupportService service,
+        CancellationToken cancellationToken)
+    {
+        var summary = await service.GetAsync(id, cancellationToken);
+        return summary is null
+            ? NotFoundResult<SIGH.Application.Employees.DecisionSupport.EmployeeDecisionSupportDto>("Funcionário não encontrado.")
+            : OkResult(summary);
+    }
 }

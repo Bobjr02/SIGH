@@ -336,6 +336,40 @@ public class DisciplinaryCasesEndpointsTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task DecisionSupport_SumsTheAppliedMeasuresOfTheEmployee()
+    {
+        var (deciderClient, _) = await CreateAuthenticatedClientAsync(AdminEmail);
+        var (approverClient, _) = await CreateAuthenticatedClientAsync(ApproverEmail);
+        var (caseId, decisionId, employeeId) = await ArrangeCaseWithRecordedDecisionAsync(deciderClient);
+        (await approverClient.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/approve-decision", new { }))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Suspensão de 3 dias corridos (hoje, amanhã e depois de amanhã).
+        var from = DateTimeOffset.UtcNow.Date;
+        var measure = new ApplyMeasureHttpRequest(decisionId, employeeId, DisciplinaryMeasureType.Suspension,
+            "Suspensão por reincidência.", new DateTimeOffset(from, TimeSpan.Zero), new DateTimeOffset(from.AddDays(2), TimeSpan.Zero));
+        (await deciderClient.PostAsJsonAsync($"/api/v1/disciplinary-cases/{caseId}/measures", measure))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await deciderClient.GetAsync($"/api/v1/employees/{employeeId}/decision-support");
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var summary = (await response.Content.ReadFromJsonAsync<Result<SIGH.Application.Employees.DecisionSupport.EmployeeDecisionSupportDto>>())!.Data!;
+
+        summary.TotalMeasures.Should().Be(1);
+        summary.Suspensions.Should().Be(1);
+        summary.SuspensionDays.Should().Be(3);
+        summary.Warnings.Should().Be(0);
+        summary.ByInfractionType.Should().ContainSingle(c => c.Label == "Falta não justificada" && c.Count == 1);
+        summary.MeasuresLast6Months.Should().Be(1);
+        summary.LastMeasureAt.Should().NotBeNull();
+        summary.Sources.Should().Equal("SIGH");
+
+        (await deciderClient.GetAsync($"/api/v1/employees/{Guid.NewGuid()}/decision-support")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var (unprivileged, _) = await CreateAuthenticatedClientAsync("unprivileged@sigh.com");
+        (await unprivileged.GetAsync($"/api/v1/employees/{employeeId}/decision-support")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task ApproveDecision_WhenBodyContainsAnotherUserId_IgnoresBodyAndPersistsTokenUser()
     {
         // Arrange

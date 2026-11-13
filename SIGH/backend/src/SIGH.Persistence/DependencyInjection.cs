@@ -39,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<SIGH.Application.Audit.IAuditLogQueryService, AuditLogQueryService>();
         services.AddScoped<SIGH.Application.Email.IEmailOutbox, SIGH.Persistence.Email.EmailOutbox>();
         services.AddScoped<SIGH.Application.Employees.Import.IEmployeeImportStore, SIGH.Persistence.Repositories.Employees.EmployeeImportStore>();
+        // Fontes do quadro de apoio à decisão (no sprint de histórico, entra a dos registros importados).
+        services.AddScoped<SIGH.Application.Employees.DecisionSupport.IEmployeeMeasureSource, SIGH.Persistence.Repositories.Employees.SighMeasureSource>();
         services.AddScoped<SIGH.Application.Email.IEmailOutboxStore, SIGH.Persistence.Email.EmailOutboxStore>();
 
         // Registro de repositórios

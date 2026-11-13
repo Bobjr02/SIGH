@@ -47,8 +47,13 @@ public class EmployeeQueryService : IEmployeeQueryService
                                   JobTitleName = j != null ? j.Name : null,
                                   e.ManagementUnitId,
                                   ManagementUnitName = m != null ? m.Name : null,
+                                  ManagementUnitCode = m != null ? m.Code : null,
                                   e.DepartmentId,
                                   DepartmentName = d != null ? d.Name : null,
+                                  DepartmentCode = d != null ? d.Code : null,
+                                  JobTitleCode = j != null ? j.Code : null,
+                                  e.Group,
+                                  e.Team,
                                   e.SupervisorId,
                                   SupervisorName = s != null ? s.FullName : null,
                                   e.UserId,
@@ -96,7 +101,13 @@ public class EmployeeQueryService : IEmployeeQueryService
             employee.TerminationReason,
             employee.Notes,
             employee.CreatedAt,
-            employee.UpdatedAt
+            employee.UpdatedAt,
+            employee.Cpf,
+            employee.Group,
+            employee.Team,
+            employee.ManagementUnitCode,
+            employee.DepartmentCode,
+            employee.JobTitleCode
         );
     }
 
@@ -120,7 +131,9 @@ public class EmployeeQueryService : IEmployeeQueryService
                 j != null ? j.Name : null,
                 m != null ? m.Name : null,
                 d != null ? d.Name : null,
-                s != null ? s.FullName : null);
+                s != null ? s.FullName : null,
+                m != null ? m.Code : null,
+                d != null ? d.Code : null);
 
         if (query.CompanyId.HasValue)
             baseQuery = baseQuery.Where(x => x.Employee.CompanyId == query.CompanyId.Value);
@@ -133,6 +146,9 @@ public class EmployeeQueryService : IEmployeeQueryService
 
         if (query.JobTitleId.HasValue)
             baseQuery = baseQuery.Where(x => x.Employee.JobTitleId == query.JobTitleId.Value);
+
+        if (query.Group.HasValue)
+            baseQuery = baseQuery.Where(x => x.Employee.Group == query.Group.Value);
 
         if (query.Status.HasValue)
             baseQuery = baseQuery.Where(x => x.Employee.Status == query.Status.Value);
@@ -213,7 +229,11 @@ public class EmployeeQueryService : IEmployeeQueryService
                 x.Employee.UserId,
                 x.Employee.HasSystemAccess,
                 x.Employee.CorporateEmail,
-                x.Employee.CreatedAt
+                x.Employee.CreatedAt,
+                x.Employee.Group,
+                x.Employee.Team,
+                x.ManagementUnitCode,
+                x.DepartmentCode
             ))
             .ToListAsync(cancellationToken);
 
@@ -226,5 +246,7 @@ public class EmployeeQueryService : IEmployeeQueryService
         string? JobTitleName,
         string? ManagementUnitName,
         string? DepartmentName,
-        string? SupervisorName);
+        string? SupervisorName,
+        string? ManagementUnitCode,
+        string? DepartmentCode);
 }
