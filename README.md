@@ -179,6 +179,43 @@ O refresh é serializado entre abas (Web Locks + BroadcastChannel no front) e o 
 `Auth:RefreshTokenReuseGraceSeconds` (30 s), um refresh token recém-rotacionado apresentado de novo, sem disparar a
 detecção de reuso.
 
+#### Empresa única
+Esta é uma instalação de **empresa única**: todos os funcionários pertencem à empresa padrão do seed,
+"Usina Serra Grande S.A." (`Seed:DefaultCompanyName`; o nome antigo "Empresa Padrão" é renomeado no próximo start).
+As 9 gerências (Chave Organização do SAP) vêm de `Seed:ManagementUnits` no `appsettings.json`; o seed só cria as que
+faltam e nunca sobrescreve nomes, que continuam editáveis no banco.
+
+#### Importação de funcionários (exportação do SAP)
+Fluxo em duas etapas (permissão `Employees.Import`):
+1. `POST /api/v1/employees/import/preview` (multipart, campo `file`, .xlsx): *dry-run*. Nada é gravado em funcionários.
+   Cria um **lote** (`EmployeeImportBatches`) com o SHA-256 do arquivo, a impressão digital do plano calculado e a validade
+   (`Import:PreviewValidityMinutes`, 30 min), e devolve o resumo: novos, alterados (campo, valor antigo e novo; CPF mascarado),
+   a desligar (ausentes do arquivo), reativados, sem mudança, erros e avisos.
+2. `POST /api/v1/employees/import/{batchId}/confirm` (multipart: `file` + `confirmMassTermination`): o arquivo **não é guardado**,
+   então o mesmo arquivo é reenviado. O servidor confere o hash, a validade e se o plano recalculado é idêntico ao pré-visualizado
+   (se a base mudou no meio do caminho, 409) e aplica tudo numa transação. Se os desligamentos por ausência passarem de
+   `Import:MaxTerminationPercent` (10%) dos ativos, exige `confirmMassTermination=true` (422 sem ele).
+3. `GET /api/v1/employees/import/batches`: histórico (contagens e erros; sem CPF nem colunas sensíveis).
+
+Regras: matrícula nova cria; existente com dados diferentes atualiza (a auditoria registra os campos); status de desligado no
+arquivo desliga; matrícula ativa ausente do arquivo é desligada com a data da importação (**nunca apagada**); desligada que volta
+ativa é reativada. Importar o mesmo arquivo de novo não altera nada. Linhas com erro são rejeitadas (identificadas por linha e
+matrícula, nunca pelo CPF) e **não** contam como ausentes. CPF de outra matrícula desligada é aviso de possível readmissão.
+
+Leitura: só as colunas da lista fechada em `HrImportColumns` (Application/Employees/Import) são lidas; as demais nunca são
+gravadas, logadas nem citadas em mensagens. Cabeçalhos são comparados sem acento, maiúsculas, espaços ou pontuação, e
+cabeçalhos duplicados ("Estado") são tolerados. CPF e matrícula em células numéricas recebem zeros à esquerda (11 e 8 dígitos).
+> Os cabeçalhos de nome, CPF, situação, grupo e turma (`Nome`, `CPF`, `Status`/`Situação`/`Status ocupação`, `Grupo`, `Turma`)
+> são suposições a confirmar contra `SIGH/docs/referencias/LEIAME.md`, que não estava disponível neste sprint.
+
+#### Funcionários e apoio à decisão
+- `/employees`: lista com busca por nome ou matrícula e filtros (situação, grupo, gerência, setor); CPF sempre mascarado
+  (`***.982.247-**`). `/employees/:id`: dados com CPF completo, histórico disciplinar e o quadro de apoio à decisão.
+- `GET /api/v1/employees/{id}/decision-support` (`Employees.View` + `Disciplinary.Reports.ViewEmployeeHistory`): medidas
+  aplicadas por tipo e por motivo, advertências, suspensões e dias de suspensão (dias corridos, contando início e fim), última
+  medida e medidas nos últimos 6 e 12 meses. Só informativo. O cálculo soma todas as `IEmployeeMeasureSource` (hoje, as
+  medidas do SIGH; o histórico importado entra como outra fonte).
+
 #### Auditoria
 Toda alteração de processos (e subentidades), evidências, funcionários, usuários, perfis, permissões e tipos de infração
 gera um registro em `AuditLogs` (campos alterados com valor antigo/novo, usuário, data UTC, IP, correlation id). Eventos de
