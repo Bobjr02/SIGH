@@ -72,6 +72,10 @@ namespace SIGH.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<int>("Kind")
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<DateTimeOffset>("OpenedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -125,6 +129,8 @@ namespace SIGH.Persistence.Migrations
 
                     b.HasIndex("CompanyId", "Status");
 
+                    b.HasIndex("Kind", "Status");
+
                     b.ToTable("DisciplinaryCases", (string)null);
                 });
 
@@ -157,6 +163,9 @@ namespace SIGH.Persistence.Migrations
                     b.Property<bool>("IsPrimarySubject")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("ManagementUnitIdAtTime")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Role")
                         .HasColumnType("int");
 
@@ -182,6 +191,8 @@ namespace SIGH.Persistence.Migrations
                     b.HasIndex("IsDeleted");
 
                     b.HasIndex("IsPrimarySubject");
+
+                    b.HasIndex("ManagementUnitIdAtTime");
 
                     b.HasIndex("Role");
 
@@ -231,10 +242,26 @@ namespace SIGH.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<DateOnly?>("MeasureDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("ProposedMeasureType")
+                        .HasColumnType("int");
+
                     b.Property<string>("Reasoning")
                         .IsRequired()
                         .HasMaxLength(8000)
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("RejectedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("RejectedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -243,6 +270,12 @@ namespace SIGH.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateOnly?>("SuspensionEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("SuspensionStart")
+                        .HasColumnType("date");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
@@ -265,6 +298,8 @@ namespace SIGH.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("DisciplinaryCaseId", "Status");
+
+                    b.HasIndex("ProposedMeasureType", "Status");
 
                     b.ToTable("DisciplinaryDecisions", (string)null);
                 });
@@ -637,7 +672,6 @@ namespace SIGH.Persistence.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -701,7 +735,6 @@ namespace SIGH.Persistence.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -791,7 +824,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1018,7 +1050,6 @@ namespace SIGH.Persistence.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1077,7 +1108,6 @@ namespace SIGH.Persistence.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1152,7 +1182,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("nvarchar(45)");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1263,7 +1292,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1355,7 +1383,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("nvarchar(250)");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1404,7 +1431,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("nvarchar(45)");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1471,7 +1497,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("nvarchar(250)");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1513,7 +1538,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1578,7 +1602,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("nvarchar(150)");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1597,6 +1620,11 @@ namespace SIGH.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1622,6 +1650,57 @@ namespace SIGH.Persistence.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("SIGH.Domain.Entities.UserManagementUnit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<Guid>("ManagementUnitId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ValidFrom")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ValidUntil")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ManagementUnitId");
+
+                    b.HasIndex("UserId", "ManagementUnitId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserManagementUnits_UserId_ManagementUnitId")
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("UserManagementUnits", (string)null);
+                });
+
             modelBuilder.Entity("SIGH.Domain.Entities.UserRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1640,7 +1719,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1656,13 +1734,20 @@ namespace SIGH.Persistence.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("ValidFrom")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ValidUntil")
+                        .HasColumnType("datetimeoffset");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RoleId");
 
                     b.HasIndex("UserId", "RoleId")
                         .IsUnique()
-                        .HasDatabaseName("IX_UserRoles_UserId_RoleId");
+                        .HasDatabaseName("IX_UserRoles_UserId_RoleId")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("UserRoles", (string)null);
                 });
@@ -1697,7 +1782,6 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("nvarchar(45)");
 
                     b.Property<bool>("IsDeleted")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -1752,6 +1836,9 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("DisciplinaryCaseId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset?>("DueDate")
@@ -1811,6 +1898,8 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DisciplinaryCaseId");
 
                     b.HasIndex("CompanyId", "UserId", "CreatedAt");
 
@@ -2102,6 +2191,25 @@ namespace SIGH.Persistence.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("SIGH.Domain.Entities.UserManagementUnit", b =>
+                {
+                    b.HasOne("SIGH.Domain.Employees.Entities.ManagementUnit", "ManagementUnit")
+                        .WithMany()
+                        .HasForeignKey("ManagementUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SIGH.Domain.Entities.User", "User")
+                        .WithMany("ManagementUnits")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ManagementUnit");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SIGH.Domain.Entities.UserRole", b =>
                 {
                     b.HasOne("SIGH.Domain.Entities.Role", "Role")
@@ -2159,6 +2267,8 @@ namespace SIGH.Persistence.Migrations
 
             modelBuilder.Entity("SIGH.Domain.Entities.User", b =>
                 {
+                    b.Navigation("ManagementUnits");
+
                     b.Navigation("PasswordHistories");
 
                     b.Navigation("RefreshTokens");

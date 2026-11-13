@@ -1,7 +1,9 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Box, Button, IconButton, Tooltip } from '@mui/material';
-import { Shield, BookOpen, Gavel, PlusCircle, LogOut, UserRound, ScrollText, Users } from 'lucide-react';
+import { AppBar, Toolbar, Typography, Box, Button, IconButton, Tooltip, Badge } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
+import { recordKeys, recordsApi } from '../../features/records/api/recordsApi';
+import { Shield, BookOpen, Gavel, PlusCircle, LogOut, UserRound, ScrollText, Users, UserCog, Building2, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { PERMISSIONS, type PermissionCode } from '../../auth/permissions';
 import { NotificationBadge } from '../../features/notifications/components/NotificationBadge';
@@ -17,11 +19,18 @@ interface MenuItem {
 
 export const MENU_ITEMS: MenuItem[] = [
   {
-    label: 'Processos',
-    path: '/disciplinary/cases',
-    activePrefix: '/disciplinary/cases',
-    permission: PERMISSIONS.DISCIPLINARY_CASES_VIEW,
+    label: 'Medidas',
+    path: '/medidas',
+    activePrefix: '/medidas',
+    permission: PERMISSIONS.DISCIPLINARY_RECORDS_VIEW,
     icon: <Gavel size={18} />,
+  },
+  {
+    label: 'Funcionários',
+    path: '/employees',
+    activePrefix: '/employees',
+    permission: PERMISSIONS.EMPLOYEES_VIEW,
+    icon: <Users size={18} />,
   },
   {
     label: 'Dashboard',
@@ -36,7 +45,7 @@ export const MENU_ITEMS: MenuItem[] = [
     permission: PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_CASES,
   },
   {
-    label: 'Medidas',
+    label: 'Medidas aplicadas',
     path: '/disciplinary/reports/measures',
     activePrefix: '/disciplinary/reports/measures',
     permission: PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_MEASURES,
@@ -55,11 +64,18 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: <BookOpen size={18} />,
   },
   {
-    label: 'Funcionários',
-    path: '/employees',
-    activePrefix: '/employees',
-    permission: PERMISSIONS.EMPLOYEES_VIEW,
-    icon: <Users size={18} />,
+    label: 'Usuários',
+    path: '/admin/usuarios',
+    activePrefix: '/admin/usuarios',
+    permission: PERMISSIONS.USERS_VIEW,
+    icon: <UserCog size={18} />,
+  },
+  {
+    label: 'Gerências',
+    path: '/admin/gerencias',
+    activePrefix: '/admin/gerencias',
+    permission: PERMISSIONS.MANAGEMENT_UNITS_MANAGE,
+    icon: <Building2 size={18} />,
   },
   {
     label: 'Auditoria',
@@ -69,6 +85,26 @@ export const MENU_ITEMS: MenuItem[] = [
     icon: <ScrollText size={18} />,
   },
 ];
+
+/** "Aprovações pendentes" com o contador (medidas que o usuário pode aprovar agora). */
+const PendingApprovalsButton: React.FC<{ active: boolean; onClick: () => void }> = ({ active, onClick }) => {
+  const { data } = useQuery({ queryKey: recordKeys.pendingCount, queryFn: recordsApi.pendingCount, refetchInterval: 60_000 });
+  return (
+    <Button
+      color="inherit"
+      startIcon={
+        <Badge badgeContent={data ?? 0} color="error" max={99} data-testid="pending-approvals-count">
+          <ClipboardCheck size={18} />
+        </Badge>
+      }
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      sx={{ fontWeight: active ? 700 : 500, borderBottom: active ? '2px solid #ffffff' : 'none', borderRadius: 0 }}
+    >
+      Aprovações pendentes
+    </Button>
+  );
+};
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -111,16 +147,20 @@ export const Header: React.FC = () => {
             );
           })}
 
-          {hasPermission(PERMISSIONS.DISCIPLINARY_CASES_CREATE) && (
+          {hasPermission(PERMISSIONS.DISCIPLINARY_RECORDS_APPROVE) && (
+            <PendingApprovalsButton active={location.pathname.startsWith('/medidas/aprovacoes')} onClick={() => navigate('/medidas/aprovacoes')} />
+          )}
+
+          {hasPermission(PERMISSIONS.DISCIPLINARY_RECORDS_REGISTER) && (
             <Button
               variant="contained"
               color="secondary"
               size="small"
               startIcon={<PlusCircle size={16} />}
-              onClick={() => navigate('/disciplinary/cases/new')}
+              onClick={() => navigate('/medidas/registrar')}
               sx={{ ml: 1, fontWeight: 700 }}
             >
-              Novo Processo
+              Registrar medida
             </Button>
           )}
 

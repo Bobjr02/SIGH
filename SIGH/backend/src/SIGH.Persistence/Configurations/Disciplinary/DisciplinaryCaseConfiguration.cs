@@ -93,7 +93,14 @@ public class DisciplinaryCaseConfiguration : IEntityTypeConfiguration<Disciplina
 
         // Indexes
         builder.HasIndex(c => c.CompanyId);
+        builder.Property(c => c.Kind)
+            .IsRequired()
+            .HasConversion<int>()
+            .HasDefaultValue(SIGH.Domain.Disciplinary.Enums.DisciplinaryCaseKind.Process)
+            .ValueGeneratedNever();
+
         builder.HasIndex(c => c.Status);
+        builder.HasIndex(c => new { c.Kind, c.Status });
         builder.HasIndex(c => c.Priority);
         builder.HasIndex(c => c.ResponsibleEmployeeId);
         builder.HasIndex(c => c.OpenedAt);

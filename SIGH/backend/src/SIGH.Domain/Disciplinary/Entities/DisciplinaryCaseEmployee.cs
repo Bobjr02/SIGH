@@ -14,6 +14,12 @@ public class DisciplinaryCaseEmployee : AuditableEntity
     public DateTimeOffset? StatementRecordedAt { get; private set; }
     public bool IsPrimarySubject { get; private set; }
 
+    /// <summary>
+    /// Gerência do funcionário quando foi vinculado ao processo (relatórios históricos). A visibilidade
+    /// usa a gerência ATUAL do funcionário: o histórico acompanha a pessoa quando ela muda de gerência.
+    /// </summary>
+    public Guid? ManagementUnitIdAtTime { get; private set; }
+
     // EF Core
     protected DisciplinaryCaseEmployee() : base() { }
 
@@ -23,7 +29,8 @@ public class DisciplinaryCaseEmployee : AuditableEntity
         Guid disciplinaryCaseId,
         Guid employeeId,
         CaseEmployeeRole role,
-        bool isPrimarySubject = false)
+        bool isPrimarySubject = false,
+        Guid? managementUnitIdAtTime = null)
     {
         if (disciplinaryCaseId == Guid.Empty)
             throw new BusinessRuleValidationException("O ID do processo disciplinar é obrigatório.");
@@ -39,7 +46,8 @@ public class DisciplinaryCaseEmployee : AuditableEntity
             DisciplinaryCaseId = disciplinaryCaseId,
             EmployeeId = employeeId,
             Role = role,
-            IsPrimarySubject = isPrimarySubject
+            IsPrimarySubject = isPrimarySubject,
+            ManagementUnitIdAtTime = managementUnitIdAtTime
         };
     }
 

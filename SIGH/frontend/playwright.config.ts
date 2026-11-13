@@ -33,11 +33,13 @@ export default defineConfig({
   projects: [
     // Primeiro acesso do admin recém-semeado (troca obrigatória de senha).
     { name: 'first-access', testMatch: /auth-flow\.spec\.ts/, use: { ...devices['Desktop Chrome'] } },
-    // O resto usa o admin já com a senha nova.
+    // Importa os funcionários sintéticos que os specs seguintes usam.
+    { name: 'employees', testMatch: /employees\.spec\.ts/, dependencies: ['first-access'], use: { ...devices['Desktop Chrome'] } },
+    // O resto usa o admin já com a senha nova e os funcionários importados.
     {
       name: 'app',
-      testMatch: /(two-tabs|evidence|password-reset|employees)\.spec\.ts/,
-      dependencies: ['first-access'],
+      testMatch: /(two-tabs|evidence|password-reset|records)\.spec\.ts/,
+      dependencies: ['employees'],
       use: { ...devices['Desktop Chrome'] },
     },
   ],
@@ -53,6 +55,8 @@ export default defineConfig({
         ASPNETCORE_ENVIRONMENT: 'Development',
         // Todos os specs fazem login do mesmo IP em poucos minutos; o padrão (10/min) é para produção.
         RateLimits__Login__PermitLimit: '100',
+        // Perda de acesso: o cache do SecurityStamp (máx. 30 s) fica em 2 s para o e2e não esperar 30 s.
+        Auth__SecurityStampCacheSeconds: '2',
       },
       stdout: 'ignore',
       stderr: 'pipe',

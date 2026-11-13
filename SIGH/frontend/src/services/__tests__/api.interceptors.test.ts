@@ -142,4 +142,39 @@ describe('api interceptors', () => {
     });
     expect(refresh).not.toHaveBeenCalled();
   });
+
+  it('after a 401 ACCESS_CHANGED (role expired) it renews and asks the app to reload the permissions', async () => {
+    const onAccessChanged = vi.fn();
+    unregister();
+    unregister = setAuthEventHandlers({ onSessionExpired, onPasswordChangeRequired, onAccessChanged });
+    tokenStore.set('old-token');
+    server.use(
+      http.post(`${API}/auth/refresh`, () => ok({ accessToken: 'recalculated-token', expiresInMinutes: 60 })),
+      http.get(`${API}/things`, ({ request }) =>
+        request.headers.get('Authorization') === 'Bearer recalculated-token'
+          ? ok('ok')
+          : HttpResponse.json({ status: 401, code: 'ACCESS_CHANGED' }, { status: 401 }),
+      ),
+    );
+
+    await api.get('/v1/things');
+
+    expect(onAccessChanged).toHaveBeenCalledTimes(1);
+    expect(onSessionExpired).not.toHaveBeenCalled();
+  });
+
+  it('a revoked session whose refresh is refused (deactivated user) ends the session', async () => {
+    const onAccessChanged = vi.fn();
+    unregister();
+    unregister = setAuthEventHandlers({ onSessionExpired, onPasswordChangeRequired, onAccessChanged });
+    tokenStore.set('old-token');
+    server.use(
+      http.post(`${API}/auth/refresh`, () => problem(400, 'Usuário inativo, bloqueado ou não encontrado.')),
+      http.get(`${API}/things`, () => HttpResponse.json({ status: 401, code: 'SESSION_REVOKED' }, { status: 401 })),
+    );
+
+    await expect(api.get('/v1/things')).rejects.toBeTruthy();
+    expect(onSessionExpired).toHaveBeenCalledTimes(1);
+    expect(onAccessChanged).not.toHaveBeenCalled();
+  });
 });

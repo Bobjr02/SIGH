@@ -73,8 +73,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         onSessionExpired: endSession,
         onPasswordChangeRequired: () =>
           setUser((current) => (current ? { ...current, mustChangePassword: true } : current)),
+        onAccessChanged: () => {
+          // Perfis ou gerências mudaram: recarrega o usuário (menu e botões) e os dados em cache.
+          void loadUser()
+            .then(() => queryClient.invalidateQueries())
+            .catch(() => undefined);
+        },
       }),
-    [endSession],
+    [endSession, loadUser, queryClient],
   );
 
   const login = useCallback(

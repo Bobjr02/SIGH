@@ -30,7 +30,15 @@ export interface AuthEventHandlers {
   onSessionExpired: () => void;
   /** A API recusou a requisição porque a troca de senha é obrigatória. */
   onPasswordChangeRequired: () => void;
+  /**
+   * A sessão foi renovada porque o acesso mudou (perfis/gerências/stamp): as permissões exibidas
+   * precisam ser recarregadas de /auth/me.
+   */
+  onAccessChanged?: () => void;
 }
+
+/** Códigos de 401 do SecurityStampMiddleware: o acesso mudou depois da emissão do token. */
+export const ACCESS_CHANGED_CODES = ['ACCESS_CHANGED', 'SESSION_REVOKED'];
 
 // Sem AuthProvider montado (ex.: chamada fora da árvore React), recorre a navegação completa.
 const defaultHandlers: AuthEventHandlers = {
@@ -145,6 +153,9 @@ api.interceptors.response.use(
       handlers.onSessionExpired();
       return Promise.reject(error);
     }
+
+    // Renovou porque o acesso mudou: o novo token já traz as permissões recalculadas; a tela também.
+    if (ACCESS_CHANGED_CODES.includes(error.response?.data?.code ?? '')) handlers.onAccessChanged?.();
 
     return api(config);
   },

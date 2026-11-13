@@ -68,6 +68,7 @@ public class ResetPasswordService : IResetPasswordService
         var newHash = _passwordHasher.HashPassword(request.NewPassword);
 
         user.PasswordHash = newHash;
+        user.RotateSecurityStamp();
         user.MustChangePassword = false;
         user.FailedLoginAttempts = 0;
         user.LockoutEnd = null;

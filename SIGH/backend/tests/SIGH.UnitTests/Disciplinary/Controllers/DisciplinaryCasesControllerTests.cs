@@ -154,7 +154,7 @@ public class DisciplinaryCasesControllerTests
             .ReturnsAsync(Result<GetDisciplinaryCaseByIdResponse>.Ok(response));
 
         // Act
-        var actionResult = await _controller.GetById(id, CancellationToken.None);
+        var actionResult = await _controller.GetById(id, AlwaysVisible.Instance, CancellationToken.None);
 
         // Assert
         var okResult = actionResult.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -171,7 +171,7 @@ public class DisciplinaryCasesControllerTests
             .ReturnsAsync(Result<GetDisciplinaryCaseByIdResponse>.Failure("Processo disciplinar não encontrado.", "NotFound"));
 
         // Act
-        var actionResult = await _controller.GetById(id, CancellationToken.None);
+        var actionResult = await _controller.GetById(id, AlwaysVisible.Instance, CancellationToken.None);
 
         // Assert
         var notFoundResult = actionResult.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
@@ -469,4 +469,11 @@ public class DisciplinaryCasesControllerTests
         permissionAttr.Should().NotBeNull($"Método {methodName} deve possuir PermissionAttribute");
         permissionAttr!.Permission.Should().Be(expectedPermission);
     }
+}
+
+internal sealed class AlwaysVisible : SIGH.Application.Common.Authorization.ICaseVisibility
+{
+    public static readonly AlwaysVisible Instance = new();
+    public Task<bool> IsVisibleAsync(Guid caseId, CancellationToken cancellationToken = default) => Task.FromResult(true);
+    public Task EnsureVisibleAsync(Guid caseId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

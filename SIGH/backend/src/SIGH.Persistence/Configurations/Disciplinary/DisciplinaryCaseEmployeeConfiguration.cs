@@ -42,6 +42,7 @@ public class DisciplinaryCaseEmployeeConfiguration : IEntityTypeConfiguration<Di
         // Indexes
         builder.HasIndex(e => e.DisciplinaryCaseId);
         builder.HasIndex(e => e.EmployeeId);
+        builder.HasIndex(e => e.ManagementUnitIdAtTime);
         builder.HasIndex(e => e.Role);
         builder.HasIndex(e => e.IsPrimarySubject);
         builder.HasIndex(e => e.IsDeleted);

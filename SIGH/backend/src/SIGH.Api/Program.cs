@@ -96,6 +96,7 @@ try
 
     // Controllers e OpenAPI
     builder.Services.AddControllers();
+    builder.Services.AddSingleton<SecurityStampCache>();
     builder.Services.AddEndpointsApiExplorer();
 
     // Health Checks (API + SQL Server / DbContext)
@@ -205,6 +206,8 @@ try
     app.UseCors("AllowFrontend");
 
     app.UseAuthentication();
+    // Perda de acesso imediata: stamp/status do usuário e vencimento de perfis conferidos a cada requisição.
+    app.UseMiddleware<SecurityStampMiddleware>();
     // Troca de senha pendente: só change-password, logout e refresh ficam acessíveis.
     app.UseMiddleware<PasswordChangeRequiredMiddleware>();
     app.UseAuthorization();

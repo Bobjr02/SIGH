@@ -16,4 +16,13 @@ public class AuthOptions
 
     /// <summary>Validade do link de definição de senha enviado quando a conta é criada.</summary>
     public int AccountSetupTokenHours { get; set; } = 72;
+
+    /// <summary>Teto do cache do SecurityStamp: a perda de acesso nunca demora mais que isto.</summary>
+    public const int MaxSecurityStampCacheSeconds = 30;
+
+    /// <summary>
+    /// Por quanto tempo (segundos) o stamp e o status do usuário ficam em cache na API antes de serem
+    /// relidos do banco. Limitado a <see cref="MaxSecurityStampCacheSeconds"/>; 0 desliga o cache.
+    /// </summary>
+    public int SecurityStampCacheSeconds { get; set; } = MaxSecurityStampCacheSeconds;
 }

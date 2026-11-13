@@ -82,6 +82,25 @@ public class CreateUserService : ICreateUserService
             throw new BusinessRuleValidationException("Um ou mais perfis (Roles) fornecidos são inválidos ou inexistentes.");
         }
 
+        if (roles.Any(r => Common.Authorization.SystemRoles.Find(r.Name) is null))
+        {
+            throw new BusinessRuleValidationException("Só os perfis de sistema podem ser atribuídos.");
+        }
+
+        var managementUnitIds = (request.ManagementUnitIds ?? []).Distinct().ToList();
+        if (roles.Any(r => r.Name == Common.Authorization.SystemRoles.Manager) && managementUnitIds.Count == 0)
+        {
+            throw new BusinessRuleValidationException(Access.UserAccessRules.ManagerWithoutUnitMessage);
+        }
+
+        if (managementUnitIds.Count > 0)
+        {
+            var found = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(
+                _context.ManagementUnits, m => managementUnitIds.Contains(m.Id), cancellationToken);
+            if (found != managementUnitIds.Count)
+                throw new BusinessRuleValidationException("Uma ou mais gerências informadas não existem.");
+        }
+
         var passwordHash = _passwordHasher.HashPassword(hasInitialPassword ? request.InitialPassword! : _random!.GenerateRandomString(64));
 
         var user = new User
@@ -102,6 +121,11 @@ public class CreateUserService : ICreateUserService
                 UserId = user.Id,
                 RoleId = role.Id
             });
+        }
+
+        foreach (var managementUnitId in managementUnitIds)
+        {
+            user.ManagementUnits.Add(new UserManagementUnit { UserId = user.Id, ManagementUnitId = managementUnitId });
         }
 
         user.PasswordHistories.Add(new PasswordHistory

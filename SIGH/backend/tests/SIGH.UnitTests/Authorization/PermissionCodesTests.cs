@@ -65,8 +65,10 @@ public class PermissionCodesTests
     [Fact]
     public void PermissionCodesAll_ShouldOnlyContainCodesUsedByControllers()
     {
-        // Evita permissões órfãs no seed (códigos que nenhum endpoint exige).
+        // Evita permissões órfãs no seed (códigos que nenhum endpoint exige). Exceção: permissões de
+        // escopo, conferidas no código (IAccessScope) em vez de num [Permission].
         var used = GetControllerPermissions().Select(u => u.Code).ToHashSet(StringComparer.Ordinal);
+        used.Add(PermissionCodes.DisciplinaryRecords.ViewAll);
 
         PermissionCodes.All.Select(p => p.Code).Should().BeSubsetOf(used);
     }

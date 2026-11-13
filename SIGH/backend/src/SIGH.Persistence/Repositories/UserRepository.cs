@@ -35,6 +35,8 @@ public class UserRepository : IUserRepository
                 .ThenInclude(ur => ur.Role)
                     .ThenInclude(r => r.RolePermissions)
                         .ThenInclude(rp => rp.Permission)
+            .Include(u => u.ManagementUnits)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken);
     }
 
@@ -45,6 +47,8 @@ public class UserRepository : IUserRepository
                 .ThenInclude(ur => ur.Role)
                     .ThenInclude(r => r.RolePermissions)
                         .ThenInclude(rp => rp.Permission)
+            .Include(u => u.ManagementUnits)
+            .AsSplitQuery()
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
     }

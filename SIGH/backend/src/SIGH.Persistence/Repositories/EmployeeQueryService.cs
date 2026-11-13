@@ -1,3 +1,4 @@
+using SIGH.Application.Common.Authorization;
 using Microsoft.EntityFrameworkCore;
 using SIGH.Application.Common.Models;
 using SIGH.Application.Employees.Common;
@@ -11,15 +12,22 @@ namespace SIGH.Persistence.Repositories;
 public class EmployeeQueryService : IEmployeeQueryService
 {
     private readonly SighDbContext _context;
+    private readonly IAccessScope _scope;
 
-    public EmployeeQueryService(SighDbContext context)
+    public EmployeeQueryService(SighDbContext context, IAccessScope scope)
     {
         _context = context;
+        _scope = scope;
     }
+
+    /// <summary>Funcionários no escopo do usuário (gerências vigentes, ou todos com ViewAll).</summary>
+    private async Task<IQueryable<Employee>> ScopedEmployeesAsync(CancellationToken cancellationToken) =>
+        _context.Employees.InScope(await _scope.GetFilterAsync(cancellationToken));
 
     public async Task<GetEmployeeByIdResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var employee = await (from e in _context.Employees
+        var scoped = await ScopedEmployeesAsync(cancellationToken);
+        var employee = await (from e in scoped
                               where e.Id == id
                               join c in _context.Companies on e.CompanyId equals c.Id into compJoin
                               from c in compJoin.DefaultIfEmpty()
@@ -113,8 +121,9 @@ public class EmployeeQueryService : IEmployeeQueryService
 
     public async Task<PagedResult<EmployeeListItemResponse>> SearchAsync(GetEmployeesQuery query, CancellationToken cancellationToken = default)
     {
+        var scoped = await ScopedEmployeesAsync(cancellationToken);
         IQueryable<EmployeeQueryRow> baseQuery =
-            from e in _context.Employees
+            from e in scoped
             join c in _context.Companies on e.CompanyId equals c.Id into compJoin
             from c in compJoin.DefaultIfEmpty()
             join j in _context.JobTitles on e.JobTitleId equals j.Id into jobJoin
@@ -246,11 +255,14 @@ public class EmployeeQueryService : IEmployeeQueryService
 
     public async Task<EmployeeFilterOptionsDto> GetFilterOptionsAsync(CancellationToken cancellationToken = default)
     {
-        var units = await _context.ManagementUnits.AsNoTracking().Where(m => m.IsActive)
+        // Máscara do escopo: o gestor não vê as gerências (nem os setores) fora do escopo nos filtros.
+        var scope = await _scope.GetFilterAsync(cancellationToken);
+        var unitIds = scope.ManagementUnitIds.ToList();
+        var units = await _context.ManagementUnits.AsNoTracking().Where(m => m.IsActive && (scope.All || unitIds.Contains(m.Id)))
             .OrderBy(m => m.Code).ThenBy(m => m.Name)
             .Select(m => new OrganizationOptionDto(m.Id, m.Code, m.Name, null))
             .ToListAsync(cancellationToken);
-        var departments = await _context.Departments.AsNoTracking().Where(d => d.IsActive)
+        var departments = await _context.Departments.AsNoTracking().Where(d => d.IsActive && (scope.All || unitIds.Contains(d.ManagementUnitId)))
             .OrderBy(d => d.Name)
             .Select(d => new OrganizationOptionDto(d.Id, d.Code, d.Name, d.ManagementUnitId))
             .ToListAsync(cancellationToken);

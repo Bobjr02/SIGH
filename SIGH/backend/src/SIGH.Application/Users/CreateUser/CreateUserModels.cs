@@ -10,7 +10,9 @@ public record CreateUserRequest(
     string Email,
     string Cpf,
     string? InitialPassword,
-    List<Guid> RoleIds
+    List<Guid> RoleIds,
+    // Gerências (obrigatório se um dos perfis for Gestor).
+    List<Guid>? ManagementUnitIds = null
 );
 
 public record CreateUserResponse(

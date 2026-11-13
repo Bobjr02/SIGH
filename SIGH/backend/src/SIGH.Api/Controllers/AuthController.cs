@@ -71,6 +71,7 @@ public class AuthController : BaseController
     [HttpPost("logout")]
     [Authorize]
     [AllowWhilePasswordChangeRequired]
+    [AllowRevokedSession]
     [ProducesResponseType(typeof(Result<LogoutResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<Result<LogoutResponse>>> Logout(

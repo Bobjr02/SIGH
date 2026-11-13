@@ -169,7 +169,7 @@ export const EmployeeDetailPage: React.FC = () => {
       kind: 'case' as const,
       title: `Processo ${c.caseNumber} - ${c.title}`,
       subtitle: `${c.status} · ${c.measuresCount} medida(s)`,
-      link: `/disciplinary/cases/${c.caseId}`,
+      link: `/medidas/${c.caseId}`,
     })),
     ...(measures.data?.items ?? []).map((m) => ({
       key: `measure-${m.measureId}`,
@@ -177,7 +177,7 @@ export const EmployeeDetailPage: React.FC = () => {
       kind: 'measure' as const,
       title: m.measureType,
       subtitle: `Processo ${m.caseNumber}${m.effectiveTo ? ` · até ${formatDate(m.effectiveTo)}` : ''}`,
-      link: `/disciplinary/cases/${m.caseId}`,
+      link: `/medidas/${m.caseId}`,
     })),
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
 

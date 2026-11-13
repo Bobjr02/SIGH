@@ -1,111 +1,106 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paper, Typography, Box, Button, Card, CardContent } from '@mui/material';
-import { Shield, BookOpen, Gavel, PlusCircle } from 'lucide-react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { Box, Button, Paper, Typography } from '@mui/material';
+import { PlusCircle } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { PERMISSIONS } from '../auth/permissions';
+import { recordErrorMessage, recordKeys, recordsApi, RecordStatus, type RecordFilters } from '../features/records/api/recordsApi';
+import { RecordsTable } from '../features/records/components/RecordsTable';
 
-export const Home: React.FC = () => {
+const Section: React.FC<{
+  title: string;
+  testId: string;
+  filters: RecordFilters;
+  emptyMessage: string;
+  highlightRejected?: boolean;
+  seeAll?: string;
+}> = ({ title, testId, filters: initial, emptyMessage, highlightRejected, seeAll }) => {
   const navigate = useNavigate();
+  const [filters, setFilters] = useState<RecordFilters>({ pageNumber: 1, pageSize: 10, ...initial });
+  const list = useQuery({ queryKey: recordKeys.list(filters), queryFn: () => recordsApi.list(filters), placeholderData: keepPreviousData });
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1000, mx: 'auto' }}>
-      <Paper
-        elevation={0}
-        sx={{
-          p: 4,
-          mb: 4,
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-          backgroundColor: '#ffffff',
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <Shield size={36} color="#d97706" />
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 800, color: '#1e293b' }}>
-              SIGH - Módulo de Gestão Disciplinar
-            </Typography>
+    <Box component="section" aria-label={title} data-testid={testId} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h6" component="h2" sx={{ fontWeight: 700 }}>
+          {title}
+        </Typography>
+        {seeAll && (
+          <Button size="small" onClick={() => navigate(seeAll)}>
+            Ver todas
+          </Button>
+        )}
+      </Box>
+      <RecordsTable
+        data={list.data}
+        isLoading={list.isLoading}
+        error={list.isError ? recordErrorMessage(list.error, 'Erro ao carregar as medidas.') : null}
+        emptyMessage={emptyMessage}
+        highlightRejected={highlightRejected}
+        onPageChange={(pageNumber) => setFilters((f) => ({ ...f, pageNumber }))}
+      />
+    </Box>
+  );
+};
 
-            <Typography variant="body2" color="text.secondary">
-              Sistema Inteligente de Gestão de Histórico Disciplinar (Sprint 6.4)
-            </Typography>
-          </Box>
+/**
+ * Página inicial por perfil:
+ * - aprovador: a fila de pendentes;
+ * - registrante: as suas medidas, com destaque para as rejeitadas;
+ * - gestor: as medidas das suas gerências;
+ * - jurídico e administrador: a lista geral.
+ */
+export const Home: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, hasPermission } = useAuth();
+  const canView = hasPermission(PERMISSIONS.DISCIPLINARY_RECORDS_VIEW);
+  const canRegister = hasPermission(PERMISSIONS.DISCIPLINARY_RECORDS_REGISTER);
+  const canApprove = hasPermission(PERMISSIONS.DISCIPLINARY_RECORDS_APPROVE);
+  const fullScope = hasPermission(PERMISSIONS.DISCIPLINARY_RECORDS_VIEW_ALL);
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
+            Olá, {user?.fullName?.split(' ')[0]}
+          </Typography>
+          <Typography color="text.secondary">SIGH — medidas disciplinares da USGA</Typography>
         </Box>
+        {canRegister && (
+          <Button variant="contained" startIcon={<PlusCircle size={16} />} onClick={() => navigate('/medidas/registrar')}>
+            Registrar medida
+          </Button>
+        )}
       </Paper>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
-          gap: 3,
-        }}
-      >
-        <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%' }}>
-          <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Box sx={{ mb: 2 }}>
-              <Gavel size={32} color="#2563eb" />
-            </Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              Processos Disciplinares
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, mb: 2 }}>
-              Consulte, acompanhe, abra investigações, registre decisões e aplique medidas disciplinares.
-            </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              onClick={() => navigate('/disciplinary/cases')}
-            >
-              Ver Processos
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%' }}>
-          <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Box sx={{ mb: 2 }}>
-              <BookOpen size={32} color="#0284c7" />
-            </Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              Tipos de Infração
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, mb: 2 }}>
-              Gerencie os tipos de infração, gravidades padrão, exigências de investigação e enquadramento.
-            </Typography>
-            <Button
-              variant="outlined"
-              color="primary"
-              fullWidth
-              onClick={() => navigate('/disciplinary/infraction-types')}
-            >
-              Ver Tipos de Infração
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%' }}>
-          <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Box sx={{ mb: 2 }}>
-              <PlusCircle size={32} color="#d97706" />
-            </Box>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-              Novo Processo
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, mb: 2 }}>
-              Autue um novo processo disciplinar informando a empresa, número e dados primários.
-            </Typography>
-            <Button
-              variant="contained"
-              color="secondary"
-              fullWidth
-              onClick={() => navigate('/disciplinary/cases/new')}
-            >
-              Autuar Processo
-            </Button>
-          </CardContent>
-        </Card>
-      </Box>
+      {canApprove && (
+        <Section
+          title="Aguardando a sua aprovação"
+          testId="home-pending"
+          filters={{ status: RecordStatus.PendingApproval }}
+          emptyMessage="Nenhuma medida aguardando aprovação."
+          seeAll="/medidas/aprovacoes"
+        />
+      )}
+      {canRegister && (
+        <Section title="Minhas medidas" testId="home-mine" filters={{ mine: true }} emptyMessage="Você ainda não registrou medidas." highlightRejected seeAll="/medidas" />
+      )}
+      {canView && !canApprove && !canRegister && (
+        <Section
+          title={fullScope ? 'Medidas' : 'Medidas das suas gerências'}
+          testId="home-all"
+          filters={{}}
+          emptyMessage="Nenhuma medida encontrada."
+          seeAll="/medidas"
+        />
+      )}
+      {!canView && (
+        <Typography color="text.secondary" data-testid="home-no-records">
+          Use o menu para acessar as funções do seu perfil.
+        </Typography>
+      )}
     </Box>
   );
 };

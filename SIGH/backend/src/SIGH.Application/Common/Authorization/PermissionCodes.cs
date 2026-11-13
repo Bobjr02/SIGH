@@ -18,6 +18,25 @@ public static class PermissionCodes
         public const string Create = "Users.Create";
         public const string ChangeStatus = "Users.ChangeStatus";
         public const string Unlock = "Users.Unlock";
+        public const string ManageRoles = "Users.ManageRoles";
+    }
+
+    public static class ManagementUnits
+    {
+        public const string Manage = "ManagementUnits.Manage";
+    }
+
+    /// <summary>
+    /// Fluxo real do RH: registrar a medida já decidida e aprová-la ou rejeitá-la.
+    /// As permissões do processo em etapas (<see cref="DisciplinaryCases"/>) continuam no código,
+    /// mas nenhum perfil semeado as recebe (exceto as de evidência).
+    /// </summary>
+    public static class DisciplinaryRecords
+    {
+        public const string View = "Disciplinary.Records.View";
+        public const string ViewAll = "Disciplinary.Records.ViewAll";
+        public const string Register = "Disciplinary.Records.Register";
+        public const string Approve = "Disciplinary.Records.Approve";
     }
 
     public static class Employees
@@ -91,6 +110,16 @@ public static class PermissionCodes
         new(Users.Create, "Criar usuários", "Cadastrar novos usuários no sistema."),
         new(Users.ChangeStatus, "Alterar status de usuários", "Ativar, inativar ou suspender usuários."),
         new(Users.Unlock, "Desbloquear usuários", "Desbloquear usuários bloqueados por tentativas de login."),
+        new(Users.ManageRoles, "Atribuir perfis e gerências", "Atribuir e retirar perfis e gerências de outros usuários, com validade."),
+
+        // Gerências
+        new(ManagementUnits.Manage, "Editar gerências", "Editar os nomes das gerências (Chave Organização do SAP)."),
+
+        // Medidas disciplinares (fluxo simplificado)
+        new(DisciplinaryRecords.View, "Consultar medidas", "Consultar medidas disciplinares dentro do escopo de gerências do usuário."),
+        new(DisciplinaryRecords.ViewAll, "Consultar todas as gerências", "Escopo total: dados de funcionários e medidas de todas as gerências."),
+        new(DisciplinaryRecords.Register, "Registrar medidas", "Registrar medidas já decididas, corrigir e cancelar as rejeitadas e anexar documentos."),
+        new(DisciplinaryRecords.Approve, "Aprovar medidas", "Aprovar ou rejeitar medidas registradas por outra pessoa."),
 
         // Funcionários
         new(Employees.View, "Visualizar funcionários", "Consultar a lista e os detalhes de funcionários."),

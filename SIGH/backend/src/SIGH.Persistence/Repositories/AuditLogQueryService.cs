@@ -8,15 +8,22 @@ namespace SIGH.Persistence.Repositories;
 public sealed class AuditLogQueryService : IAuditLogQueryService
 {
     private readonly SighDbContext _context;
+    private readonly SIGH.Application.Common.Authorization.IAccessScope? _scope;
 
-    public AuditLogQueryService(SighDbContext context)
+    public AuditLogQueryService(SighDbContext context, SIGH.Application.Common.Authorization.IAccessScope? scope = null)
     {
         _context = context;
+        _scope = scope;
     }
 
     public Task<PagedResult<AuditLogDto>> SearchAsync(AuditLogFilter filter, CancellationToken cancellationToken = default)
     {
         var query = _context.AuditLogs.AsNoTracking();
+
+        // A trilha geral mistura dados de todas as gerências: só quem tem escopo total a consulta.
+        // (Com escopo parcial a lista vem vazia; a trilha de UM processo usa o escopo do processo.)
+        if (_scope is not null && !_scope.HasFullAccess)
+            query = query.Where(_ => false);
 
         if (!string.IsNullOrWhiteSpace(filter.EntityName))
             query = query.Where(a => a.Entity == filter.EntityName.Trim());

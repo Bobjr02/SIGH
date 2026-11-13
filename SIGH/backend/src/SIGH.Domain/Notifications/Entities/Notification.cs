@@ -16,6 +16,12 @@ public class Notification : AuditableEntity
     public DateTimeOffset? DueDate { get; private set; }
     public string? Metadata { get; private set; }
 
+    /// <summary>
+    /// Processo/medida a que a notificação se refere. Usado para o escopo por gerência: quem perdeu
+    /// o acesso ao funcionário deixa de ver a notificação.
+    /// </summary>
+    public Guid? DisciplinaryCaseId { get; private set; }
+
     // EF Core constructor
     protected Notification() : base() { }
 
@@ -27,7 +33,8 @@ public class Notification : AuditableEntity
         string type = "Info",
         string priority = "Medium",
         DateTimeOffset? dueDate = null,
-        string? metadata = null) : base()
+        string? metadata = null,
+        Guid? disciplinaryCaseId = null) : base()
     {
         if (companyId == Guid.Empty)
             throw new ArgumentException("CompanyId é obrigatório.", nameof(companyId));
@@ -49,6 +56,7 @@ public class Notification : AuditableEntity
         Priority = string.IsNullOrWhiteSpace(priority) ? "Medium" : priority.Trim();
         DueDate = dueDate;
         Metadata = metadata;
+        DisciplinaryCaseId = disciplinaryCaseId;
         IsRead = false;
         ReadAt = null;
         IsExpired = false;
@@ -62,9 +70,10 @@ public class Notification : AuditableEntity
         string type = "Info",
         string priority = "Medium",
         DateTimeOffset? dueDate = null,
-        string? metadata = null)
+        string? metadata = null,
+        Guid? disciplinaryCaseId = null)
     {
-        return new Notification(companyId, userId, title, message, type, priority, dueDate, metadata);
+        return new Notification(companyId, userId, title, message, type, priority, dueDate, metadata, disciplinaryCaseId);
     }
 
     public void MarkAsRead(DateTimeOffset readAt)

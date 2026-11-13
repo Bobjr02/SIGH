@@ -17,6 +17,23 @@ public class DisciplinaryDecision : AuditableEntity
     public DateTimeOffset? ApprovedAt { get; private set; }
     public DecisionStatus Status { get; private set; } = DecisionStatus.Draft;
 
+    // Medida proposta (fluxo simplificado do RH): o registrante informa a medida já decidida; ela só vira
+    // DisciplinaryMeasure quando a decisão é aprovada.
+    public DisciplinaryMeasureType? ProposedMeasureType { get; private set; }
+    public DateOnly? MeasureDate { get; private set; }
+    public DateOnly? SuspensionStart { get; private set; }
+    public DateOnly? SuspensionEnd { get; private set; }
+
+    // Rejeição: quem, quando e por quê (a decisão rejeitada fica na história do processo).
+    public Guid? RejectedByUserId { get; private set; }
+    public DateTimeOffset? RejectedAt { get; private set; }
+    public string? RejectionReason { get; private set; }
+
+    /// <summary>Dias de suspensão, contando o primeiro e o último dia.</summary>
+    public int? SuspensionDays => SuspensionStart is { } start && SuspensionEnd is { } end
+        ? end.DayNumber - start.DayNumber + 1
+        : null;
+
     // EF Core
     protected DisciplinaryDecision() : base() { }
 
@@ -74,6 +91,49 @@ public class DisciplinaryDecision : AuditableEntity
 
     public bool RequiresApproval() => DecisionType != DecisionType.NoViolation;
 
+    /// <summary>Tipo de decisão correspondente a uma medida do registro simplificado.</summary>
+    public static DecisionType DecisionTypeFor(DisciplinaryMeasureType measureType) => measureType switch
+    {
+        DisciplinaryMeasureType.VerbalWarning or DisciplinaryMeasureType.WrittenWarning => DecisionType.FormalWarning,
+        DisciplinaryMeasureType.Suspension => DecisionType.Suspension,
+        DisciplinaryMeasureType.JustCauseTermination => DecisionType.JustCauseTermination,
+        DisciplinaryMeasureType.TerminationRecommendation => DecisionType.TerminationRecommendation,
+        _ => DecisionType.Other
+    };
+
+    /// <summary>
+    /// Registra a medida já decidida que acompanha a decisão. Só no rascunho. Suspensão exige início e fim
+    /// (fim igual ou posterior ao início); os outros tipos não têm período.
+    /// </summary>
+    public void ProposeMeasure(DisciplinaryMeasureType measureType, DateOnly measureDate, DateOnly? suspensionStart = null, DateOnly? suspensionEnd = null)
+    {
+        if (Status != DecisionStatus.Draft)
+            throw new BusinessRuleValidationException("A medida proposta só pode ser definida enquanto a decisão é rascunho.");
+
+        if (measureType == DisciplinaryMeasureType.Undefined || !Enum.IsDefined(measureType))
+            throw new BusinessRuleValidationException("O tipo de medida disciplinar é inválido.");
+
+        if (measureDate == default)
+            throw new BusinessRuleValidationException("A data da medida é obrigatória.");
+
+        if (measureType == DisciplinaryMeasureType.Suspension)
+        {
+            if (suspensionStart is null || suspensionEnd is null)
+                throw new BusinessRuleValidationException("A suspensão exige data de início e de fim.");
+            if (suspensionEnd < suspensionStart)
+                throw new BusinessRuleValidationException("O fim da suspensão não pode ser anterior ao início.");
+        }
+        else if (suspensionStart is not null || suspensionEnd is not null)
+        {
+            throw new BusinessRuleValidationException("Somente a suspensão tem período de início e fim.");
+        }
+
+        ProposedMeasureType = measureType;
+        MeasureDate = measureDate;
+        SuspensionStart = suspensionStart;
+        SuspensionEnd = suspensionEnd;
+    }
+
     internal void UpdateBeforeApproval(DecisionType decisionType, string summary, string reasoning)
     {
         if (Status != DecisionStatus.Draft)
@@ -127,7 +187,7 @@ public class DisciplinaryDecision : AuditableEntity
         Status = DecisionStatus.Approved;
     }
 
-    internal void Reject(Guid rejectedByUserId, string reason)
+    internal void Reject(Guid rejectedByUserId, string reason, DateTimeOffset? rejectedAt = null)
     {
         if (rejectedByUserId == Guid.Empty)
             throw new BusinessRuleValidationException("O usuário responsável pela rejeição é obrigatório.");
@@ -137,6 +197,13 @@ public class DisciplinaryDecision : AuditableEntity
 
         EnsureReviewerIsNotDecider(rejectedByUserId, "rejeitar");
 
+        var trimmedReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        if (trimmedReason?.Length > DisciplinaryDomainConstants.ReasonMaxLength)
+            throw new BusinessRuleValidationException($"O motivo da rejeição não pode exceder {DisciplinaryDomainConstants.ReasonMaxLength} caracteres.");
+
+        RejectedByUserId = rejectedByUserId;
+        RejectedAt = rejectedAt ?? DateTimeOffset.UtcNow;
+        RejectionReason = trimmedReason;
         Status = DecisionStatus.Rejected;
     }
 

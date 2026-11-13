@@ -1,3 +1,4 @@
+using SIGH.Application.Common.Authorization;
 using Microsoft.EntityFrameworkCore;
 using SIGH.Application.Common.Models;
 using SIGH.Application.Disciplinary.Reports.DTOs;
@@ -10,11 +11,17 @@ namespace SIGH.Persistence.Repositories.Disciplinary;
 public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryRepository
 {
     private readonly SighDbContext _context;
+    private readonly SIGH.Application.Common.Authorization.IAccessScope? _scope;
 
-    public DisciplinaryReportQueryRepository(SighDbContext context)
+    public DisciplinaryReportQueryRepository(SighDbContext context, SIGH.Application.Common.Authorization.IAccessScope? scope = null)
     {
         _context = context;
+        _scope = scope;
     }
+
+    /// <summary>Escopo por gerência (tudo, sem serviço de escopo: uso fora de requisição/testes).</summary>
+    private async Task<SIGH.Application.Common.Authorization.AccessScopeFilter> ScopeAsync(CancellationToken cancellationToken) =>
+        _scope is null ? SIGH.Application.Common.Authorization.AccessScopeFilter.Everything : await _scope.GetFilterAsync(cancellationToken);
 
     public async Task<PagedResult<DisciplinaryMeasureSummaryDto>> GetMeasuresAsync(
         GetDisciplinaryMeasuresQuery query,
@@ -29,6 +36,14 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
                   !c.IsDeleted &&
                   c.CompanyId == authorizedCompanyId
             select new { Measure = m, DisciplinaryCase = c };
+
+        // Escopo: a medida do funcionário que pertence HOJE a uma gerência do escopo.
+        var scope = await ScopeAsync(cancellationToken);
+        if (!scope.All)
+        {
+            var scopedEmployees = _context.Employees.InScope(scope);
+            dbQuery = dbQuery.Where(x => scopedEmployees.Any(e => e.Id == x.Measure.EmployeeId));
+        }
 
         if (query.EmployeeId.HasValue)
         {
@@ -114,7 +129,7 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
         Guid authorizedCompanyId,
         CancellationToken cancellationToken = default)
     {
-        var dbQuery = BuildCasesReportQuery(query, authorizedCompanyId);
+        var dbQuery = BuildCasesReportQuery(query, authorizedCompanyId, await ScopeAsync(cancellationToken));
 
         var totalCount = await dbQuery.CountAsync(cancellationToken);
 
@@ -136,7 +151,7 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
         int maximumRecords,
         CancellationToken cancellationToken = default)
     {
-        var dbQuery = BuildCasesReportQuery(query, authorizedCompanyId);
+        var dbQuery = BuildCasesReportQuery(query, authorizedCompanyId, await ScopeAsync(cancellationToken));
 
         dbQuery = ApplySorting(dbQuery, query.SortBy, query.SortDirection);
 
@@ -149,10 +164,12 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
 
     private IQueryable<SIGH.Domain.Disciplinary.Entities.DisciplinaryCase> BuildCasesReportQuery(
         GetDisciplinaryCaseReportQuery query,
-        Guid authorizedCompanyId)
+        Guid authorizedCompanyId,
+        AccessScopeFilter scope)
     {
         var dbQuery = _context.DisciplinaryCases
             .AsNoTracking()
+            .InScope(_context.DisciplinaryCaseEmployees, _context.Employees, scope)
             .Include(c => c.Occurrences.Where(o => !o.IsDeleted))
             .Include(c => c.Evidences.Where(e => !e.IsDeleted))
             .Include(c => c.Decisions.Where(d => !d.IsDeleted))

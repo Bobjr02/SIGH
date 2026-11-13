@@ -13,6 +13,7 @@ public static class EmailTemplates
     public const string PasswordResetTemplate = "PasswordReset";
     public const string AccountCreatedTemplate = "AccountCreated";
     public const string DeadlineAlertTemplate = "DeadlineAlert";
+    public const string RecordNoticeTemplate = "RecordNotice";
 
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
     private static readonly TimeZoneInfo Brasilia = FindBrasilia();
@@ -104,6 +105,26 @@ public static class EmailTemplates
             LinkFallback(link));
 
         return new EmailContent(DeadlineAlertTemplate, subject, html, text.ToString());
+    }
+
+    /// <summary>Aviso de medida disciplinar (registrada, aprovada, rejeitada, pendente). Sem dados do funcionário.</summary>
+    public static EmailContent RecordNotice(string fullName, string title, string message, string link)
+    {
+        var subject = $"{title} - SIGH";
+        var text = new StringBuilder()
+            .AppendLine($"Olá, {fullName}.")
+            .AppendLine()
+            .AppendLine(message)
+            .AppendLine()
+            .AppendLine($"Abra no SIGH: {link}");
+
+        var html = Layout(subject,
+            $"<p>Olá, {E(fullName)}.</p>" +
+            $"<p>{E(message)}</p>" +
+            Button(link, "Abrir no SIGH") +
+            LinkFallback(link));
+
+        return new EmailContent(RecordNoticeTemplate, subject, html, text.ToString());
     }
 
     private static string E(string value) => WebUtility.HtmlEncode(value);

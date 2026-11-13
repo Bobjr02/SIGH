@@ -22,15 +22,14 @@ const NotificationsPage = lazy(() =>
 const InfractionTypesPage = lazy(() =>
   import('../features/disciplinary/pages/InfractionTypesPage').then((m) => ({ default: m.InfractionTypesPage })),
 );
-const DisciplinaryCasesListPage = lazy(() =>
-  import('../features/disciplinary/pages/DisciplinaryCasesListPage').then((m) => ({ default: m.DisciplinaryCasesListPage })),
-);
-const CreateDisciplinaryCasePage = lazy(() =>
-  import('../features/disciplinary/pages/CreateDisciplinaryCasePage').then((m) => ({ default: m.CreateDisciplinaryCasePage })),
-);
-const DisciplinaryCaseDetailPage = lazy(() =>
-  import('../features/disciplinary/pages/DisciplinaryCaseDetailPage').then((m) => ({ default: m.DisciplinaryCaseDetailPage })),
-);
+// Fluxo real do RH (registrar → aprovar/rejeitar). As telas do processo em etapas saíram do menu e das rotas.
+const RecordsListPage = lazy(() => import('../features/records/pages/RecordsListPage'));
+const RecordFormPage = lazy(() => import('../features/records/pages/RecordFormPage'));
+const RecordDetailPage = lazy(() => import('../features/records/pages/RecordDetailPage'));
+const PendingApprovalsPage = lazy(() => import('../features/records/pages/PendingApprovalsPage'));
+const UsersPage = lazy(() => import('../features/admin/pages/UsersPage'));
+const UserDetailPage = lazy(() => import('../features/admin/pages/UserDetailPage'));
+const ManagementUnitsPage = lazy(() => import('../features/admin/pages/ManagementUnitsPage'));
 const DisciplinaryDashboardPage = lazy(() =>
   import('../features/disciplinary-reports/pages/DisciplinaryDashboardPage').then((m) => ({ default: m.DisciplinaryDashboardPage })),
 );
@@ -79,12 +78,14 @@ export const AppRoutes: React.FC = () => {
               path="/disciplinary/infraction-types"
               element={guard(PERMISSIONS.DISCIPLINARY_INFRACTION_TYPES_VIEW, <InfractionTypesPage />)}
             />
-            <Route path="/disciplinary/cases" element={guard(PERMISSIONS.DISCIPLINARY_CASES_VIEW, <DisciplinaryCasesListPage />)} />
-            <Route
-              path="/disciplinary/cases/new"
-              element={guard(PERMISSIONS.DISCIPLINARY_CASES_CREATE, <CreateDisciplinaryCasePage />)}
-            />
-            <Route path="/disciplinary/cases/:id" element={guard(PERMISSIONS.DISCIPLINARY_CASES_VIEW, <DisciplinaryCaseDetailPage />)} />
+            <Route path="/medidas" element={guard(PERMISSIONS.DISCIPLINARY_RECORDS_VIEW, <RecordsListPage />)} />
+            <Route path="/medidas/registrar" element={guard(PERMISSIONS.DISCIPLINARY_RECORDS_REGISTER, <RecordFormPage />)} />
+            <Route path="/medidas/aprovacoes" element={guard(PERMISSIONS.DISCIPLINARY_RECORDS_APPROVE, <PendingApprovalsPage />)} />
+            <Route path="/medidas/:id" element={guard(PERMISSIONS.DISCIPLINARY_RECORDS_VIEW, <RecordDetailPage />)} />
+            <Route path="/medidas/:id/corrigir" element={guard(PERMISSIONS.DISCIPLINARY_RECORDS_REGISTER, <RecordFormPage />)} />
+            <Route path="/admin/usuarios" element={guard(PERMISSIONS.USERS_VIEW, <UsersPage />)} />
+            <Route path="/admin/usuarios/:id" element={guard(PERMISSIONS.USERS_VIEW, <UserDetailPage />)} />
+            <Route path="/admin/gerencias" element={guard(PERMISSIONS.MANAGEMENT_UNITS_MANAGE, <ManagementUnitsPage />)} />
             <Route
               path="/disciplinary/reports/dashboard"
               element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_DASHBOARD, <DisciplinaryDashboardPage />)}
@@ -109,7 +110,7 @@ export const AppRoutes: React.FC = () => {
             <Route path="/employees" element={guard(PERMISSIONS.EMPLOYEES_VIEW, <EmployeesListPage />)} />
             <Route path="/employees/import" element={guard(PERMISSIONS.EMPLOYEES_IMPORT, <EmployeeImportPage />)} />
             <Route path="/employees/:id" element={guard(PERMISSIONS.EMPLOYEES_VIEW, <EmployeeDetailPage />)} />
-            <Route path="*" element={<Navigate to="/disciplinary/cases" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>
       </Routes>

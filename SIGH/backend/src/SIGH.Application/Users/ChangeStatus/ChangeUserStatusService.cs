@@ -1,5 +1,6 @@
 using SIGH.Application.Common.Interfaces;
 using SIGH.Application.Interfaces;
+using SIGH.Application.Users.Access;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Exceptions;
 using SIGH.Domain.Repositories;
@@ -11,15 +12,18 @@ public class ChangeUserStatusService : IChangeUserStatusService
     private readonly IApplicationDbContext _context;
     private readonly IUserRepository _userRepository;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ICurrentUserService? _currentUser;
 
     public ChangeUserStatusService(
         IApplicationDbContext context,
         IUserRepository userRepository,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        ICurrentUserService? currentUser = null)
     {
         _context = context;
         _userRepository = userRepository;
         _dateTimeProvider = dateTimeProvider;
+        _currentUser = currentUser;
     }
 
     public async Task<ChangeUserStatusResponse> ChangeUserStatusAsync(ChangeUserStatusRequest request, CancellationToken cancellationToken = default)
@@ -31,14 +35,22 @@ public class ChangeUserStatusService : IChangeUserStatusService
             throw new BusinessRuleValidationException("Usuário não encontrado.");
         }
 
+        var losesAccess = request.NewStatus is UserStatus.Inactive or UserStatus.Locked or UserStatus.Suspended;
+
+        if (_currentUser?.UserId is { } actorId)
+            UserAccessRules.EnsureNotSelf(actorId, user.Id);
+
+        if (losesAccess)
+            await UserAccessRules.EnsureNotLastActiveAdministratorAsync(_context, user.Id, _dateTimeProvider.UtcNow, cancellationToken);
+
         user.Status = request.NewStatus;
 
         // Se o novo status inativa/bloqueia o usuário, revoga os tokens e sessões ativas
-        if (request.NewStatus == UserStatus.Inactive ||
-            request.NewStatus == UserStatus.Locked ||
-            request.NewStatus == UserStatus.Suspended)
+        // e troca o SecurityStamp: o access token em uso para de valer na próxima requisição.
+        if (losesAccess)
         {
             var now = _dateTimeProvider.UtcNow;
+            user.RotateSecurityStamp();
 
             var activeTokens = await _userRepository.GetActiveRefreshTokensByUserIdAsync(user.Id, cancellationToken);
 

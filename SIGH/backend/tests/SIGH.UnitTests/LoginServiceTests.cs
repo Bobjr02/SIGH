@@ -52,7 +52,7 @@ public class LoginServiceTests
         await context.SaveChangesAsync();
 
         var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
-        mockJwtGenerator.Setup(j => j.GenerateToken(It.IsAny<User>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()))
+        mockJwtGenerator.Setup(j => j.GenerateToken(It.IsAny<User>(), It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>(), It.IsAny<DateTimeOffset?>()))
             .Returns("fake-jwt-access-token");
 
         var mockDateTime = new Mock<IDateTimeProvider>();

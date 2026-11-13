@@ -11,8 +11,10 @@ public class UserRoleConfiguration : AuditableEntityConfiguration<UserRole>
 
         builder.ToTable("UserRoles");
 
+        // Um vínculo ATIVO por perfil; o retirado (exclusão lógica) fica na história e permite reatribuir.
         builder.HasIndex(ur => new { ur.UserId, ur.RoleId })
             .IsUnique()
+            .HasFilter("[IsDeleted] = 0")
             .HasDatabaseName("IX_UserRoles_UserId_RoleId");
 
         builder.HasOne(ur => ur.User)

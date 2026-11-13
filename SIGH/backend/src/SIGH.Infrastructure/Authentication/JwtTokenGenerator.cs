@@ -19,7 +19,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         _jwtOptions = jwtOptions.Value;
     }
 
-    public string GenerateToken(User user, IEnumerable<string> roles, IEnumerable<string> permissions)
+    public string GenerateToken(User user, IEnumerable<string> roles, IEnumerable<string> permissions, DateTimeOffset? accessChangesAt = null)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         // A chave é validada no startup (JwtOptions + ValidateOnStart); não há segredo de fallback.
@@ -30,8 +30,14 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Email, user.Email),
             new(ClaimTypes.Name, user.FullName),
-            new("status", user.Status.ToString())
+            new("status", user.Status.ToString()),
+            new(SighClaimTypes.SecurityStamp, user.SecurityStamp)
         };
+
+        if (accessChangesAt is { } changesAt)
+        {
+            claims.Add(new Claim(SighClaimTypes.AccessChangesAt, changesAt.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture), ClaimValueTypes.Integer64));
+        }
 
         // CPF nunca vai no token (dado pessoal, e o JWT é apenas codificado, não cifrado).
         if (user.MustChangePassword)

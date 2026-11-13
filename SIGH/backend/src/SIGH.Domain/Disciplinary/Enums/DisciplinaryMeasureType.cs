@@ -8,5 +8,7 @@ public enum DisciplinaryMeasureType
     WrittenWarning = 3,
     Suspension = 4,
     TerminationRecommendation = 5,
-    Other = 6
+    Other = 6,
+    /// <summary>Demissão por justa causa. Não altera o status do funcionário: o SAP é a fonte da verdade.</summary>
+    JustCauseTermination = 7
 }

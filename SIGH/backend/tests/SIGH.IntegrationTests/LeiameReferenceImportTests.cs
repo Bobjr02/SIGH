@@ -94,17 +94,15 @@ public class LeiameReferenceImportTests : IntegrationTestBase
         preview.Errors.Should().OnlyContain(e => e.Row > 1);
         preview.Errors.Should().NotContain(e => Regex.IsMatch(e.Message, @"\d{11}"), "o erro nunca traz o CPF");
 
-        // 50090000 — o LEIAME diz "Setor mudou", mas o arquivo do pacote NÃO altera nenhuma coluna dessa linha
-        // (Uni.Org 13205 / SERRALHARIA nos dois arquivos). Resultado real: sem mudança. Ver o teste
-        // SectorChange_IsUpdatedWithAudit, que cobre a regra com a célula alterada em memória.
-        preview.Updated.Should().NotContain(c => c.EmployeeNumber == "50090000");
-        preview.Unchanged.Should().Contain("50090000");
+        // 50090000 — setor mudou (13205 SERRALHARIA → 13110 MANUTENCAO INDUSTRIAL) → atualizado
+        preview.Updated.Single(c => c.EmployeeNumber == "50090000").Changes
+            .Should().ContainSingle().Which.Should().BeEquivalentTo(new FieldChange("Setor (Uni.Org)", "13205", "13110"));
 
         // 50090005 (CPF começa com zero), 50090007 (dona do CPF repetido) e demais: sem mudança
-        // (43 linhas = 39 existentes + 4 novas; 39 - 2 alteradas = 37 sem mudança)
+        // (43 linhas = 39 existentes + 4 novas; 39 - 3 alteradas = 36 sem mudança)
         preview.Unchanged.Should().Contain(["50090005", "50090007"]);
         preview.Summary.Should().BeEquivalentTo(new ImportSummaryDto(
-            TotalRows: 43, Created: 1, Updated: 2, Terminated: 0, TerminatedByAbsence: 1, Reactivated: 0, Unchanged: 37,
+            TotalRows: 43, Created: 1, Updated: 3, Terminated: 0, TerminatedByAbsence: 1, Reactivated: 0, Unchanged: 36,
             Errors: 3, Warnings: preview.Summary.Warnings));
         preview.RequiresMassTerminationConfirmation.Should().BeFalse("1 ausente em 40 ativos = 2,5%");
 
@@ -123,36 +121,16 @@ public class LeiameReferenceImportTests : IntegrationTestBase
         all.Should().NotContainKeys("59999999", "59999997", "59999996");
         all["50090005"].Cpf.Should().Be("01687731390").And.StartWith("0");
         all["50090007"].FullName.Should().Be("FRANCISCA PEDRO COSTA SOUZA TESTE");
+        (await db.Departments.SingleAsync(d => d.Id == all["50090000"].DepartmentId)).Name.Should().Be("MANUTENCAO INDUSTRIAL");
 
         // Auditoria dos campos atualizados.
         var audits = await db.AuditLogs.AsNoTracking().Where(a => a.Entity == "Employee" && a.Action == "Updated").ToListAsync();
         audits.Should().Contain(a => a.EntityId == all["50090001"].Id.ToString() && a.NewValues!.Contains("\"Status\":\"OnLeave\""));
         audits.Should().Contain(a => a.EntityId == all["50090002"].Id.ToString() && a.NewValues!.Contains("TESTE JUNIOR"));
         audits.Should().Contain(a => a.EntityId == all["50090010"].Id.ToString() && a.NewValues!.Contains("\"Status\":\"Terminated\""));
-        audits.Should().HaveCount(3, "só as 3 matrículas alteradas geram auditoria");
-    }
-
-    [Fact]
-    public async Task SectorChange_IsUpdatedWithAudit()
-    {
-        // Complementa a linha 50090000 do LEIAME ("Setor mudou"): o arquivo do pacote não traz a mudança, então
-        // a mesma atualização é usada com o setor da 50090000 alterado em memória (o arquivo original não muda).
-        using var admin = await AdminAsync();
-        await ImportAsync(admin, InitialLoad);
-        var changed = WithCells(Update, "50090000", ("Uni.Org", "13210"), ("Descr.Unid.Org.", "CALDEIRARIA"));
-
-        var preview = await PreviewAsync(admin, changed);
-
-        preview.Updated.Single(c => c.EmployeeNumber == "50090000").Changes
-            .Should().ContainSingle().Which.Should().BeEquivalentTo(new FieldChange("Setor (Uni.Org)", "13205", "13210"));
-        (await ConfirmAsync(admin, preview.BatchId, changed)).StatusCode.Should().Be(HttpStatusCode.OK);
-
-        await using var scope = Factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<SighDbContext>();
-        var employee = await db.Employees.AsNoTracking().SingleAsync(e => e.EmployeeNumber == "50090000");
-        (await db.Departments.SingleAsync(d => d.Id == employee.DepartmentId)).Name.Should().Be("CALDEIRARIA");
-        (await db.AuditLogs.AnyAsync(a => a.Entity == "Employee" && a.EntityId == employee.Id.ToString()
-                                          && a.Action == "Updated" && a.NewValues!.Contains("DepartmentId"))).Should().BeTrue();
+        audits.Should().Contain(a => a.EntityId == all["50090000"].Id.ToString() && a.NewValues!.Contains("DepartmentId"),
+            "a troca de setor é auditada com o campo alterado");
+        audits.Should().HaveCount(4, "só as 4 matrículas alteradas geram auditoria");
     }
 
     [Fact]
@@ -225,28 +203,6 @@ public class LeiameReferenceImportTests : IntegrationTestBase
         foreach (var cell in header.Elements<Cell>())
             columns.TryAdd(cell.InnerText, Regex.Match(cell.CellReference!.Value!, "^[A-Z]+").Value);
         return (columns, data);
-    }
-
-    private static byte[] WithCells(byte[] xlsx, string employeeNumber, params (string Header, string Value)[] changes)
-    {
-        var buffer = new MemoryStream();
-        buffer.Write(xlsx);
-        using (var doc = SpreadsheetDocument.Open(buffer, true))
-        {
-            var (columns, data) = Open(doc);
-            var row = data.Elements<Row>().Single(r => r.Elements<Cell>().Any(c =>
-                c.CellReference!.Value!.StartsWith(columns["Matrícula"] + r.RowIndex, StringComparison.Ordinal) && c.InnerText == employeeNumber));
-            foreach (var (headerName, value) in changes)
-            {
-                var cell = row.Elements<Cell>().Single(c => c.CellReference!.Value == columns[headerName] + row.RowIndex);
-                cell.DataType = CellValues.InlineString;
-                cell.CellValue = null;
-                cell.RemoveAllChildren();
-                cell.InlineString = new InlineString(new Text(value));
-            }
-            doc.WorkbookPart!.WorksheetParts.First().Worksheet.Save();
-        }
-        return buffer.ToArray();
     }
 
     private static byte[] WithoutColumn(byte[] xlsx, string headerName)

@@ -108,6 +108,9 @@ public class ChangePasswordService : IChangePasswordService
 
         var now = _dateTimeProvider.UtcNow;
 
+        // Senha trocada: tokens emitidos antes deixam de valer (o par novo abaixo já leva o stamp novo).
+        user.RotateSecurityStamp();
+
         // Revoga todos os refresh tokens anteriores: sessões abertas com a senha antiga
         // (inclusive as emitidas com a claim pwd_change_required) não podem mais ser renovadas.
         var activeRefreshTokens = await _userRepository.GetActiveRefreshTokensByUserIdAsync(user.Id, cancellationToken);
@@ -119,10 +122,10 @@ public class ChangePasswordService : IChangePasswordService
 
         // Novo par de tokens, já refletindo MustChangePassword = false.
         var userWithAccess = await _userRepository.GetByIdWithRolesAndPermissionsAsync(user.Id, cancellationToken);
-        var roles = userWithAccess?.GetActiveRoleNames() ?? new List<string>();
-        var permissions = userWithAccess?.GetActivePermissionCodes() ?? new List<string>();
+        var roles = userWithAccess?.GetActiveRoleNames(now) ?? new List<string>();
+        var permissions = userWithAccess?.GetActivePermissionCodes(now) ?? new List<string>();
 
-        var accessToken = _jwtTokenGenerator.GenerateToken(user, roles, permissions);
+        var accessToken = _jwtTokenGenerator.GenerateToken(user, roles, permissions, userWithAccess?.GetNextAccessChange(now));
         var rawRefreshToken = _refreshTokenGenerator.GenerateRefreshToken();
 
         var refreshTokenExpiresAt = now.AddDays(_tokenOptions.RefreshTokenExpirationInDays);
