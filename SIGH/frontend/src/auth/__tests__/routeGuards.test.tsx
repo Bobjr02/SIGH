@@ -104,20 +104,25 @@ describe('header', () => {
       refreshSucceeds(),
       meReturns(
         makeUser({
-          permissions: [PERMISSIONS.DISCIPLINARY_CASES_VIEW, PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_DASHBOARD],
+          permissions: [PERMISSIONS.DISCIPLINARY_RECORDS_VIEW, PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_DASHBOARD],
         }),
       ),
+      http.get(`${API}/disciplinary-records`, () => ok({ items: [], pageNumber: 1, pageSize: 10, totalCount: 0, totalPages: 0 })),
     );
 
     renderApp('/');
 
     const nav = await screen.findByRole('navigation', { name: 'Menu principal' });
-    expect(within(nav).getByRole('button', { name: /processos/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('button', { name: /^medidas$/i })).toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'Dashboard' })).toBeInTheDocument();
     expect(within(nav).queryByRole('button', { name: 'Relatórios' })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: 'Medidas' })).not.toBeInTheDocument();
     expect(within(nav).queryByRole('button', { name: 'Histórico' })).not.toBeInTheDocument();
     expect(within(nav).queryByRole('button', { name: /tipos de infração/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('button', { name: /registrar medida/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('button', { name: /aprovações pendentes/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('button', { name: /usuários/i })).not.toBeInTheDocument();
+    // O processo em etapas saiu do menu.
+    expect(within(nav).queryByRole('button', { name: /processos/i })).not.toBeInTheDocument();
     expect(within(nav).queryByRole('button', { name: /novo processo/i })).not.toBeInTheDocument();
   });
 
