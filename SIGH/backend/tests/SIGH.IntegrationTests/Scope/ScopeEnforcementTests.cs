@@ -80,11 +80,8 @@ public class ScopeEnforcementTests : IntegrationTestBase
         ["/api/v1/disciplinary-records/pending-count"] = new ScopeCase(Number(_ => "/api/v1/disciplinary-records/pending-count", d => d.GetInt32(), 1)),
 
         ["/api/v1/disciplinary-cases"] = new ScopeCase(Contains(_ => "/api/v1/disciplinary-cases?pageSize=100", s => s.Record131.ToString())),
-        ["/api/v1/DisciplinaryCases"] = new ScopeCase(Contains(_ => "/api/v1/DisciplinaryCases?pageSize=100", s => s.Record131.ToString())),
         ["/api/v1/disciplinary-cases/{id:guid}"] = new ScopeCase(Found(s => $"/api/v1/disciplinary-cases/{s.Record131}")),
-        ["/api/v1/DisciplinaryCases/{id:guid}"] = new ScopeCase(Found(s => $"/api/v1/DisciplinaryCases/{s.Record131}")),
         ["/api/v1/disciplinary-cases/{id:guid}/audit-trail"] = new ScopeCase(Found(s => $"/api/v1/disciplinary-cases/{s.Record131}/audit-trail")),
-        ["/api/v1/DisciplinaryCases/{id:guid}/audit-trail"] = new ScopeCase(Found(s => $"/api/v1/DisciplinaryCases/{s.Record131}/audit-trail")),
         ["/api/v1/disciplinary-cases/{caseId:guid}/evidences/{evidenceId:guid}/file"] =
             new ScopeCase(Found(s => $"/api/v1/disciplinary-cases/{s.Record131}/evidences/{s.Evidence131}/file")),
 

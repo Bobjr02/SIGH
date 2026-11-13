@@ -13,7 +13,6 @@ using SIGH.Infrastructure.Authorization;
 namespace SIGH.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/[controller]")]
 [Route("api/v1/infraction-types")]
 [Tags("InfractionTypes")]
 [Authorize]
@@ -67,8 +66,7 @@ public class InfractionTypesController : BaseController
     /// Obter tipo de infração por ID
     /// </summary>
     /// <description>Retorna os detalhes de um tipo de infração disciplinar por seu identificador único.</description>
-    [HttpGet("/api/v1/InfractionTypes/{id:guid}", Name = "GetInfractionTypeById")]
-    [HttpGet("/api/v1/infraction-types/{id:guid}")]
+    [HttpGet("{id:guid}", Name = "GetInfractionTypeById")]
     [Permission(PermissionCodes.InfractionTypes.View)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<GetInfractionTypeByIdResponse>), StatusCodes.Status200OK)]

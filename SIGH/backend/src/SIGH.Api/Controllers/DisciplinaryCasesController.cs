@@ -23,7 +23,6 @@ using SIGH.Infrastructure.Authorization;
 namespace SIGH.Api.Controllers;
 
 [ApiController]
-[Route("api/v1/[controller]")]
 [Route("api/v1/disciplinary-cases")]
 [Tags("DisciplinaryCases")]
 [Authorize]
@@ -105,8 +104,7 @@ public class DisciplinaryCasesController : BaseController
     /// Obter processo disciplinar por ID
     /// </summary>
     /// <description>Obtém os detalhes completos do processo disciplinar, incluindo ocorrências, envolvidos, evidências, decisões e medidas.</description>
-    [HttpGet("/api/v1/DisciplinaryCases/{id:guid}", Name = "GetDisciplinaryCaseById")]
-    [HttpGet("/api/v1/disciplinary-cases/{id:guid}")]
+    [HttpGet("{id:guid}", Name = "GetDisciplinaryCaseById")]
     [Permission(PermissionCodes.DisciplinaryCases.View)]
     [Produces("application/json")]
     [ProducesResponseType(typeof(Result<GetDisciplinaryCaseByIdResponse>), StatusCodes.Status200OK)]

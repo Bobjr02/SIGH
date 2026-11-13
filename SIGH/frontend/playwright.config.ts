@@ -47,7 +47,7 @@ export default defineConfig({
     {
       // API apontando para o banco desta execução (não reaproveita uma API já de pé).
       command: 'dotnet run --project ../backend/src/SIGH.Api --launch-profile http',
-      url: 'http://localhost:5000/health',
+      url: 'http://localhost:5000/api/v1/health',
       reuseExistingServer: false,
       timeout: 240_000,
       env: {
