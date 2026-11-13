@@ -9,10 +9,12 @@ namespace SIGH.Persistence.Repositories.Employees;
 public sealed class EmployeeImportStore : IEmployeeImportStore
 {
     private readonly SighDbContext _context;
+    private readonly Microsoft.Extensions.Logging.ILogger<EmployeeImportStore> _logger;
 
-    public EmployeeImportStore(SighDbContext context)
+    public EmployeeImportStore(SighDbContext context, Microsoft.Extensions.Logging.ILogger<EmployeeImportStore> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     /// <summary>Instalação de empresa única: tudo vai para a empresa padrão.</summary>
@@ -72,6 +74,7 @@ public sealed class EmployeeImportStore : IEmployeeImportStore
         await strategy.ExecuteAsync(async () =>
         {
             await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
 
             // 1. Dados de referência (gerências, cargos, setores).
             var mus = await _context.ManagementUnits.Where(m => m.CompanyId == companyId && m.Code != null).ToListAsync(cancellationToken);
@@ -106,6 +109,7 @@ public sealed class EmployeeImportStore : IEmployeeImportStore
             var deptByCode = depts.GroupBy(d => d.Code!, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First().Id, StringComparer.OrdinalIgnoreCase);
 
             await _context.SaveChangesAsync(cancellationToken);
+            var referencesMs = watch.ElapsedMilliseconds;
 
             HrRecord Record(HrRow r) => new(
                 r.FullName, r.Cpf, r.AdmissionDate, jobByCode[r.JobTitleCode], muByCode[r.ManagementUnitCode], deptByCode[r.DepartmentCode],
@@ -134,6 +138,8 @@ public sealed class EmployeeImportStore : IEmployeeImportStore
                 tracked[change.EmployeeId!.Value].ApplyHrRecord(Record(change.Row!));
             await _context.SaveChangesAsync(cancellationToken);
 
+            var updatesMs = watch.ElapsedMilliseconds;
+
             // 3. Criações.
             foreach (var change in plan.Changes.Where(c => c.Kind == EmployeeChangeKind.Created))
                 _context.Employees.Add(Employee.CreateFromHrSystem(companyId, change.EmployeeNumber, Record(change.Row!)));
@@ -152,6 +158,11 @@ public sealed class EmployeeImportStore : IEmployeeImportStore
             await _context.SaveChangesAsync(cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
+
+            // Só contagens e tempos: nunca dados de funcionários.
+            Microsoft.Extensions.Logging.LoggerExtensions.LogInformation(_logger,
+                "Importação {BatchId} aplicada em {TotalMs} ms (referências {RefMs} ms, alterações {UpdMs} ms, criações e lote {CreateMs} ms).",
+                batch.Id, watch.ElapsedMilliseconds, referencesMs, updatesMs - referencesMs, watch.ElapsedMilliseconds - updatesMs);
         });
     }
 

@@ -14,6 +14,11 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
     /// <summary>O cabeçalho é procurado nas primeiras linhas (a exportação pode ter título acima).</summary>
     private const int MaxHeaderSearchRows = 20;
 
+    // O ExcelDataReader precisa das code pages legadas (ex.: 1252), que no .NET moderno ficam num
+    // provider separado. Antes isso só funcionava porque o SqlClient o registrava indiretamente.
+    static ExcelHrSpreadsheetReader() =>
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
     public HrSheet Read(Stream xlsx)
     {
         IExcelDataReader reader;

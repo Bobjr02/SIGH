@@ -1,12 +1,16 @@
 namespace SIGH.Application.Employees.Import;
 
 /// <summary>Célula como texto. WasNumber: a célula era numérica no Excel (para completar zeros à esquerda).</summary>
-public readonly record struct HrCell(string Text, bool WasNumber);
+public readonly record struct HrCell(string Text, bool WasNumber)
+{
+    public static readonly HrCell Empty = new(string.Empty, false);
+}
 
 /// <summary>Uma linha de dados, só com os campos da lista fechada. RowNumber é a linha no Excel (1 = primeira).</summary>
 public sealed record HrRawRow(int RowNumber, IReadOnlyDictionary<HrField, HrCell> Cells)
 {
-    public HrCell Get(HrField field) => Cells.TryGetValue(field, out var cell) ? cell : default;
+    /// <summary>Célula do campo; vazia se a coluna (opcional) não existir no arquivo.</summary>
+    public HrCell Get(HrField field) => Cells.TryGetValue(field, out var cell) && cell.Text is not null ? cell : HrCell.Empty;
 }
 
 public sealed record HrSheet(IReadOnlyList<HrRawRow> Rows, IReadOnlyList<string> Warnings);

@@ -105,8 +105,19 @@ public static class EmployeeImportPlanner
         }
 
         // 2. Duplicidades dentro do arquivo: todas as ocorrências são rejeitadas.
-        rows = RejectDuplicates(rows, r => r.EmployeeNumber, "Matrícula repetida no arquivo (linhas {0}).", issues);
-        rows = RejectDuplicates(rows, r => r.Cpf, "CPF repetido no arquivo (linhas {0}).", issues);
+        rows = RejectDuplicates(rows, r => r.EmployeeNumber, "Matrícula repetida no arquivo (linhas {0}).", issues, _ => true);
+        // CPF repetido é erro quando mais de uma das linhas não está desligada. Uma linha ativa mais
+        // linhas desligadas com o mesmo CPF é a readmissão no SAP (matrícula nova; a exportação traz os desligados).
+        rows = RejectDuplicates(rows, r => r.Cpf, "CPF repetido no arquivo em mais de uma matrícula não desligada (linhas {0}).", issues,
+            group => group.Count(r => r.Status != EmployeeStatus.Terminated) > 1);
+        foreach (var group in rows.GroupBy(r => r.Cpf).Where(g => g.Count() > 1))
+        {
+            var active = group.FirstOrDefault(r => r.Status != EmployeeStatus.Terminated);
+            if (active is null) continue;
+            var previous = string.Join(", ", group.Where(r => r != active).Select(r => r.EmployeeNumber));
+            issues.Add(new HrImportIssue(active.RowNumber, active.EmployeeNumber, HrIssueSeverity.Warning,
+                $"Possível readmissão: o CPF também aparece na(s) matrícula(s) desligada(s) {previous} deste arquivo."));
+        }
         foreach (var r in rows) presentNumbers.Add(r.EmployeeNumber);
 
         var byNumber = existing.ToDictionary(e => e.EmployeeNumber, StringComparer.Ordinal);
@@ -191,9 +202,10 @@ public static class EmployeeImportPlanner
             Fingerprint(ordered, unchanged, sortedIssues));
     }
 
-    private static List<HrRow> RejectDuplicates(List<HrRow> rows, Func<HrRow, string> key, string message, List<HrImportIssue> issues)
+    private static List<HrRow> RejectDuplicates(
+        List<HrRow> rows, Func<HrRow, string> key, string message, List<HrImportIssue> issues, Func<IReadOnlyCollection<HrRow>, bool> isError)
     {
-        var duplicated = rows.GroupBy(key).Where(g => g.Count() > 1).ToList();
+        var duplicated = rows.GroupBy(key).Where(g => g.Count() > 1 && isError(g.ToList())).ToList();
         if (duplicated.Count == 0) return rows;
 
         var rejected = new HashSet<HrRow>();
@@ -240,7 +252,7 @@ public static class EmployeeImportPlanner
             }
 
             var previous = others.FirstOrDefault(e => FinalStatus(e) == EmployeeStatus.Terminated);
-            if (previous is not null && !byNumber.ContainsKey(row.EmployeeNumber))
+            if (previous is not null && !byNumber.ContainsKey(row.EmployeeNumber) && row.Status != EmployeeStatus.Terminated)
                 issues.Add(new HrImportIssue(row.RowNumber, row.EmployeeNumber, HrIssueSeverity.Warning,
                     $"Possível readmissão: o CPF já pertence à matrícula desligada {previous.EmployeeNumber}."));
 
