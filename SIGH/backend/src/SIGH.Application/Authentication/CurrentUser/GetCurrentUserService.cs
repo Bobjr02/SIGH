@@ -1,4 +1,5 @@
 using SIGH.Application.Authentication.Common;
+using SIGH.Application.Interfaces;
 using SIGH.Domain.Enums;
 using SIGH.Domain.Repositories;
 
@@ -7,10 +8,12 @@ namespace SIGH.Application.Authentication.CurrentUser;
 public class GetCurrentUserService : IGetCurrentUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IDateTimeProvider _dateTimeProvider;
 
-    public GetCurrentUserService(IUserRepository userRepository)
+    public GetCurrentUserService(IUserRepository userRepository, IDateTimeProvider dateTimeProvider)
     {
         _userRepository = userRepository;
+        _dateTimeProvider = dateTimeProvider;
     }
 
     public async Task<CurrentUserResponse> GetAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -29,7 +32,7 @@ public class GetCurrentUserService : IGetCurrentUserService
             user.Email,
             user.Status.ToString(),
             user.MustChangePassword,
-            user.GetActiveRoleNames(),
-            user.GetActivePermissionCodes());
+            user.GetActiveRoleNames(_dateTimeProvider.UtcNow),
+            user.GetActivePermissionCodes(_dateTimeProvider.UtcNow));
     }
 }

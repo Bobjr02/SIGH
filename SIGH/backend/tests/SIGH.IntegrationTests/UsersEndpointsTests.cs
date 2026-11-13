@@ -95,7 +95,8 @@ public class UsersEndpointsTests : IntegrationTestBase
 
         var usersResponse = await _client.GetAsync("/api/v1/users");
         var usersResult = await usersResponse.Content.ReadFromJsonAsync<Result<SIGH.Application.Users.GetUsers.PagedList<SIGH.Application.Users.GetUsers.UserSummaryDto>>>();
-        var adminUser = usersResult!.Data!.Items.FirstOrDefault(u => u.Email == "admin@sigh.com");
+        // Ninguém altera o próprio status: o admin desativa outro usuário (o aprovador).
+        var adminUser = usersResult!.Data!.Items.FirstOrDefault(u => u.Email == "approver@sigh.com");
 
         adminUser.Should().NotBeNull();
 

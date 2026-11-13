@@ -105,6 +105,8 @@ public class LoginService : ILoginService
             {
                 user.Status = UserStatus.Locked;
                 user.LockoutEnd = now.AddMinutes(_passwordOptions.LockoutDurationInMinutes);
+                // Bloqueio: sessões já abertas perdem o acesso na próxima requisição.
+                user.RotateSecurityStamp();
                 lockedNow = true;
             }
 
@@ -133,11 +135,11 @@ public class LoginService : ILoginService
         }
 
         // Extrair Roles e Permissões
-        var roles = user.GetActiveRoleNames();
-        var permissions = user.GetActivePermissionCodes();
+        var roles = user.GetActiveRoleNames(now);
+        var permissions = user.GetActivePermissionCodes(now);
 
         // Gerar Access Token e Refresh Token
-        var accessToken = _jwtTokenGenerator.GenerateToken(user, roles, permissions);
+        var accessToken = _jwtTokenGenerator.GenerateToken(user, roles, permissions, user.GetNextAccessChange(now));
         var rawRefreshToken = _refreshTokenGenerator.GenerateRefreshToken();
         var tokenHash = _tokenHasher.HashToken(rawRefreshToken);
 

@@ -129,9 +129,24 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         await SeedFixtureUsersAsync(db, _fixturePasswordHash);
     }
 
+    /// <summary>
+    /// Perfil SÓ DE TESTE com todas as permissões (inclusive as do processo em etapas, que nenhum perfil
+    /// semeado recebe). Mantém os testes antigos dos endpoints legados; os testes de perfis usam os perfis reais.
+    /// </summary>
+    public const string FullAccessTestRoleName = "IntegrationTests.FullAccess";
+
     private static async Task SeedFixtureUsersAsync(SighDbContext db, string passwordHash)
     {
         var administratorRole = await db.Roles.SingleAsync(r => r.Name == DatabaseSeeder.AdministratorRoleName);
+        var fullAccessRole = await db.Roles.SingleOrDefaultAsync(r => r.Name == FullAccessTestRoleName);
+        if (fullAccessRole is null)
+        {
+            fullAccessRole = new Role(Guid.NewGuid()) { Name = FullAccessTestRoleName, Description = "Somente testes" };
+            db.Roles.Add(fullAccessRole);
+        }
+        var granted = await db.RolePermissions.Where(rp => rp.RoleId == fullAccessRole.Id).Select(rp => rp.PermissionId).ToListAsync();
+        foreach (var permission in await db.Permissions.Where(p => !granted.Contains(p.Id)).ToListAsync())
+            db.RolePermissions.Add(new RolePermission(Guid.NewGuid()) { RoleId = fullAccessRole.Id, PermissionId = permission.Id });
 
         var adminUser = CreateUser(AdminUserId, "Administrador do Sistema", "admin@sigh.com", "12345678901", passwordHash);
 
@@ -149,7 +164,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         db.Users.AddRange(adminUser, approverUser, lockedUser, unprivilegedUser);
         db.UserRoles.AddRange(
             new UserRole(Guid.NewGuid()) { UserId = adminUser.Id, RoleId = administratorRole.Id },
-            new UserRole(Guid.NewGuid()) { UserId = approverUser.Id, RoleId = administratorRole.Id });
+            new UserRole(Guid.NewGuid()) { UserId = adminUser.Id, RoleId = fullAccessRole.Id },
+            new UserRole(Guid.NewGuid()) { UserId = approverUser.Id, RoleId = administratorRole.Id },
+            new UserRole(Guid.NewGuid()) { UserId = approverUser.Id, RoleId = fullAccessRole.Id });
 
         await db.SaveChangesAsync();
     }
@@ -164,6 +181,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             Status = UserStatus.Active,
             MustChangePassword = false,
             FailedLoginAttempts = 0,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            // Stamp fixo: o reset recria o usuário com o mesmo stamp, e os tokens do TokenCache continuam válidos.
+            SecurityStamp = "fixture" + id.ToString("N")
         };
 }

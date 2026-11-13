@@ -63,6 +63,8 @@ public static class DependencyInjection
         services.AddScoped<IChangeUserStatusService, ChangeUserStatusService>();
         services.AddScoped<IGetUsersService, GetUsersService>();
         services.AddScoped<IGetUserByIdService, GetUserByIdService>();
+        services.AddScoped<SIGH.Application.Users.Access.IUserAccessAdministrationService, SIGH.Application.Users.Access.UserAccessAdministrationService>();
+        services.AddScoped<SIGH.Application.Users.Access.IManagementUnitAdministrationService, SIGH.Application.Users.Access.ManagementUnitAdministrationService>();
 
         // Registro de Casos de Uso do Módulo de Funcionários
         services.AddScoped<SIGH.Application.Employees.CreateEmployee.ICreateEmployeeUseCase, SIGH.Application.Employees.CreateEmployee.CreateEmployeeUseCase>();

@@ -202,7 +202,7 @@ public class RefreshTokenService : IRefreshTokenService
 
         await _userRepository.AddRefreshTokenAsync(newTokenEntity, cancellationToken);
 
-        var newAccessToken = _jwtTokenGenerator.GenerateToken(user, user.GetActiveRoleNames(), user.GetActivePermissionCodes());
+        var newAccessToken = _jwtTokenGenerator.GenerateToken(user, user.GetActiveRoleNames(now), user.GetActivePermissionCodes(now), user.GetNextAccessChange(now));
 
         await _context.SaveChangesAsync(cancellationToken);
 

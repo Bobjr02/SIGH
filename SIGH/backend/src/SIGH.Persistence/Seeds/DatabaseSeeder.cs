@@ -9,12 +9,13 @@ namespace SIGH.Persistence.Seeds;
 
 /// <summary>
 /// Seed idempotente dos dados mínimos para o sistema funcionar num banco novo:
-/// catálogo de permissões, perfil Administrator, empresa padrão e usuário administrador.
-/// Pode ser executado a cada inicialização: só insere o que estiver faltando.
+/// catálogo de permissões, perfis de sistema (<see cref="SystemRoles"/>), empresa padrão e usuário administrador.
+/// Pode ser executado a cada inicialização: só insere o que estiver faltando, e as permissões de cada
+/// perfil de sistema são sincronizadas com a lista fixa (o que sobrar é retirado logicamente).
 /// </summary>
 public sealed class DatabaseSeeder
 {
-    public const string AdministratorRoleName = "Administrator";
+    public const string AdministratorRoleName = SystemRoles.Administrator;
 
     /// <summary>
     /// Empresa padrão da qual o AuthorizedCompanyProvider depende.
@@ -48,7 +49,8 @@ public sealed class DatabaseSeeder
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         var permissions = await EnsurePermissionsAsync(cancellationToken);
-        var adminRole = await EnsureAdministratorRoleAsync(permissions, cancellationToken);
+        var roles = await EnsureSystemRolesAsync(permissions, cancellationToken);
+        var adminRole = roles[SystemRoles.Administrator];
         await EnsureDefaultCompanyAsync(cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -101,38 +103,65 @@ public sealed class DatabaseSeeder
         return result;
     }
 
-    private async Task<Role> EnsureAdministratorRoleAsync(IReadOnlyList<Permission> permissions, CancellationToken cancellationToken)
+    private async Task<Dictionary<string, Role>> EnsureSystemRolesAsync(IReadOnlyList<Permission> permissions, CancellationToken cancellationToken)
     {
-        var role = await _context.Roles
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(r => r.Name == AdministratorRoleName, cancellationToken);
+        var permissionByCode = permissions.ToDictionary(p => p.Code, StringComparer.Ordinal);
+        var result = new Dictionary<string, Role>(StringComparer.Ordinal);
 
-        if (role is null)
+        foreach (var definition in SystemRoles.All)
         {
-            role = new Role
+            var role = await _context.Roles
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(r => r.Name == definition.Name, cancellationToken);
+
+            if (role is null)
             {
-                Name = AdministratorRoleName,
-                Description = "Perfil com acesso irrestrito e total ao sistema SIGH"
-            };
-            await _context.Roles.AddAsync(role, cancellationToken);
-            _logger.LogInformation("Seed: perfil {Role} criado.", AdministratorRoleName);
+                role = new Role { Name = definition.Name, Description = definition.Description };
+                await _context.Roles.AddAsync(role, cancellationToken);
+                _logger.LogInformation("Seed: perfil {Role} criado.", definition.Name);
+            }
+            else
+            {
+                if (role.IsDeleted)
+                {
+                    role.IsDeleted = false;
+                    role.DeletedAt = null;
+                    role.DeletedBy = null;
+                }
+                if (role.Description != definition.Description)
+                    role.Description = definition.Description;
+            }
+
+            await SyncRolePermissionsAsync(role, definition, permissionByCode, cancellationToken);
+            result[definition.Name] = role;
         }
-        else if (role.IsDeleted)
-        {
-            role.IsDeleted = false;
-            role.DeletedAt = null;
-            role.DeletedBy = null;
-        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Deixa o perfil com EXATAMENTE as permissões da definição: concede as que faltam e retira
+    /// (exclusão lógica, auditada) as que sobram — é assim que o Administrador de bancos antigos
+    /// perde as permissões de medida e do processo em etapas.
+    /// </summary>
+    private async Task SyncRolePermissionsAsync(
+        Role role,
+        SystemRoleDefinition definition,
+        IReadOnlyDictionary<string, Permission> permissionByCode,
+        CancellationToken cancellationToken)
+    {
+        var wanted = definition.Permissions.Select(code => permissionByCode[code].Id).ToHashSet();
 
         var links = await _context.RolePermissions
             .IgnoreQueryFilters()
             .Where(rp => rp.RoleId == role.Id)
-            .ToDictionaryAsync(rp => rp.PermissionId, cancellationToken);
+            .ToListAsync(cancellationToken);
 
         var granted = 0;
-        foreach (var permission in permissions)
+        var revoked = 0;
+        foreach (var link in links)
         {
-            if (links.TryGetValue(permission.Id, out var link))
+            if (wanted.Contains(link.PermissionId))
             {
                 if (link.IsDeleted)
                 {
@@ -141,21 +170,24 @@ public sealed class DatabaseSeeder
                     link.DeletedBy = null;
                     granted++;
                 }
-                continue;
             }
-
-            await _context.RolePermissions.AddAsync(new RolePermission
+            else if (!link.IsDeleted)
             {
-                RoleId = role.Id,
-                PermissionId = permission.Id
-            }, cancellationToken);
+                link.IsDeleted = true;
+                link.DeletedAt = DateTimeOffset.UtcNow;
+                revoked++;
+            }
+        }
+
+        var existing = links.Select(l => l.PermissionId).ToHashSet();
+        foreach (var permissionId in wanted.Where(id => !existing.Contains(id)))
+        {
+            await _context.RolePermissions.AddAsync(new RolePermission { RoleId = role.Id, PermissionId = permissionId }, cancellationToken);
             granted++;
         }
 
-        if (granted > 0)
-            _logger.LogInformation("Seed: {Count} permissões concedidas ao perfil {Role}.", granted, AdministratorRoleName);
-
-        return role;
+        if (granted > 0 || revoked > 0)
+            _logger.LogInformation("Seed: perfil {Role}: {Granted} permissões concedidas, {Revoked} retiradas.", definition.Name, granted, revoked);
     }
 
     private async Task EnsureDefaultCompanyAsync(CancellationToken cancellationToken)

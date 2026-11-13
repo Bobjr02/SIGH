@@ -108,9 +108,9 @@ public class PasswordChangeEnforcementTests : IntegrationTestBase
         using var apiClient = CreateClient(changed.AccessToken);
         (await apiClient.GetAsync("/api/v1/users")).StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // O token antigo (com a claim) continua restrito até expirar.
+        // O token antigo (com a claim) deixa de valer: a troca de senha mudou o SecurityStamp (401).
         using var pendingClient = CreateClient(login.AccessToken);
-        (await pendingClient.GetAsync("/api/v1/users")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await pendingClient.GetAsync("/api/v1/users")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
         // O refresh token emitido antes da troca foi revogado...
         using var replayClient = AuthTestHelpers.CreateClientWithoutCookieJar(Factory, refreshToken: oldCookie.Value);

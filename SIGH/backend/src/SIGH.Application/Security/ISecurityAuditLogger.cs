@@ -29,4 +29,9 @@ public static class SecurityAuditActions
     public const string RefreshTokenReuseDetected = "Security.RefreshTokenReuseDetected";
     public const string RolesOrPermissionsChanged = "Security.RolesOrPermissionsChanged";
     public const string EvidenceDownloaded = "Security.EvidenceDownloaded";
+    public const string RoleAssigned = "Security.RoleAssigned";
+    public const string RoleRevoked = "Security.RoleRevoked";
+    public const string ManagementUnitAssigned = "Security.ManagementUnitAssigned";
+    public const string ManagementUnitRevoked = "Security.ManagementUnitRevoked";
+    public const string RefreshTokensRevoked = "Security.RefreshTokensRevoked";
 }

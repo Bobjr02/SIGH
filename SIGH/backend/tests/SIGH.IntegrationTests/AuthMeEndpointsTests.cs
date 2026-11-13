@@ -42,7 +42,8 @@ public class AuthMeEndpointsTests : IntegrationTestBase
         me.Email.Should().Be("admin@sigh.com");
         me.Status.Should().Be("Active");
         me.MustChangePassword.Should().BeFalse();
-        me.Roles.Should().Equal(DatabaseSeeder.AdministratorRoleName);
+        // Fixture: Administrador + o perfil de teste com todas as permissões.
+        me.Roles.Should().BeEquivalentTo(DatabaseSeeder.AdministratorRoleName, CustomWebApplicationFactory.FullAccessTestRoleName);
         me.Permissions.Should().BeEquivalentTo(PermissionCodes.All.Select(p => p.Code));
     }
 

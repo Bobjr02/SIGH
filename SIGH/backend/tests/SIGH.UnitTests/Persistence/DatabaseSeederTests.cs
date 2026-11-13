@@ -47,7 +47,9 @@ public class DatabaseSeederTests
         context.Permissions.Select(p => p.Code).Should().BeEquivalentTo(PermissionCodes.All.Select(p => p.Code));
 
         var role = await context.Roles.SingleAsync(r => r.Name == DatabaseSeeder.AdministratorRoleName);
-        (await context.RolePermissions.CountAsync(rp => rp.RoleId == role.Id)).Should().Be(PermissionCodes.All.Count);
+        (await PermissionsOf(context, SystemRoles.Administrator))
+            .Should().BeEquivalentTo(SystemRoles.Find(SystemRoles.Administrator)!.Permissions);
+        context.Roles.Select(r => r.Name).Should().BeEquivalentTo(SystemRoles.All.Select(r => r.Name));
 
         var company = await context.Companies.SingleAsync();
         company.Id.Should().Be(DatabaseSeeder.DefaultCompanyId);
@@ -74,8 +76,8 @@ public class DatabaseSeederTests
             await CreateSeeder(context, "SenhaForte@123").SeedAsync();
 
             (await context.Permissions.CountAsync()).Should().Be(PermissionCodes.All.Count);
-            (await context.RolePermissions.CountAsync()).Should().Be(PermissionCodes.All.Count);
-            (await context.Roles.CountAsync()).Should().Be(1);
+            (await context.RolePermissions.CountAsync()).Should().Be(SystemRoles.All.Sum(r => r.Permissions.Count));
+            (await context.Roles.CountAsync()).Should().Be(SystemRoles.All.Count);
             (await context.Companies.CountAsync()).Should().Be(1);
             (await context.Users.CountAsync()).Should().Be(1);
         }
@@ -125,4 +127,77 @@ public class DatabaseSeederTests
             (await context.Users.Select(u => u.Email).ToListAsync()).Should().Equal(AdminEmail);
         }
     }
+
+    [Fact]
+    public async Task Administrator_NeverRegistersNorApprovesMeasures()
+    {
+        await using var context = CreateContext(Guid.NewGuid().ToString());
+        await CreateSeeder(context, "SenhaForte@123").SeedAsync();
+
+        var admin = await PermissionsOf(context, SystemRoles.Administrator);
+        admin.Should().NotContain(PermissionCodes.DisciplinaryRecords.Register);
+        admin.Should().NotContain(PermissionCodes.DisciplinaryRecords.Approve);
+        admin.Should().Contain([PermissionCodes.Users.ManageRoles, PermissionCodes.DisciplinaryRecords.ViewAll]);
+    }
+
+    [Fact]
+    public async Task NoSeededRole_ReceivesTheStepByStepProcessPermissions_ExceptEvidence()
+    {
+        await using var context = CreateContext(Guid.NewGuid().ToString());
+        await CreateSeeder(context, "SenhaForte@123").SeedAsync();
+
+        var granted = await context.RolePermissions.Select(rp => rp.Permission.Code).Distinct().ToListAsync();
+        var legacy = typeof(PermissionCodes.DisciplinaryCases).GetFields()
+            .Select(f => (string)f.GetValue(null)!)
+            .Except([PermissionCodes.DisciplinaryCases.AddEvidence, PermissionCodes.DisciplinaryCases.RemoveEvidence]);
+        granted.Should().NotIntersectWith(legacy);
+    }
+
+    [Fact]
+    public async Task OnlyTheManager_HasNoFullScope()
+    {
+        await using var context = CreateContext(Guid.NewGuid().ToString());
+        await CreateSeeder(context, "SenhaForte@123").SeedAsync();
+
+        foreach (var role in SystemRoles.All)
+        {
+            var permissions = await PermissionsOf(context, role.Name);
+            permissions.Should().BeEquivalentTo(role.Permissions, $"o perfil {role.Name} fica exatamente com a lista fixa");
+            permissions.Contains(PermissionCodes.DisciplinaryRecords.ViewAll).Should().Be(role.Name != SystemRoles.Manager);
+        }
+    }
+
+    [Fact]
+    public async Task ExistingAdministratorWithAllPermissions_LosesTheExtraOnes_AndStaysAdministrator()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(dbName))
+        {
+            // Banco antigo: o seed dava TODAS as permissões ao Administrator.
+            var role = new Role { Name = DatabaseSeeder.AdministratorRoleName, Description = "antigo" };
+            context.Roles.Add(role);
+            foreach (var definition in PermissionCodes.All)
+            {
+                var permission = new Permission { Code = definition.Code, Name = definition.Name, Description = definition.Description };
+                context.Permissions.Add(permission);
+                context.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = permission.Id });
+            }
+            await context.SaveChangesAsync();
+        }
+
+        await using (var context = CreateContext(dbName))
+        {
+            await CreateSeeder(context, "SenhaForte@123").SeedAsync();
+
+            (await PermissionsOf(context, SystemRoles.Administrator))
+                .Should().BeEquivalentTo(SystemRoles.Find(SystemRoles.Administrator)!.Permissions);
+            // Retirada lógica: o vínculo antigo fica na história.
+            (await context.RolePermissions.IgnoreQueryFilters().CountAsync(rp => rp.IsDeleted)).Should().BeGreaterThan(0);
+            var admin = await context.Users.Include(u => u.UserRoles).ThenInclude(ur => ur.Role).SingleAsync();
+            admin.UserRoles.Select(ur => ur.Role.Name).Should().Equal(SystemRoles.Administrator);
+        }
+    }
+
+    private static Task<List<string>> PermissionsOf(SIGH.Persistence.Context.SighDbContext context, string roleName) =>
+        context.RolePermissions.Where(rp => rp.Role.Name == roleName).Select(rp => rp.Permission.Code).ToListAsync();
 }
