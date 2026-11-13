@@ -26,4 +26,8 @@ public sealed class CurrentUserService : ICurrentUserService
     public string? UserEmail => User?.FindFirstValue(ClaimTypes.Email);
 
     public bool IsAuthenticated => User is not null;
+
+    public bool HasPermission(string permission) =>
+        User?.Claims.Any(c => (c.Type == "permission" || c.Type == "Permission")
+                              && string.Equals(c.Value, permission, StringComparison.OrdinalIgnoreCase)) == true;
 }

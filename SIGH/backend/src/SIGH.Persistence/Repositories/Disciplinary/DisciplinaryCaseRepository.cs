@@ -11,10 +11,12 @@ namespace SIGH.Persistence.Repositories.Disciplinary;
 public class DisciplinaryCaseRepository : IDisciplinaryCaseRepository
 {
     private readonly SighDbContext _context;
+    private readonly SIGH.Application.Common.Authorization.IAccessScope? _scope;
 
-    public DisciplinaryCaseRepository(SighDbContext context)
+    public DisciplinaryCaseRepository(SighDbContext context, SIGH.Application.Common.Authorization.IAccessScope? scope = null)
     {
         _context = context;
+        _scope = scope;
     }
 
     public async Task<DisciplinaryCase?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -55,6 +57,13 @@ public class DisciplinaryCaseRepository : IDisciplinaryCaseRepository
             .Include(c => c.Occurrences)
             .Include(c => c.Employees)
             .AsQueryable();
+
+        // Escopo por gerência (o funcionário acusado na gerência, hoje).
+        if (_scope is not null)
+        {
+            var filter = await _scope.GetFilterAsync(cancellationToken);
+            dbQuery = SIGH.Application.Common.Authorization.AccessScopeQueryExtensions.InScope(dbQuery, _context.DisciplinaryCaseEmployees, _context.Employees, filter);
+        }
 
         if (query.CompanyId.HasValue)
         {

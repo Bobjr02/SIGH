@@ -115,8 +115,13 @@ public class DisciplinaryCasesController : BaseController
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<Result<GetDisciplinaryCaseByIdResponse>>> GetById(
         [FromRoute] Guid id,
+        [FromServices] SIGH.Application.Common.Authorization.ICaseVisibility visibility,
         CancellationToken cancellationToken)
     {
+        // Fora do escopo por gerência: 404, como se não existisse.
+        if (!await visibility.IsVisibleAsync(id, cancellationToken))
+            return NotFoundResult<GetDisciplinaryCaseByIdResponse>("Processo disciplinar não encontrado.");
+
         var result = await _getDisciplinaryCaseByIdUseCase.ExecuteAsync(id, cancellationToken);
         return ToActionResult(result);
     }
@@ -314,6 +319,11 @@ public class DisciplinaryCasesController : BaseController
         [FromBody] AddEvidenceHttpRequest request,
         CancellationToken cancellationToken)
     {
+        // Escopo por gerência: fora dele o processo "não existe".
+        var visibility = HttpContext?.RequestServices?.GetService<SIGH.Application.Common.Authorization.ICaseVisibility>();
+        if (visibility is not null && !await visibility.IsVisibleAsync(id, cancellationToken))
+            return NotFoundResult<AddEvidenceResponse>("Processo disciplinar não encontrado.");
+
         var applicationRequest = request.ToApplicationRequest(id, GetUserId());
         var result = await _addEvidenceUseCase.ExecuteAsync(applicationRequest, cancellationToken);
         return ToActionResult(result);
@@ -476,10 +486,14 @@ public class DisciplinaryCasesController : BaseController
     public async Task<ActionResult<Result<PagedResult<SIGH.Application.Audit.AuditLogDto>>>> GetAuditTrail(
         [FromRoute] Guid id,
         [FromServices] SIGH.Application.Audit.IAuditLogQueryService auditQuery,
+        [FromServices] SIGH.Application.Common.Authorization.ICaseVisibility visibility,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 100,
         CancellationToken cancellationToken = default)
     {
+        if (!await visibility.IsVisibleAsync(id, cancellationToken))
+            return NotFoundResult<PagedResult<SIGH.Application.Audit.AuditLogDto>>("Processo disciplinar não encontrado.");
+
         var trail = await auditQuery.GetDisciplinaryCaseTrailAsync(id, pageNumber, pageSize, cancellationToken);
         return trail is null
             ? NotFoundResult<PagedResult<SIGH.Application.Audit.AuditLogDto>>("Processo disciplinar não encontrado.")

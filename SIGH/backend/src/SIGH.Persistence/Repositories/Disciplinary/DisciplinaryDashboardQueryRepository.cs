@@ -10,20 +10,29 @@ namespace SIGH.Persistence.Repositories.Disciplinary;
 public class DisciplinaryDashboardQueryRepository : IDisciplinaryDashboardQueryRepository
 {
     private readonly SighDbContext _context;
+    private readonly SIGH.Application.Common.Authorization.IAccessScope? _scope;
 
-    public DisciplinaryDashboardQueryRepository(SighDbContext context)
+    public DisciplinaryDashboardQueryRepository(SighDbContext context, SIGH.Application.Common.Authorization.IAccessScope? scope = null)
     {
         _context = context;
+        _scope = scope;
     }
+
+    /// <summary>Escopo por gerência (tudo, sem serviço de escopo: uso fora de requisição/testes).</summary>
+    private async Task<SIGH.Application.Common.Authorization.AccessScopeFilter> ScopeAsync(CancellationToken cancellationToken) =>
+        _scope is null ? SIGH.Application.Common.Authorization.AccessScopeFilter.Everything : await _scope.GetFilterAsync(cancellationToken);
 
     public async Task<DisciplinaryDashboardDto> GetDashboardAsync(
         GetDisciplinaryDashboardQuery query,
         Guid authorizedCompanyId,
         CancellationToken cancellationToken = default)
     {
-        var casesQuery = _context.DisciplinaryCases
-            .AsNoTracking()
-            .Where(c => c.CompanyId == authorizedCompanyId && !c.IsDeleted);
+        var scope = await ScopeAsync(cancellationToken);
+        var casesQuery = SIGH.Application.Common.Authorization.AccessScopeQueryExtensions.InScope(
+            _context.DisciplinaryCases
+                .AsNoTracking()
+                .Where(c => c.CompanyId == authorizedCompanyId && !c.IsDeleted),
+            _context.DisciplinaryCaseEmployees, _context.Employees, scope);
 
         if (query.DateFrom.HasValue)
         {

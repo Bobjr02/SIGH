@@ -10,10 +10,12 @@ namespace SIGH.Persistence.Repositories.Disciplinary;
 public class EmployeeDisciplinaryHistoryQueryRepository : IEmployeeDisciplinaryHistoryQueryRepository
 {
     private readonly SighDbContext _context;
+    private readonly SIGH.Application.Common.Authorization.IAccessScope? _scope;
 
-    public EmployeeDisciplinaryHistoryQueryRepository(SighDbContext context)
+    public EmployeeDisciplinaryHistoryQueryRepository(SighDbContext context, SIGH.Application.Common.Authorization.IAccessScope? scope = null)
     {
         _context = context;
+        _scope = scope;
     }
 
     public async Task<EmployeeDisciplinaryHistoryDto?> GetEmployeeHistoryAsync(
@@ -26,6 +28,10 @@ public class EmployeeDisciplinaryHistoryQueryRepository : IEmployeeDisciplinaryH
             .FirstOrDefaultAsync(e => e.Id == query.EmployeeId && e.CompanyId == authorizedCompanyId && !e.IsDeleted, cancellationToken);
 
         if (employee == null) return null;
+
+        // Fora do escopo por gerência: o funcionário "não existe" (404).
+        if (_scope is not null && !(await _scope.GetFilterAsync(cancellationToken)).Allows(employee.ManagementUnitId))
+            return null;
 
         var company = await _context.Companies
             .AsNoTracking()

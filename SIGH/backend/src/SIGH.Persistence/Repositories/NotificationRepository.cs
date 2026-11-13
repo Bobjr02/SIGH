@@ -11,10 +11,31 @@ using SIGH.Persistence.Context;
 public class NotificationRepository : INotificationRepository
 {
     private readonly SighDbContext _context;
+    private readonly SIGH.Application.Common.Authorization.IAccessScope? _scope;
 
-    public NotificationRepository(SighDbContext context)
+    public NotificationRepository(SighDbContext context, SIGH.Application.Common.Authorization.IAccessScope? scope = null)
     {
         _context = context;
+        _scope = scope;
+    }
+
+    /// <summary>
+    /// Notificações do usuário, sem as que se referem a uma medida/processo fora do escopo atual dele
+    /// (por exemplo, depois de perder a gerência). Notificações sem processo vinculado sempre aparecem.
+    /// </summary>
+    private async Task<IQueryable<Notification>> UserNotificationsAsync(Guid companyId, Guid userId, CancellationToken cancellationToken)
+    {
+        var query = _context.Notifications.AsNoTracking().Where(n => n.CompanyId == companyId && n.UserId == userId);
+        if (_scope is null)
+            return query;
+
+        var filter = await _scope.GetFilterAsync(cancellationToken);
+        if (filter.All)
+            return query;
+
+        var visibleCases = SIGH.Application.Common.Authorization.AccessScopeQueryExtensions.VisibleCaseIds(
+            _context.DisciplinaryCaseEmployees, _context.Employees, filter);
+        return query.Where(n => n.DisciplinaryCaseId == null || visibleCases.Contains(n.DisciplinaryCaseId.Value));
     }
 
     public async Task AddAsync(Notification notification, CancellationToken cancellationToken = default)
@@ -55,9 +76,7 @@ public class NotificationRepository : INotificationRepository
         GetNotificationsQuery queryParams,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Notifications
-            .AsNoTracking()
-            .Where(n => n.CompanyId == queryParams.CompanyId && n.UserId == queryParams.UserId);
+        var query = await UserNotificationsAsync(queryParams.CompanyId, queryParams.UserId, cancellationToken);
 
         if (queryParams.IsRead.HasValue)
         {
@@ -133,9 +152,8 @@ public class NotificationRepository : INotificationRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Notifications
-            .AsNoTracking()
-            .Where(n => n.CompanyId == companyId && n.UserId == userId && !n.IsRead)
+        return await (await UserNotificationsAsync(companyId, userId, cancellationToken))
+            .Where(n => !n.IsRead)
             .OrderByDescending(n => n.CreatedAt)
             .Select(n => new NotificationDto
             {
@@ -162,9 +180,8 @@ public class NotificationRepository : INotificationRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Notifications
-            .AsNoTracking()
-            .CountAsync(n => n.CompanyId == companyId && n.UserId == userId && !n.IsRead, cancellationToken);
+        return await (await UserNotificationsAsync(companyId, userId, cancellationToken))
+            .CountAsync(n => !n.IsRead, cancellationToken);
     }
 
     public async Task<int> MarkAllAsReadAsync(

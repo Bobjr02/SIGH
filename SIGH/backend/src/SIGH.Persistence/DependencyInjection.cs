@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<SIGH.Persistence.Seeds.DatabaseSeeder>();
         services.AddScoped<SIGH.Application.Security.ISecurityAuditLogger, SIGH.Persistence.Auditing.SecurityAuditLogger>();
         services.AddScoped<SIGH.Application.Security.IUserSecurityStateReader, UserSecurityStateReader>();
+        services.AddScoped<SIGH.Application.Common.Authorization.IAccessScope, AccessScope>();
         services.AddScoped<SIGH.Application.Audit.IAuditLogQueryService, AuditLogQueryService>();
         services.AddScoped<SIGH.Application.Email.IEmailOutbox, SIGH.Persistence.Email.EmailOutbox>();
         services.AddScoped<SIGH.Application.Employees.Import.IEmployeeImportStore, SIGH.Persistence.Repositories.Employees.EmployeeImportStore>();

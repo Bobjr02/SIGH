@@ -34,6 +34,9 @@ public class DisciplinaryCaseEvidencesController : BaseController
         [FromServices] IUploadEvidenceFileUseCase useCase,
         CancellationToken cancellationToken)
     {
+        if (!await IsVisibleAsync(caseId, cancellationToken))
+            return NotFoundResult<EvidenceFileDto>("Processo disciplinar não encontrado.");
+
         if (file is null)
             return BadRequestResult<EvidenceFileDto>("Envie o arquivo no campo \"file\" (multipart/form-data).");
 
@@ -45,9 +48,12 @@ public class DisciplinaryCaseEvidencesController : BaseController
         return ToActionResult(result);
     }
 
-    /// <summary>Baixa o arquivo em stream. Cada download é registrado na auditoria.</summary>
+    /// <summary>
+    /// Baixa o arquivo em stream. Cada download é registrado na auditoria. Exige Disciplinary.Records.View
+    /// (os anexos das medidas usam as evidências) e o processo no escopo do usuário (senão 404).
+    /// </summary>
     [HttpGet("{evidenceId:guid}/file")]
-    [Permission(PermissionCodes.DisciplinaryCases.View)]
+    [Permission(PermissionCodes.DisciplinaryRecords.View)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(Result<EvidenceDownload>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download(
@@ -56,6 +62,9 @@ public class DisciplinaryCaseEvidencesController : BaseController
         [FromServices] IDownloadEvidenceFileUseCase useCase,
         CancellationToken cancellationToken)
     {
+        if (!await IsVisibleAsync(caseId, cancellationToken))
+            return NotFound(Result<object>.Failure("Processo disciplinar não encontrado.", EvidenceErrors.CaseNotFound));
+
         var result = await useCase.ExecuteAsync(caseId, evidenceId, GetUserId(), cancellationToken);
         if (!result.Success)
             return NotFound(Result<object>.Failure(result.Message!, result.ErrorCode));
@@ -82,9 +91,16 @@ public class DisciplinaryCaseEvidencesController : BaseController
         [FromServices] IRemoveEvidenceUseCase useCase,
         CancellationToken cancellationToken)
     {
+        if (!await IsVisibleAsync(caseId, cancellationToken))
+            return NotFoundResult<bool>("Processo disciplinar não encontrado.");
+
         var result = await useCase.ExecuteAsync(caseId, evidenceId, request.Reason, GetUserId(), cancellationToken);
         return ToActionResult(result);
     }
+
+    private Task<bool> IsVisibleAsync(Guid caseId, CancellationToken cancellationToken) =>
+        HttpContext.RequestServices.GetRequiredService<SIGH.Application.Common.Authorization.ICaseVisibility>()
+            .IsVisibleAsync(caseId, cancellationToken);
 
     private ActionResult<Result<T>> ToActionResult<T>(Result<T> result)
     {

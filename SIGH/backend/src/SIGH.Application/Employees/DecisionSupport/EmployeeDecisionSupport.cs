@@ -104,6 +104,7 @@ public static class EmployeeDecisionSupportCalculator
         DisciplinaryMeasureType.WrittenWarning => "Advertência escrita",
         DisciplinaryMeasureType.Suspension => "Suspensão",
         DisciplinaryMeasureType.TerminationRecommendation => "Recomendação de desligamento",
+        DisciplinaryMeasureType.JustCauseTermination => "Demissão por justa causa",
         _ => "Outra"
     };
 }
@@ -119,17 +120,28 @@ public sealed class EmployeeDecisionSupportService : IEmployeeDecisionSupportSer
     private readonly IEnumerable<IEmployeeMeasureSource> _sources;
     private readonly IDateTimeProvider _clock;
     private readonly IEmployeeRepository _employees;
+    private readonly SIGH.Application.Common.Authorization.IAccessScope? _scope;
 
-    public EmployeeDecisionSupportService(IEnumerable<IEmployeeMeasureSource> sources, IDateTimeProvider clock, IEmployeeRepository employees)
+    public EmployeeDecisionSupportService(
+        IEnumerable<IEmployeeMeasureSource> sources,
+        IDateTimeProvider clock,
+        IEmployeeRepository employees,
+        SIGH.Application.Common.Authorization.IAccessScope? scope = null)
     {
         _sources = sources;
         _clock = clock;
         _employees = employees;
+        _scope = scope;
     }
 
     public async Task<EmployeeDecisionSupportDto?> GetAsync(Guid employeeId, CancellationToken cancellationToken = default)
     {
-        if (await _employees.GetByIdAsync(employeeId, cancellationToken) is null)
+        var employee = await _employees.GetByIdAsync(employeeId, cancellationToken);
+        if (employee is null)
+            return null;
+
+        // Escopo por gerência: fora dele, o funcionário "não existe" (404).
+        if (_scope is not null && !(await _scope.GetFilterAsync(cancellationToken)).Allows(employee.ManagementUnitId))
             return null;
 
         var facts = new List<MeasureFact>();
