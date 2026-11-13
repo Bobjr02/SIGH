@@ -48,13 +48,16 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
                     if (map is null)
                     {
                         if (excelRow > MaxHeaderSearchRows) break;
-                        var (candidate, missing, duplicated) = MapHeader(reader);
+                        var (candidate, missing, duplicated, missingOptional) = MapHeader(reader);
                         if (candidate is null)
                         {
                             if (bestMissing.Count == 0 || (missing.Count > 0 && missing.Count < bestMissing.Count)) bestMissing = missing;
                             continue;
                         }
                         map = candidate;
+                        // Coluna opcional ausente nunca passa em silêncio: o campo ficaria vazio para todos.
+                        warnings.AddRange(missingOptional.Select(c =>
+                            $"Coluna \"{c.Header}\" não encontrada; o campo {c.Label} ficará vazio para todos."));
                         warnings.AddRange(duplicated.Select(d =>
                             $"O cabeçalho \"{d}\" aparece mais de uma vez; foi usada a primeira ocorrência."));
                         continue;
@@ -84,7 +87,7 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
             {
                 var names = bestMissing.Count > 0
                     ? bestMissing
-                    : HrImportColumns.All.Where(c => c.Required).Select(c => c.Headers[0]).ToList();
+                    : HrImportColumns.All.Where(c => c.Required).Select(c => c.Header).ToList();
                 throw new HrSpreadsheetException(
                     $"Coluna(s) obrigatória(s) não encontrada(s) no cabeçalho: {string.Join(", ", names.Select(n => $"\"{n}\""))}.");
             }
@@ -97,7 +100,7 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
     /// Tenta usar a linha atual como cabeçalho. Só é cabeçalho se tiver "Matrícula"; nesse caso todas
     /// as obrigatórias precisam estar presentes. Cabeçalhos duplicados ("Estado" duas vezes) são tolerados.
     /// </summary>
-    private static (Dictionary<HrField, int>? Map, List<string> Missing, List<string> Duplicated) MapHeader(IExcelDataReader reader)
+    private static (Dictionary<HrField, int>? Map, List<string> Missing, List<string> Duplicated, List<HrColumn> MissingOptional) MapHeader(IExcelDataReader reader)
     {
         var positions = new Dictionary<string, int>();
         var duplicatedKeys = new HashSet<string>();
@@ -108,26 +111,28 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
             if (!positions.TryAdd(key, i)) duplicatedKeys.Add(key);
         }
 
-        var employeeNumberKeys = HrImportColumns.All.First(c => c.Field == HrField.EmployeeNumber).Headers.Select(HrImportColumns.Normalize);
-        if (!employeeNumberKeys.Any(positions.ContainsKey))
-            return (null, new List<string>(), new List<string>());
+        var employeeNumberKey = HrImportColumns.Normalize(HrImportColumns.All.First(c => c.Field == HrField.EmployeeNumber).Header);
+        if (!positions.ContainsKey(employeeNumberKey))
+            return (null, new List<string>(), new List<string>(), new List<HrColumn>());
 
         var map = new Dictionary<HrField, int>();
         var missing = new List<string>();
         var duplicated = new List<string>();
+        var missingOptional = new List<HrColumn>();
         foreach (var column in HrImportColumns.All)
         {
-            var key = column.Headers.Select(HrImportColumns.Normalize).FirstOrDefault(positions.ContainsKey);
-            if (key is null)
+            var key = HrImportColumns.Normalize(column.Header);
+            if (!positions.ContainsKey(key))
             {
-                if (column.Required) missing.Add(column.Headers[0]);
+                if (column.Required) missing.Add(column.Header);
+                else missingOptional.Add(column);
                 continue;
             }
             map[column.Field] = positions[key];
-            if (duplicatedKeys.Contains(key)) duplicated.Add(column.Headers[0]);
+            if (duplicatedKeys.Contains(key)) duplicated.Add(column.Header);
         }
 
-        return missing.Count > 0 ? (null, missing, duplicated) : (map, missing, duplicated);
+        return missing.Count > 0 ? (null, missing, duplicated, missingOptional) : (map, missing, duplicated, missingOptional);
     }
 
     private static HrCell ToCell(object? value) => value switch

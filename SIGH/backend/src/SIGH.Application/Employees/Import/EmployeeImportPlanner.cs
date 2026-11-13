@@ -104,12 +104,19 @@ public static class EmployeeImportPlanner
             }
         }
 
-        // 2. Duplicidades dentro do arquivo: todas as ocorrências são rejeitadas.
+        // Toda matrícula válida do arquivo está presente, mesmo que a linha seja rejeitada adiante por
+        // duplicidade: linha rejeitada nunca conta como ausente (não desliga ninguém).
+        foreach (var r in rows) presentNumbers.Add(r.EmployeeNumber);
+
+        var byNumber = existing.ToDictionary(e => e.EmployeeNumber, StringComparer.Ordinal);
+
+        // 2. Duplicidades dentro do arquivo.
+        // Matrícula repetida: todas as ocorrências são rejeitadas.
         rows = RejectDuplicates(rows, r => r.EmployeeNumber, "Matrícula repetida no arquivo (linhas {0}).", issues, _ => true);
-        // CPF repetido é erro quando mais de uma das linhas não está desligada. Uma linha ativa mais
-        // linhas desligadas com o mesmo CPF é a readmissão no SAP (matrícula nova; a exportação traz os desligados).
-        rows = RejectDuplicates(rows, r => r.Cpf, "CPF repetido no arquivo em mais de uma matrícula não desligada (linhas {0}).", issues,
-            group => group.Count(r => r.Status != EmployeeStatus.Terminated) > 1);
+        // CPF repetido em mais de uma linha não desligada.
+        rows = RejectDuplicateCpfs(rows, byNumber, issues);
+        // Uma linha ativa mais linhas desligadas com o mesmo CPF é a readmissão no SAP (matrícula nova;
+        // a exportação traz os desligados).
         foreach (var group in rows.GroupBy(r => r.Cpf).Where(g => g.Count() > 1))
         {
             var active = group.FirstOrDefault(r => r.Status != EmployeeStatus.Terminated);
@@ -118,9 +125,6 @@ public static class EmployeeImportPlanner
             issues.Add(new HrImportIssue(active.RowNumber, active.EmployeeNumber, HrIssueSeverity.Warning,
                 $"Possível readmissão: o CPF também aparece na(s) matrícula(s) desligada(s) {previous} deste arquivo."));
         }
-        foreach (var r in rows) presentNumbers.Add(r.EmployeeNumber);
-
-        var byNumber = existing.ToDictionary(e => e.EmployeeNumber, StringComparer.Ordinal);
 
         // 3. Conflitos de CPF com o banco: o CPF não pode ficar em duas matrículas não desligadas.
         rows = ResolveCpfConflicts(rows, existing, byNumber, presentNumbers, issues);
@@ -200,6 +204,44 @@ public static class EmployeeImportPlanner
             newMus.ToList(),
             activeBefore, Math.Round(percent, 2), requiresConfirmation,
             Fingerprint(ordered, unchanged, sortedIssues));
+    }
+
+    /// <summary>
+    /// CPF repetido em mais de uma linha não desligada. Se UMA das linhas é a matrícula que já tem esse
+    /// CPF no banco, ela é mantida (o cadastro dela não muda por causa de uma linha nova errada) e só as
+    /// outras são rejeitadas, citando a dona do CPF. Se nenhuma é dona (ou mais de uma), todas são rejeitadas.
+    /// </summary>
+    private static List<HrRow> RejectDuplicateCpfs(List<HrRow> rows, Dictionary<string, EmployeeSnapshot> byNumber, List<HrImportIssue> issues)
+    {
+        var rejected = new HashSet<HrRow>();
+        foreach (var group in rows.GroupBy(r => r.Cpf).Where(g => g.Count(r => r.Status != EmployeeStatus.Terminated) > 1))
+        {
+            var candidates = group.Where(r => r.Status != EmployeeStatus.Terminated).ToList();
+            var owners = candidates
+                .Where(r => byNumber.TryGetValue(r.EmployeeNumber, out var current) && current.Cpf == r.Cpf)
+                .ToList();
+
+            if (owners.Count == 1)
+            {
+                var owner = owners[0];
+                foreach (var row in candidates.Where(r => r != owner))
+                {
+                    rejected.Add(row);
+                    issues.Add(new HrImportIssue(row.RowNumber, row.EmployeeNumber, HrIssueSeverity.Error,
+                        $"CPF igual ao da matrícula {owner.EmployeeNumber} (linha {owner.RowNumber}), que já tem esse CPF."));
+                }
+                continue;
+            }
+
+            var lines = string.Join(", ", candidates.Select(r => r.RowNumber));
+            foreach (var row in candidates)
+            {
+                rejected.Add(row);
+                issues.Add(new HrImportIssue(row.RowNumber, row.EmployeeNumber, HrIssueSeverity.Error,
+                    $"CPF repetido no arquivo em mais de uma matrícula não desligada (linhas {lines})."));
+            }
+        }
+        return rejected.Count == 0 ? rows : rows.Where(r => !rejected.Contains(r)).ToList();
     }
 
     private static List<HrRow> RejectDuplicates(

@@ -21,37 +21,36 @@ public enum HrField
     Team
 }
 
-public sealed record HrColumn(HrField Field, bool Required, params string[] Headers);
+/// <param name="Label">Nome do campo no SIGH, usado nos avisos ("o campo Grupo ficará vazio").</param>
+public sealed record HrColumn(HrField Field, bool Required, string Header, string Label);
 
 /// <summary>
-/// LISTA FECHADA de colunas da importação. É o único ponto que define o que é lido do arquivo.
-///
-/// Os cabeçalhos de Matrícula, Cargo, Descr.Cargo, Uni.Org, Descr.Unid.Org., Chave Organização,
-/// Data admissão e Data demissão vêm da especificação do sprint. Os de nome, CPF, situação, grupo e
-/// turma são SUPOSIÇÕES até a conferência com SIGH/docs/referencias/LEIAME.md (seção 2), que não
-/// estava disponível quando este código foi escrito: ajuste os cabeçalhos aqui se forem diferentes.
+/// LISTA FECHADA de colunas da importação, conforme SIGH/docs/referencias/LEIAME.md, seção 2,
+/// tabela "Colunas que o SIGH importa", e conferida contra os arquivos fictícios do pacote
+/// (72 colunas, aba "Data"). É o único ponto que define o que é lido do arquivo: qualquer outra coluna
+/// (inclusive "Turma", que é só o código, e as duas "Estado") é ignorada.
 /// </summary>
 public static class HrImportColumns
 {
     public static readonly IReadOnlyList<HrColumn> All =
     [
-        new(HrField.EmployeeNumber, true, "Matrícula"),
-        new(HrField.FullName, true, "Nome", "Nome completo"),
-        new(HrField.Cpf, true, "CPF", "Nº CPF"),
-        new(HrField.AdmissionDate, true, "Data admissão"),
-        new(HrField.TerminationDate, false, "Data demissão"),
-        new(HrField.Status, true, "Status", "Situação", "Status ocupação"),
-        new(HrField.JobTitleCode, true, "Cargo"),
-        new(HrField.JobTitleName, true, "Descr.Cargo"),
-        new(HrField.DepartmentCode, true, "Uni.Org"),
-        new(HrField.DepartmentName, true, "Descr.Unid.Org."),
-        new(HrField.ManagementUnitCode, true, "Chave Organização"),
-        new(HrField.Group, false, "Grupo"),
-        new(HrField.Team, false, "Turma"),
+        new(HrField.EmployeeNumber, true, "Matrícula", "Matrícula"),
+        new(HrField.FullName, true, "Nome", "Nome"),
+        new(HrField.Cpf, true, "CPF", "CPF"),
+        new(HrField.Status, true, "Status", "Situação"),
+        new(HrField.Group, false, "Grupo_Emp", "Grupo"),
+        new(HrField.JobTitleCode, true, "Cargo", "Cargo"),
+        new(HrField.JobTitleName, true, "Descr.Cargo", "Descrição do cargo"),
+        new(HrField.DepartmentCode, true, "Uni.Org", "Setor"),
+        new(HrField.DepartmentName, true, "Descr.Unid.Org.", "Descrição do setor"),
+        new(HrField.AdmissionDate, true, "Data admissão", "Admissão"),
+        new(HrField.TerminationDate, false, "Data demissão", "Demissão"),
+        new(HrField.Team, false, "Descrição Turma", "Turma"),
+        new(HrField.ManagementUnitCode, true, "Chave Organização", "Gerência"),
     ];
 
-    /// <summary>Nome exibido nas mensagens (o primeiro cabeçalho aceito).</summary>
-    public static string DisplayName(HrField field) => All.First(c => c.Field == field).Headers[0];
+    /// <summary>Cabeçalho exibido nas mensagens.</summary>
+    public static string DisplayName(HrField field) => All.First(c => c.Field == field).Header;
 
     /// <summary>Sem acento, minúsculo e só letras e dígitos: "Descr. Unid. Org." == "descr.unid.org" == "DESCRUNIDORG".</summary>
     public static string Normalize(string? header)
