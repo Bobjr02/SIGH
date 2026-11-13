@@ -201,12 +201,20 @@ Regras: matrícula nova cria; existente com dados diferentes atualiza (a auditor
 arquivo desliga; matrícula ativa ausente do arquivo é desligada com a data da importação (**nunca apagada**); desligada que volta
 ativa é reativada. Importar o mesmo arquivo de novo não altera nada. Linhas com erro são rejeitadas (identificadas por linha e
 matrícula, nunca pelo CPF) e **não** contam como ausentes. CPF de outra matrícula desligada é aviso de possível readmissão.
+CPF repetido no arquivo em linhas não desligadas: se uma delas é a matrícula que já tem esse CPF no banco, ela é mantida e as
+outras são rejeitadas; se nenhuma é dona, todas são rejeitadas.
 
-Leitura: só as colunas da lista fechada em `HrImportColumns` (Application/Employees/Import) são lidas; as demais nunca são
-gravadas, logadas nem citadas em mensagens. Cabeçalhos são comparados sem acento, maiúsculas, espaços ou pontuação, e
-cabeçalhos duplicados ("Estado") são tolerados. CPF e matrícula em células numéricas recebem zeros à esquerda (11 e 8 dígitos).
-> Os cabeçalhos de nome, CPF, situação, grupo e turma (`Nome`, `CPF`, `Status`/`Situação`/`Status ocupação`, `Grupo`, `Turma`)
-> são suposições a confirmar contra `SIGH/docs/referencias/LEIAME.md`, que não estava disponível neste sprint.
+Leitura: só as colunas da lista fechada em `HrImportColumns` (Application/Employees/Import), conferida contra a tabela
+"Colunas que o SIGH importa" do `SIGH/docs/referencias/LEIAME.md` e contra os arquivos fictícios do pacote: `Matrícula`,
+`Nome`, `CPF`, `Status`, `Grupo_Emp`, `Cargo`, `Descr.Cargo`, `Uni.Org`, `Descr.Unid.Org.`, `Data admissão`, `Data demissão`,
+`Descrição Turma` e `Chave Organização`. As demais (inclusive `Turma`, que é só o código, e as duas `Estado`) nunca são lidas,
+gravadas, logadas nem citadas em mensagens. Cabeçalhos são comparados sem acento, maiúsculas, espaços ou pontuação.
+Coluna obrigatória ausente bloqueia o arquivo com o nome dela; coluna opcional ausente (`Grupo_Emp`, `Descrição Turma`,
+`Data demissão`) gera um aviso no topo da pré-visualização ("o campo X ficará vazio para todos").
+
+Os arquivos fictícios do pacote (`SIGH/docs/referencias/importacao-funcionarios`) também estão em
+`SIGH/backend/tests/SIGH.IntegrationTests/Fixtures/Referencias`, onde o teste `LeiameReferenceImportTests` confere a tabela
+de resultados esperados do LEIAME linha a linha.
 
 #### Funcionários e apoio à decisão
 - `/employees`: lista com busca por nome ou matrícula e filtros (situação, grupo, gerência, setor); CPF sempre mascarado

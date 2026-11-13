@@ -234,6 +234,31 @@ describe('/employees/import', () => {
     expect(await screen.findByText(/Importação aplicada: 1 novo\(s\)/)).toBeInTheDocument();
   });
 
+  it('shows file-level warnings (missing optional column) at the top of the preview', async () => {
+    vi.spyOn(employeesApi, 'previewImport').mockResolvedValue({
+      ...preview,
+      requiresMassTerminationConfirmation: false,
+      errors: [],
+      warnings: [
+        { row: null, employeeNumber: null, severity: 'Warning', message: 'Coluna "Grupo_Emp" não encontrada; o campo Grupo ficará vazio para todos.' },
+        ...preview.warnings,
+      ],
+    });
+    server.use(refreshSucceeds(), importUser(), batches());
+    const user = userEvent.setup();
+
+    renderApp('/employees/import');
+    await user.upload(await screen.findByLabelText('Planilha do SAP'), xlsx());
+    await user.click(screen.getByRole('button', { name: 'Pré-visualizar' }));
+
+    const top = await screen.findAllByTestId('file-warning');
+    expect(top).toHaveLength(1);
+    expect(top[0]).toHaveTextContent('Coluna "Grupo_Emp" não encontrada; o campo Grupo ficará vazio para todos.');
+    // Avisos de linha continuam só na aba.
+    expect(screen.queryByText(/Possível readmissão/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirmar importação' })).toBeEnabled();
+  });
+
   it('shows the server error for a file with a missing column', async () => {
     vi.spyOn(employeesApi, 'previewImport').mockRejectedValue(new Error('Coluna(s) obrigatória(s) não encontrada(s) no cabeçalho: "Chave Organização".'));
     server.use(refreshSucceeds(), importUser(), batches());

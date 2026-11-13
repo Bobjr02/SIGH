@@ -208,6 +208,14 @@ export const EmployeeImportPage: React.FC = () => {
               {preview.summary.totalRows} linha(s) · {preview.summary.unchanged} sem mudança · válida até{' '}
               {new Date(preview.expiresAt).toLocaleTimeString('pt-BR')}
             </Typography>
+            {/* Avisos do arquivo inteiro (ex.: coluna opcional ausente) ficam no topo, não só na aba Avisos. */}
+            {preview.warnings
+              .filter((w) => w.row == null)
+              .map((w) => (
+                <Alert key={w.message} severity="warning" data-testid="file-warning">
+                  {w.message}
+                </Alert>
+              ))}
             {preview.requiresMassTerminationConfirmation && (
               <Alert severity="warning" role="alert">
                 Esta importação desliga {preview.toTerminate.length} funcionário(s) ausente(s) do arquivo (

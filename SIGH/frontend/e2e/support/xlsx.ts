@@ -124,8 +124,9 @@ export const syntheticCpf = (base9: string) => {
 };
 
 export const SAP_HEADERS = [
-  'Matrícula', 'Nome', 'Nome da mãe', 'CPF', 'Estado', 'Data admissão', 'Data demissão', 'Status ocupação',
-  'Cargo', 'Descr.Cargo', 'Uni.Org', 'Descr.Unid.Org.', 'Chave Organização', 'Grupo', 'Turma', 'Endereço', 'CEP', 'Estado',
+  // Cabeçalhos reais da exportação (LEIAME, seção 2). "Turma" é só o código; o SIGH lê "Descrição Turma".
+  'Matrícula', 'Nome', 'Nome mãe', 'CPF', 'Estado', 'Data admissão', 'Data demissão', 'Status',
+  'Cargo', 'Descr.Cargo', 'Uni.Org', 'Descr.Unid.Org.', 'Chave Organização', 'Grupo_Emp', 'Turma', 'Descrição Turma', 'Endereço', 'CEP', 'Estado',
 ];
 
 export interface SapRow {
@@ -149,6 +150,6 @@ export const sapFile = (rows: SapRow[]) =>
     ...rows.map((r, i) => [
       r.number, r.name, `MAE FICTICIA ${i}`, r.cpf, 'PE FICTICIO', r.admission ?? '01/02/2020', r.termination ?? '', r.status ?? 'Ativo',
       ...(r.job ?? ['50001234', 'Operador de Máquinas']), ...(r.dept ?? ['60001000', 'Moagem']), r.mu ?? 'USGA131',
-      r.group ?? 'Indústria', r.team ?? 'A', `RUA FICTICIO ${i}`, '00000-000', 'Casado FICTICIA',
+      r.group ?? 'Industria', '999', r.team ?? 'A', `RUA FICTICIA ${i}`, '00000-000', 'Casado FICTICIA',
     ]),
   ]);
