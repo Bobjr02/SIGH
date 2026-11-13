@@ -200,9 +200,9 @@ public class ExcelHrSpreadsheetReaderTests
     }
 
     [Fact]
-    public void OptionalColumnsMayBeMissing()
+    public void OptionalColumnsMayBeMissing_ButEachOneProducesAWarning()
     {
-        var sheet = Read(new HrXlsxBuilder().Without("Grupo").Without("Turma").Without("Data demissão")
+        var sheet = Read(new HrXlsxBuilder().Without("Grupo_Emp").Without("Descrição Turma").Without("Data demissão")
             .Add(new R("50090001", "Ana", HrXlsxBuilder.Cpf(1))).Build());
         var issues = new List<HrImportIssue>();
 
@@ -210,8 +210,29 @@ public class ExcelHrSpreadsheetReaderTests
 
         issues.Should().BeEmpty();
         row!.Group.Should().BeNull();
-        row.Team.Should().BeNull();
+        row.Team.Should().BeNull("a coluna \"Turma\" (código) existe, mas não é lida");
         row.TerminationDate.Should().BeNull();
+        sheet.Warnings.Should().BeEquivalentTo(
+            "Coluna \"Grupo_Emp\" não encontrada; o campo Grupo ficará vazio para todos.",
+            "Coluna \"Descrição Turma\" não encontrada; o campo Turma ficará vazio para todos.",
+            "Coluna \"Data demissão\" não encontrada; o campo Demissão ficará vazio para todos.");
+    }
+
+    [Theory]
+    [InlineData("Grupo")]          // alias antigo, não existe na exportação
+    [InlineData("Situação")]
+    [InlineData("Status ocupação")]
+    public void InventedAliases_AreNotAccepted(string header)
+    {
+        HrImportColumns.All.Select(c => HrImportColumns.Normalize(c.Header)).Should().NotContain(HrImportColumns.Normalize(header));
+    }
+
+    [Fact]
+    public void ClosedList_MatchesTheLeiameTable()
+    {
+        HrImportColumns.All.Select(c => c.Header).Should().BeEquivalentTo(
+            "Matrícula", "Nome", "CPF", "Status", "Grupo_Emp", "Cargo", "Descr.Cargo", "Uni.Org", "Descr.Unid.Org.",
+            "Data admissão", "Data demissão", "Descrição Turma", "Chave Organização");
     }
 
     [Fact]
@@ -270,12 +291,36 @@ public class EmployeeImportPlannerTests
     }
 
     [Fact]
-    public void CpfOfAnotherActiveEmployee_IsAnError()
+    public void DuplicatedCpf_KeepsTheEmployeeWhoAlreadyOwnsIt_AndRejectsOnlyTheOther()
     {
         var plan = Plan(Rows(new R("50090009", "Outra Pessoa", HrXlsxBuilder.Cpf(1)), new R("50090001", "Pessoa 50090001", HrXlsxBuilder.Cpf(1))),
             Existing("50090001", HrXlsxBuilder.Cpf(1)));
 
-        plan.Issues.Should().Contain(i => i.Severity == HrIssueSeverity.Error && i.Message.Contains("CPF repetido"));
+        plan.Issues.Should().ContainSingle(i => i.Severity == HrIssueSeverity.Error)
+            .Which.Should().Match<HrImportIssue>(i => i.EmployeeNumber == "50090009" && i.Message.Contains("CPF igual ao da matrícula 50090001"));
+        plan.UnchangedEmployeeNumbers.Should().Equal("50090001");
+        plan.Of(EmployeeChangeKind.Created).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DuplicatedCpfBetweenTwoNewEmployees_RejectsBoth()
+    {
+        var plan = Plan(Rows(new R("50090008", "Pessoa A", HrXlsxBuilder.Cpf(7)), new R("50090009", "Pessoa B", HrXlsxBuilder.Cpf(7))));
+
+        plan.Issues.Where(i => i.Severity == HrIssueSeverity.Error).Select(i => i.EmployeeNumber).Should().BeEquivalentTo("50090008", "50090009");
+        plan.Changes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ARejectedDuplicate_IsNeverTerminatedAsAbsent()
+    {
+        // Duas matrículas existentes passam a ter o mesmo CPF no arquivo (nenhuma é dona dele): as duas são
+        // rejeitadas, mas continuam presentes, então nenhuma é desligada por ausência.
+        var plan = Plan(Rows(new R("50090001", "Pessoa 50090001", HrXlsxBuilder.Cpf(9)), new R("50090002", "Pessoa 50090002", HrXlsxBuilder.Cpf(9))),
+            Existing("50090001", HrXlsxBuilder.Cpf(1)), Existing("50090002", HrXlsxBuilder.Cpf(2)));
+
+        plan.Of(EmployeeChangeKind.TerminatedByAbsence).Should().BeEmpty();
+        plan.ErrorCount.Should().Be(2);
     }
 
     [Fact]

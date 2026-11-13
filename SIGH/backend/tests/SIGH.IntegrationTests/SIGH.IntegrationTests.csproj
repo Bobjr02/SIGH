@@ -26,4 +26,8 @@
     <ProjectReference Include="..\..\src\SIGH.Api\SIGH.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Arquivos FICTÍCIOS do pacote de referência (SIGH/docs/referencias/importacao-funcionarios). -->
+    <None Include="Fixtures\Referencias\*.xlsx" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

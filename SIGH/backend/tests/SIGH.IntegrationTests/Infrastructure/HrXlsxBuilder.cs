@@ -39,8 +39,8 @@ public sealed class HrXlsxBuilder
         _extraColumns = extraColumns;
         _headers =
         [
-            "Matrícula", "Nome", "Nome da mãe", "CPF", "Estado", "Data admissão", "Data demissão", "Status ocupação",
-            "Cargo", "Descr.Cargo", "Uni.Org", "Descr.Unid.Org.", "Chave Organização", "Grupo", "Turma",
+            "Matrícula", "Nome", "Nome da mãe", "CPF", "Estado", "Data admissão", "Data demissão", "Status",
+            "Cargo", "Descr.Cargo", "Uni.Org", "Descr.Unid.Org.", "Chave Organização", "Grupo_Emp", "Turma", "Descrição Turma",
             "Endereço", "CEP", "Estado", "Telefone", "PIS", "Conta bancária"
         ];
     }
@@ -80,14 +80,16 @@ public sealed class HrXlsxBuilder
                     ["CPF"] = row.Cpf,
                     ["Data admissão"] = row.Admission,
                     ["Data demissão"] = row.Termination,
-                    ["Status ocupação"] = row.Status,
+                    ["Status"] = row.Status,
                     ["Cargo"] = row.JobCode,
                     ["Descr.Cargo"] = row.JobName,
                     ["Uni.Org"] = row.DeptCode,
                     ["Descr.Unid.Org."] = row.DeptName,
                     ["Chave Organização"] = row.ManagementUnit,
-                    ["Grupo"] = row.Group,
-                    ["Turma"] = row.Team,
+                    ["Grupo_Emp"] = row.Group,
+                    // "Turma" é só o código (não importado); o SIGH lê "Descrição Turma".
+                    ["Turma"] = "999",
+                    ["Descrição Turma"] = row.Team,
                     ["Endereço"] = $"RUA FICTICIO {index}",
                     ["CEP"] = "00000-0" + (index % 10),
                     ["Telefone"] = "(00) 00000-0000",
