@@ -183,7 +183,7 @@ describe('registrar medida', () => {
     expect(await screen.findByText('Medida registrada. Aguardando aprovação.')).toBeInTheDocument();
     expect(posted[1]).toMatchObject({ confirmPossibleDuplicate: true });
     expect(screen.getByTestId('location')).toHaveTextContent('/medidas/rec-1');
-  });
+  }, 15_000); // fluxo longo (autocomplete com debounce + formulário inteiro)
 
   it('suspension shows the days counting both ends and requires the period', async () => {
     server.use(refreshSucceeds(), meReturns(REGISTRAR), optionsHandler());

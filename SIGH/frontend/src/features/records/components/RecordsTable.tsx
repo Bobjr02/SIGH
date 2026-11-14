@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material';
 import type { PagedResult } from '../../employees/api/employeesApi';
-import { formatBusinessDate, RecordStatus, type RecordSummary } from '../api/recordsApi';
+import { formatBusinessDate, historySealOf, RecordOrigin, RecordStatus, type RecordSummary } from '../api/recordsApi';
 import { RecordStatusChip } from './RecordStatusChip';
 
 interface RecordsTableProps {
@@ -77,11 +77,17 @@ export const RecordsTable: React.FC<RecordsTableProps> = ({ data, isLoading, err
                   <TableCell>
                     {r.measureTypeLabel}
                     {r.suspensionDays ? ` (${r.suspensionDays} dia${r.suspensionDays > 1 ? 's' : ''})` : ''}
+                    {r.suspensionDaysUnknown ? ' (dias: não informado)' : ''}
                   </TableCell>
                   <TableCell>{r.infractionTypeName ?? '—'}</TableCell>
                   <TableCell>{formatBusinessDate(r.measureDate)}</TableCell>
                   <TableCell>
                     <RecordStatusChip status={r.status} />
+                    {r.origin === RecordOrigin.Historical && (
+                      <Typography variant="caption" sx={{ display: "block" }} color="text.secondary" data-testid="history-seal">
+                        {historySealOf(r.importedAt)}
+                      </Typography>
+                    )}
                   </TableCell>
                 </TableRow>
               );

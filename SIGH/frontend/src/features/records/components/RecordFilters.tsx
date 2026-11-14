@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Button, MenuItem, TextField } from '@mui/material';
-import { RECORD_STATUS_LABELS, RecordStatus, type RecordFilters as Filters, type RecordOptions } from '../api/recordsApi';
+import { ORIGIN_LABELS, RECORD_STATUS_LABELS, RecordOrigin, RecordStatus, type RecordFilters as Filters, type RecordOptions } from '../api/recordsApi';
 
 interface RecordFiltersProps {
   value: Filters;
@@ -22,6 +22,21 @@ export const RecordFilters: React.FC<RecordFiltersProps> = ({ value, options, on
       <TextField select size="small" label="Situação" value={value.status ?? ''} onChange={(e) => set({ status: e.target.value === '' ? '' : (Number(e.target.value) as RecordStatus) })} sx={{ minWidth: 190 }}>
         <MenuItem value="">Todas</MenuItem>
         {Object.entries(RECORD_STATUS_LABELS).map(([k, label]) => (
+          <MenuItem key={k} value={k}>
+            {label}
+          </MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        select
+        size="small"
+        label="Origem"
+        value={value.origin ?? ''}
+        onChange={(e) => set({ origin: e.target.value === '' ? '' : (Number(e.target.value) as RecordOrigin) })}
+        sx={{ minWidth: 150 }}
+      >
+        <MenuItem value="">Todas</MenuItem>
+        {Object.entries(ORIGIN_LABELS).map(([k, label]) => (
           <MenuItem key={k} value={k}>
             {label}
           </MenuItem>

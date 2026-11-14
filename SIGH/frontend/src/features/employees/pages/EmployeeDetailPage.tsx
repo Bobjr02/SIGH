@@ -75,12 +75,36 @@ export const DecisionSupportPanel: React.FC<{ data: DecisionSupport }> = ({ data
           <Stat
             label="Suspensões"
             value={data.suspensions}
-            hint={`${data.suspensionDays} dia(s) no total${data.suspensionsWithoutPeriod ? `, ${data.suspensionsWithoutPeriod} sem período` : ''}`}
+            hint={`${data.suspensionDays} dia(s) no total${
+              data.suspensionsWithoutPeriod
+                ? ` +${data.suspensionsWithoutPeriod} suspensão${data.suspensionsWithoutPeriod > 1 ? 'ões' : ''} sem dias informados`
+                : ''
+            }`}
           />
           <Stat label="Última medida" value={formatDate(data.lastMeasureAt)} />
           <Stat label="Últimos 6 meses" value={data.measuresLast6Months} />
           <Stat label="Últimos 12 meses" value={data.measuresLast12Months} />
         </Box>
+
+        {(data.historicalMeasures ?? 0) > 0 && data.byOrigin && (
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+              Por origem
+            </Typography>
+            <Box component="ul" aria-label="Medidas por origem" sx={{ m: 0, pl: 2.5 }}>
+              {data.byOrigin.map((o) => (
+                <li key={o.label} data-testid="origin-breakdown">
+                  <Typography variant="body2">
+                    <strong>
+                      {o.total} {o.label.toLowerCase()}
+                    </strong>{' '}
+                    — {o.historical} histórica{o.historical === 1 ? '' : 's'}, {o.sigh} no SIGH
+                  </Typography>
+                </li>
+              ))}
+            </Box>
+          </Box>
+        )}
 
         <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
           <Box>
@@ -124,7 +148,11 @@ interface TimelineItem {
   title: string;
   subtitle: string;
   link?: string;
+  /** "Histórico importado — lote de dd/MM/yyyy". */
+  seal?: string;
 }
+
+const historySeal = (importedAt?: string | null) => `Histórico importado — lote de ${importedAt ? formatDate(importedAt) : '-'}`;
 
 export const EmployeeDetailPage: React.FC = () => {
   const { id = '' } = useParams<{ id: string }>();
@@ -165,19 +193,23 @@ export const EmployeeDetailPage: React.FC = () => {
   const timeline: TimelineItem[] = [
     ...(history.data?.cases ?? []).map((c) => ({
       key: `case-${c.caseId}`,
-      date: c.openedAt,
+      date: c.occurredAt ?? c.openedAt,
       kind: 'case' as const,
       title: `Processo ${c.caseNumber} - ${c.title}`,
       subtitle: `${c.status} · ${c.measuresCount} medida(s)`,
       link: `/medidas/${c.caseId}`,
+      seal: c.origin === 'Histórico' ? historySeal(c.importedAt) : undefined,
     })),
     ...(measures.data?.items ?? []).map((m) => ({
       key: `measure-${m.measureId}`,
       date: m.appliedAt,
       kind: 'measure' as const,
       title: m.measureType,
-      subtitle: `Processo ${m.caseNumber}${m.effectiveTo ? ` · até ${formatDate(m.effectiveTo)}` : ''}`,
+      subtitle: `Processo ${m.caseNumber}${m.effectiveTo ? ` · até ${formatDate(m.effectiveTo)}` : ''}${
+        m.suspensionDaysUnknown ? ' · dias não informados' : ''
+      }`,
       link: `/medidas/${m.caseId}`,
+      seal: m.origin === 'Histórico' ? 'Histórico importado' : undefined,
     })),
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
 
@@ -235,6 +267,11 @@ export const EmployeeDetailPage: React.FC = () => {
                     <Typography variant="caption" color="text.secondary">
                       {item.subtitle}
                     </Typography>
+                    {item.seal && (
+                      <Box>
+                        <Chip size="small" variant="outlined" color="secondary" label={item.seal} data-testid="history-seal" />
+                      </Box>
+                    )}
                   </Box>
                 </Box>
               ))}

@@ -30,6 +30,7 @@ const PendingApprovalsPage = lazy(() => import('../features/records/pages/Pendin
 const UsersPage = lazy(() => import('../features/admin/pages/UsersPage'));
 const UserDetailPage = lazy(() => import('../features/admin/pages/UserDetailPage'));
 const ManagementUnitsPage = lazy(() => import('../features/admin/pages/ManagementUnitsPage'));
+const HistoryImportPage = lazy(() => import('../features/admin/pages/HistoryImportPage'));
 const DisciplinaryDashboardPage = lazy(() =>
   import('../features/disciplinary-reports/pages/DisciplinaryDashboardPage').then((m) => ({ default: m.DisciplinaryDashboardPage })),
 );
@@ -86,6 +87,7 @@ export const AppRoutes: React.FC = () => {
             <Route path="/admin/usuarios" element={guard(PERMISSIONS.USERS_VIEW, <UsersPage />)} />
             <Route path="/admin/usuarios/:id" element={guard(PERMISSIONS.USERS_VIEW, <UserDetailPage />)} />
             <Route path="/admin/gerencias" element={guard(PERMISSIONS.MANAGEMENT_UNITS_MANAGE, <ManagementUnitsPage />)} />
+            <Route path="/admin/history-import" element={guard(PERMISSIONS.DISCIPLINARY_HISTORY_IMPORT, <HistoryImportPage />)} />
             <Route
               path="/disciplinary/reports/dashboard"
               element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_DASHBOARD, <DisciplinaryDashboardPage />)}

@@ -30,13 +30,27 @@ export enum RecordStatus {
   Rejected = 2,
   Approved = 3,
   Cancelled = 4,
+  /** Histórico importado da planilha de penalidades: somente leitura. */
+  Historical = 5,
 }
+
+/** Espelha RecordOrigin. */
+export enum RecordOrigin {
+  Sigh = 1,
+  Historical = 2,
+}
+
+export const ORIGIN_LABELS: Record<RecordOrigin, string> = {
+  [RecordOrigin.Sigh]: 'SIGH',
+  [RecordOrigin.Historical]: 'Histórico',
+};
 
 export const RECORD_STATUS_LABELS: Record<RecordStatus, string> = {
   [RecordStatus.PendingApproval]: 'Aguardando aprovação',
   [RecordStatus.Rejected]: 'Rejeitada',
   [RecordStatus.Approved]: 'Aprovada',
   [RecordStatus.Cancelled]: 'Cancelada',
+  [RecordStatus.Historical]: 'Histórico importado',
 };
 
 export interface RecordSummary {
@@ -60,6 +74,12 @@ export interface RecordSummary {
   registeredAt: string;
   registeredByUserId: string;
   registeredByName?: string | null;
+  origin?: RecordOrigin;
+  originLabel?: string;
+  /** Histórico: data do lote que importou o registro. */
+  importedAt?: string | null;
+  /** Suspensão com dias "não informado" (fora da soma de dias). */
+  suspensionDaysUnknown?: boolean;
 }
 
 export interface RecordEvidence {
@@ -165,6 +185,7 @@ export interface RecordFilters {
   to?: string;
   employee?: string;
   mine?: boolean;
+  origin?: RecordOrigin | '';
 }
 
 /** Aviso de possível duplicidade (409 POSSIBLE_DUPLICATE): exige confirmação. */
@@ -275,6 +296,14 @@ export const todayIso = (): string => {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+};
+
+/** "Histórico importado — lote de dd/MM/yyyy". */
+export const historySealOf = (importedAt?: string | null): string => {
+  if (!importedAt) return 'Histórico importado';
+  const d = new Date(importedAt);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `Histórico importado — lote de ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
 /** Dias de suspensão, contando os dois extremos. */

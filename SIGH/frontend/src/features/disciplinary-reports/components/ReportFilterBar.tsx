@@ -15,6 +15,9 @@ interface ReportFilterBarProps {
   onPriorityChange?: (value: string) => void;
   measureType?: string;
   onMeasureTypeChange?: (value: string) => void;
+  /** Origem: "" (todas), "1" (SIGH) ou "2" (Histórico). */
+  origin?: string;
+  onOriginChange?: (value: string) => void;
   onReset?: () => void;
   onExportCsv?: () => void;
   isExporting?: boolean;
@@ -34,6 +37,8 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
   onPriorityChange,
   measureType,
   onMeasureTypeChange,
+  origin,
+  onOriginChange,
   onReset,
   onExportCsv,
   isExporting,
@@ -114,6 +119,20 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
             <option value={String(DisciplinaryCasePriority.Normal)}>Normal</option>
             <option value={String(DisciplinaryCasePriority.High)}>Alta</option>
             <option value={String(DisciplinaryCasePriority.Critical)}>Crítica</option>
+          </select>
+        )}
+
+        {/* Origem */}
+        {onOriginChange && (
+          <select
+            aria-label="Origem"
+            value={origin || ''}
+            onChange={(e) => onOriginChange(e.target.value)}
+            className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Todas as origens</option>
+            <option value="1">SIGH</option>
+            <option value="2">Histórico</option>
           </select>
         )}
 

@@ -17,7 +17,7 @@ import {
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS } from '../../../auth/permissions';
 import { CaseAuditTimeline } from '../../audit/components/CaseAuditTimeline';
-import { formatBusinessDate, recordErrorMessage, recordKeys, recordsApi } from '../api/recordsApi';
+import { formatBusinessDate, historySealOf, recordErrorMessage, recordKeys, recordsApi, RecordOrigin } from '../api/recordsApi';
 import { AttachmentsPanel } from '../components/AttachmentsPanel';
 import { RecordStatusChip } from '../components/RecordStatusChip';
 
@@ -105,6 +105,12 @@ export const RecordDetailPage: React.FC = () => {
           {error}
         </Alert>
       )}
+      {s.origin === RecordOrigin.Historical && (
+        <Alert severity="info" data-testid="history-seal">
+          {historySealOf(s.importedAt)}. Medida aplicada antes do SIGH, sem decisão nem aprovação registradas aqui; somente leitura
+          (anexos, como a carta assinada antiga, ainda podem ser incluídos).
+        </Alert>
+      )}
       {record.lastRejectionReason && s.status !== 3 && (
         <Alert severity="warning" data-testid="rejection-reason">
           Rejeitada por {record.lastRejectedByName ?? 'aprovador'} em {formatInstant(record.lastRejectedAt)}: {record.lastRejectionReason}
@@ -142,13 +148,17 @@ export const RecordDetailPage: React.FC = () => {
         <Field label="Motivo" value={s.infractionTypeName} />
         <Field label="Data da medida" value={formatBusinessDate(s.measureDate)} />
         <Field label="Ocorrência(s)" value={record.occurrenceDates.map(formatBusinessDate).join(', ')} />
+        {s.suspensionDaysUnknown && <Field label="Suspensão" value="Dias: não informado" />}
         {record.suspensionStart && (
           <Field
             label="Suspensão"
             value={`${formatBusinessDate(record.suspensionStart)} a ${formatBusinessDate(record.suspensionEnd)} (${s.suspensionDays} dia${(s.suspensionDays ?? 0) > 1 ? 's' : ''})`}
           />
         )}
-        <Field label="Registrada por" value={`${s.registeredByName ?? '—'} em ${formatInstant(s.registeredAt)}`} />
+        <Field
+          label={s.origin === RecordOrigin.Historical ? 'Importada por' : 'Registrada por'}
+          value={`${s.registeredByName ?? '—'} em ${formatInstant(s.registeredAt)}`}
+        />
         {record.approvedAt && <Field label="Aprovada por" value={`${record.approvedByName ?? '—'} em ${formatInstant(record.approvedAt)}`} />}
         {record.cancelledAt && <Field label="Cancelada" value={`${formatInstant(record.cancelledAt)}: ${record.cancellationReason}`} />}
         <Box sx={{ gridColumn: '1 / -1' }}>
