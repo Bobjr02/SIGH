@@ -51,6 +51,8 @@ export const DisciplinaryMeasuresReportPage: React.FC = () => {
         onDateFromChange={(val) => setFilters((f) => ({ ...f, appliedFrom: val, pageNumber: 1 }))}
         dateTo={filters.appliedTo}
         onDateToChange={(val) => setFilters((f) => ({ ...f, appliedTo: val, pageNumber: 1 }))}
+        origin={filters.origin}
+        onOriginChange={(val) => setFilters((f) => ({ ...f, origin: val, pageNumber: 1 }))}
         measureType={filters.measureType}
         onMeasureTypeChange={(val) => setFilters((f) => ({ ...f, measureType: val, pageNumber: 1 }))}
         onReset={() =>
@@ -90,6 +92,7 @@ export const DisciplinaryMeasuresReportPage: React.FC = () => {
                     <th className="px-4 py-3">Data Aplicação</th>
                     <th className="px-4 py-3">Vigência</th>
                     <th className="px-4 py-3">Aplicado Por</th>
+                    <th className="px-4 py-3">Origem</th>
                   </tr>
                 </thead>
 
@@ -117,6 +120,10 @@ export const DisciplinaryMeasuresReportPage: React.FC = () => {
                           : '-'}
                       </td>
                       <td className="px-4 py-3 text-slate-600">{row.appliedByEmployeeName}</td>
+                      <td className="px-4 py-3 text-slate-600" data-testid="measure-origin">
+                        {row.origin ?? 'SIGH'}
+                        {row.suspensionDaysUnknown ? ' · dias não informado' : ''}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

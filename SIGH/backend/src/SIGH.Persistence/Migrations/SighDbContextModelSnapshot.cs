@@ -69,6 +69,16 @@ namespace SIGH.Persistence.Migrations
                     b.Property<DateTimeOffset?>("DueDate")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<Guid?>("HistoryImportBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("HistoryKey")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<Guid?>("HistoryUpdatedByBatchId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -107,6 +117,12 @@ namespace SIGH.Persistence.Migrations
                     b.HasIndex("CompanyId");
 
                     b.HasIndex("DueDate");
+
+                    b.HasIndex("HistoryImportBatchId");
+
+                    b.HasIndex("HistoryKey")
+                        .IsUnique()
+                        .HasFilter("[HistoryKey] IS NOT NULL");
 
                     b.HasIndex("IsDeleted");
 
@@ -405,6 +421,84 @@ namespace SIGH.Persistence.Migrations
                     b.ToTable("DisciplinaryEvidences", (string)null);
                 });
 
+            modelBuilder.Entity("SIGH.Domain.Disciplinary.Entities.DisciplinaryHistoryImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AbsentCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("AppliedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("AppliedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ExistingCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("FileSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int>("ImportedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IssuesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NewInfractionTypeCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PlanFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset>("PreviewedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("PreviewedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RejectedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UpdatedCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WarningCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FileSha256");
+
+                    b.HasIndex("PreviewedAt");
+
+                    b.ToTable("DisciplinaryHistoryImportBatches", (string)null);
+                });
+
             modelBuilder.Entity("SIGH.Domain.Disciplinary.Entities.DisciplinaryMeasure", b =>
                 {
                     b.Property<Guid>("Id")
@@ -431,7 +525,7 @@ namespace SIGH.Persistence.Migrations
                     b.Property<Guid>("DisciplinaryCaseId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("DisciplinaryDecisionId")
+                    b.Property<Guid?>("DisciplinaryDecisionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("EffectiveFrom")
@@ -459,6 +553,9 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("nvarchar(2000)");
 
                     b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SuspensionDays")
                         .HasColumnType("int");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
@@ -572,6 +669,47 @@ namespace SIGH.Persistence.Migrations
                     b.HasIndex("DisciplinaryCaseId", "Status");
 
                     b.ToTable("DisciplinaryOccurrences", (string)null);
+                });
+
+            modelBuilder.Entity("SIGH.Domain.Disciplinary.Entities.HistoryImportState", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ClosedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("HistoryImportStates", (string)null);
                 });
 
             modelBuilder.Entity("SIGH.Domain.Disciplinary.Entities.InfractionType", b =>
@@ -2032,8 +2170,7 @@ namespace SIGH.Persistence.Migrations
                     b.HasOne("SIGH.Domain.Disciplinary.Entities.DisciplinaryDecision", null)
                         .WithMany()
                         .HasForeignKey("DisciplinaryDecisionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SIGH.Domain.Employees.Entities.Employee", null)
                         .WithMany()

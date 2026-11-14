@@ -126,10 +126,6 @@ try
     builder.Services.AddSingleton<SecurityStampCache>();
     builder.Services.AddEndpointsApiExplorer();
 
-    // Health Checks (API + SQL Server / DbContext)
-    builder.Services.AddHealthChecks()
-        .AddDbContextCheck<SighDbContext>("Database");
-
     // CORS: origens vêm de Cors:AllowedOrigins. Em desenvolvimento o front usa o proxy do Vite
     // (mesma origem), então a lista pode ficar vazia; sem origens configuradas, nenhuma é liberada.
     var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()?
@@ -246,9 +242,7 @@ try
 
     app.MapControllers();
 
-    // Health Checks Endpoints
-    app.MapHealthChecks("/health");
-    app.MapHealthChecks("/api/v1/health-check");
+    // Health: rota única GET /api/v1/health (HealthController, com teste de conexão ao banco).
 
     // Endpoint de Verificação da Fundação do Sistema (/api/v1)
     app.MapGet("/api/v1", () => Results.Ok(new

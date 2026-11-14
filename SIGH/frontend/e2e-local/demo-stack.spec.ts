@@ -94,3 +94,23 @@ test('preposto (Registro + Aprovador): pending queue and own records', async ({ 
   await expect(page.getByTestId('home-mine')).toBeVisible();
   await expect(page.getByTestId('home-mine').getByTestId('records-empty')).toBeVisible();
 });
+
+test('demo history: the manager sees the imported history of his unit and the decision support splits the origins', async ({ page }) => {
+  await login(page, 'gestor.industrial');
+  await page.goto('/medidas?');
+  await page.getByRole('combobox', { name: 'Origem' }).click();
+  await page.getByRole('option', { name: 'Histórico' }).click();
+  const units = await unitsOf(page);
+  expect(units.every((u) => u === 'USGA131')).toBeTruthy();
+  await expect(page.getByTestId('history-seal').first()).toContainText('Histórico importado — lote de');
+
+  await page.getByRole('button', { name: 'Sair' }).click();
+  await login(page, 'gestor.agricola');
+  await page.goto('/employees');
+  await page.getByLabel('Nome ou matrícula').fill('50090007');
+  await page.getByRole('button', { name: 'Filtrar' }).click();
+  await page.getByTestId('employee-row-50090007').click();
+  const origins = page.getByRole('region', { name: 'Apoio à decisão' }).getByRole('list', { name: 'Medidas por origem' });
+  await expect(origins).toContainText('1 advertências — 1 histórica, 0 no SIGH');
+  await expect(origins).toContainText('2 suspensões — 2 históricas, 0 no SIGH');
+});

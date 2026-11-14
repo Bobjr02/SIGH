@@ -337,6 +337,8 @@ public sealed class RecordService : IRecordService
             throw new KeyNotFoundException("Medida não encontrada.");
 
         var record = await _cases.GetByIdWithDetailsAsync(recordId, cancellationToken);
+        if (record?.Kind == DisciplinaryCaseKind.Historical)
+            throw new BusinessRuleValidationException("Registro histórico importado é somente leitura.");
         if (record is null || record.Kind != DisciplinaryCaseKind.Record)
             throw new KeyNotFoundException("Medida não encontrada.");
         return record;

@@ -67,6 +67,8 @@ export const DisciplinaryCasesReportPage: React.FC = () => {
         onDateToChange={(val) => setFilters((f) => ({ ...f, dateTo: val, pageNumber: 1 }))}
         status={filters.status}
         onStatusChange={(val) => setFilters((f) => ({ ...f, status: val as any, pageNumber: 1 }))}
+        origin={filters.origin}
+        onOriginChange={(val) => setFilters((f) => ({ ...f, origin: val, pageNumber: 1 }))}
         priority={filters.priority}
         onPriorityChange={(val) => setFilters((f) => ({ ...f, priority: val as any, pageNumber: 1 }))}
         onReset={() =>

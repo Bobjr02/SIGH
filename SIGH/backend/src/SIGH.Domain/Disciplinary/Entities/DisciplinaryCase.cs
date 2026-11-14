@@ -29,6 +29,17 @@ public class DisciplinaryCase : AuditableEntity
     public string? ConclusionSummary { get; private set; }
     public DisciplinaryCaseKind Kind { get; private set; } = DisciplinaryCaseKind.Process;
 
+    /// <summary>Histórico importado: chave de idempotência da linha (matrícula|data|tipo|motivo|início do período).</summary>
+    public string? HistoryKey { get; private set; }
+
+    /// <summary>Histórico importado: lote que criou o registro (hash do arquivo, quem e quando ficam no lote).</summary>
+    public Guid? HistoryImportBatchId { get; private set; }
+
+    /// <summary>Histórico importado: último lote que corrigiu o registro (reimportação de planilha corrigida).</summary>
+    public Guid? HistoryUpdatedByBatchId { get; private set; }
+
+    public const int HistoryKeyMaxLength = 400;
+
     public DisciplinaryDecision? Decision => _decisions.FirstOrDefault(d => d.Status == DecisionStatus.Draft || d.Status == DecisionStatus.PendingApproval || d.Status == DecisionStatus.Approved);
     public Guid? DecisionId => Decision?.Id;
 
@@ -115,6 +126,65 @@ public class DisciplinaryCase : AuditableEntity
             Status = initialStatus,
             Kind = kind
         };
+    }
+
+    /// <summary>
+    /// Registro histórico (planilha de penalidades anterior ao SIGH): acusado com a gerência da época, uma
+    /// ocorrência e a medida já aplicada, concluído. NÃO há decisão nem aprovação: a medida não passou pelo
+    /// SIGH. O domínio exige decisão aprovada para AddMeasure no fluxo normal; este é o caminho próprio do
+    /// histórico. OpenedBy/ReportedBy registram quem lançou o registro no SIGH (o importador), nunca uma decisão.
+    /// </summary>
+    public static DisciplinaryCase CreateHistorical(
+        string caseNumber,
+        Guid companyId,
+        string title,
+        string description,
+        string historyKey,
+        Guid importBatchId,
+        Guid importedByUserId,
+        DateTimeOffset importedAt,
+        Guid employeeId,
+        Guid managementUnitIdAtTime,
+        Guid infractionTypeId,
+        InfractionSeverity severity,
+        DisciplinaryMeasureType measureType,
+        DateTimeOffset measureDate,
+        DateTimeOffset effectiveFrom,
+        DateTimeOffset? effectiveUntil,
+        int? suspensionDays)
+    {
+        if (string.IsNullOrWhiteSpace(historyKey) || historyKey.Length > HistoryKeyMaxLength)
+            throw new BusinessRuleValidationException("A chave do registro histórico é inválida.");
+        if (importBatchId == Guid.Empty)
+            throw new BusinessRuleValidationException("O lote de importação é obrigatório.");
+
+        var record = Create(caseNumber, companyId, title, description, importedAt, importedByUserId,
+            initialStatus: DisciplinaryCaseStatus.Open, kind: DisciplinaryCaseKind.Historical);
+        record.HistoryKey = historyKey;
+        record.HistoryImportBatchId = importBatchId;
+
+        record._employees.Add(DisciplinaryCaseEmployee.Create(record.Id, employeeId, CaseEmployeeRole.Accused, true, managementUnitIdAtTime));
+        record._occurrences.Add(DisciplinaryOccurrence.Create(record.Id, measureDate, importedAt, description, importedByUserId, infractionTypeId, severity));
+        record._measures.Add(DisciplinaryMeasure.CreateHistorical(record.Id, employeeId, measureType, description, measureDate, effectiveFrom, effectiveUntil, suspensionDays));
+
+        record.Status = DisciplinaryCaseStatus.Completed;
+        record.ClosedAt = measureDate;
+        record.ConclusionSummary = "Registro histórico importado da planilha de penalidades.";
+        return record;
+    }
+
+    /// <summary>
+    /// Único caminho que altera um registro histórico: a reimportação de uma planilha corrigida (mesma
+    /// chave, dados diferentes). Só gerência da época e período/dias da suspensão podem mudar.
+    /// </summary>
+    public void ApplyHistoricalCorrection(Guid managementUnitIdAtTime, DateTimeOffset effectiveFrom, DateTimeOffset? effectiveUntil, int? suspensionDays, Guid batchId)
+    {
+        if (Kind != DisciplinaryCaseKind.Historical)
+            throw new BusinessRuleValidationException("Só registros históricos são corrigidos pela reimportação.");
+
+        _employees.Single(e => e.Role == CaseEmployeeRole.Accused).ChangeManagementUnitAtTime(managementUnitIdAtTime);
+        _measures.Single().CorrectHistoricalPeriod(effectiveFrom, effectiveUntil, suspensionDays);
+        HistoryUpdatedByBatchId = batchId;
     }
 
     public void Open()
@@ -626,7 +696,8 @@ public class DisciplinaryCase : AuditableEntity
     /// </summary>
     private void EnsureEvidenceChangesAllowed()
     {
-        if (Status == DisciplinaryCaseStatus.Completed && Kind == DisciplinaryCaseKind.Record)
+        // Medida aprovada no SIGH ou registro histórico (carta assinada antiga): anexos continuam permitidos.
+        if (Status == DisciplinaryCaseStatus.Completed && Kind is DisciplinaryCaseKind.Record or DisciplinaryCaseKind.Historical)
             return;
 
         EnsureNotCompletedOrCancelled();
@@ -634,6 +705,10 @@ public class DisciplinaryCase : AuditableEntity
 
     private void EnsureNotCompletedOrCancelled()
     {
+        // Histórico importado é somente leitura (ele nasce concluído; a checagem explícita deixa a regra clara).
+        if (Kind == DisciplinaryCaseKind.Historical)
+            throw new BusinessRuleValidationException("Registro histórico importado é somente leitura.");
+
         if (Status == DisciplinaryCaseStatus.Completed)
             throw new BusinessRuleValidationException("O processo disciplinar concluído não pode ser alterado.");
 

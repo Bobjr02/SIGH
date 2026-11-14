@@ -61,10 +61,15 @@ public sealed class DemoDataSeeder
         new(8, "50090015", DisciplinaryMeasureType.VerbalWarning, "ATRASO", 10, Outcome.Cancelled),                    // USGA134
     ];
 
+    /// <summary>
+    /// Catálogo da demonstração com os nomes da planilha de penalidades: assim a importação do histórico só cria
+    /// o motivo novo "USO DE CELULAR EM SERVIÇO", como em HISTORICO.md.
+    /// </summary>
     private static readonly (string Code, string Name, InfractionSeverity Severity)[] InfractionTypes =
     [
-        ("FALTA_INJUSTIFICADA", "Faltas injustificadas", InfractionSeverity.Moderate),
-        ("EPI", "Falta de uso de EPI", InfractionSeverity.High),
+        ("FALTA_INJUSTIFICADA", "Faltas injustificadas de forma recorrente", InfractionSeverity.Moderate),
+        ("EPI", "Falta de utilização do EPI", InfractionSeverity.High),
+        ("NEGLIGENCIA", "Negligência ou imprudência no desempenho de suas funções", InfractionSeverity.High),
         ("ATRASO", "Atrasos reiterados", InfractionSeverity.Low),
     ];
 
@@ -94,8 +99,8 @@ public sealed class DemoDataSeeder
                           ?? throw new InvalidOperationException("Dados de demonstração exigem o administrador do seed (Seed:AdminEmail e Seed:AdminPassword).");
 
             await ImportEmployeesAsync(adminId, cancellationToken);
-            _logger.LogInformation("Demo: importação de histórico disciplinar não existe nesta versão; etapa pulada.");
             var infractions = await EnsureInfractionTypesAsync(adminId, cancellationToken);
+            await ImportHistoryAsync(adminId, cancellationToken);
             var users = await EnsureUsersAsync(adminId, cancellationToken);
             await EnsureRecordsAsync(users, infractions, cancellationToken);
             _logger.LogInformation("Demo: dados de demonstração prontos ({Users} usuários, {Records} medidas).", users.Count, Records.Length);
@@ -128,6 +133,36 @@ public sealed class DemoDataSeeder
             var confirm = await import.ConfirmAsync(preview.Data!.BatchId, new MemoryStream(bytes), false, adminId, ct);
             if (!confirm.Success) throw new InvalidOperationException($"Confirmação da carga de funcionários falhou: {confirm.Message}");
             _logger.LogInformation("Demo: {Count} funcionários fictícios importados.", confirm.Data!.Summary.Created);
+        });
+    }
+
+    // ---- b. histórico disciplinar fictício (importador do histórico) ----
+
+    private async Task ImportHistoryAsync(Guid adminId, CancellationToken ct)
+    {
+        await RunAsAsync(adminId, async sp =>
+        {
+            var db = sp.GetRequiredService<SighDbContext>();
+            if (await db.DisciplinaryCases.AnyAsync(c => c.Kind == DisciplinaryCaseKind.Historical, ct))
+            {
+                _logger.LogInformation("Demo: histórico disciplinar já importado.");
+                return;
+            }
+
+            var import = sp.GetRequiredService<SIGH.Application.Disciplinary.History.IHistoryImportService>();
+            if ((await import.GetStatusAsync(ct)).IsClosed)
+            {
+                _logger.LogInformation("Demo: importação de histórico encerrada; etapa pulada.");
+                return;
+            }
+
+            var path = Path.Combine(DataPath(), "historico-disciplinar", "base_disciplinar_ficticia.xlsx");
+            var bytes = await File.ReadAllBytesAsync(path, ct);
+            var preview = await import.PreviewAsync(new MemoryStream(bytes), Path.GetFileName(path), adminId, ct);
+            if (!preview.Success) throw new InvalidOperationException($"Pré-visualização do histórico falhou: {preview.Message}");
+            var confirm = await import.ConfirmAsync(preview.Data!.BatchId, new MemoryStream(bytes), adminId, ct);
+            if (!confirm.Success) throw new InvalidOperationException($"Confirmação do histórico falhou: {confirm.Message}");
+            _logger.LogInformation("Demo: {Count} registros históricos fictícios importados.", confirm.Data!.Imported);
         });
     }
 

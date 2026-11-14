@@ -33,6 +33,8 @@ public class GetDisciplinaryMeasuresQuery
     public DateTimeOffset? AppliedFrom { get; set; }
     public DateTimeOffset? AppliedTo { get; set; }
     public string? SearchTerm { get; set; }
+    /// <summary>Origem: SIGH ou Histórico (vazio = todas).</summary>
+    public SIGH.Application.Disciplinary.Records.RecordOrigin? Origin { get; set; }
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 10;
 }
@@ -51,6 +53,8 @@ public class GetDisciplinaryCaseReportQuery
     public string? SearchTerm { get; set; }
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 10;
+    /// <summary>Origem: SIGH ou Histórico (vazio = todas).</summary>
+    public SIGH.Application.Disciplinary.Records.RecordOrigin? Origin { get; set; }
     public string? SortBy { get; set; }
     public string? SortDirection { get; set; } = "asc";
 }

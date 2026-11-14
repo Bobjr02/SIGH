@@ -40,6 +40,12 @@ export interface EmployeeDisciplinaryCaseSummaryDto {
   occurrencesCount: number;
   decisionsCount: number;
   measuresCount: number;
+  /** "SIGH" ou "Histórico" (importado da planilha de penalidades). */
+  origin?: string;
+  /** Histórico: data do lote de importação. */
+  importedAt?: string | null;
+  /** Data da medida (histórico) ou da abertura (SIGH). */
+  occurredAt?: string;
 }
 
 export interface EmployeeDisciplinaryHistoryDto {
@@ -70,6 +76,10 @@ export interface DisciplinaryMeasureSummaryDto {
   effectiveTo?: string;
   appliedByEmployeeId: string;
   appliedByEmployeeName: string;
+  origin?: string;
+  suspensionDays?: number | null;
+  /** Suspensão com dias "não informado" (fora da soma de dias). */
+  suspensionDaysUnknown?: boolean;
 }
 
 export interface DisciplinaryCaseReportItemDto {
@@ -112,6 +122,8 @@ export interface CaseReportFilters {
   dateFrom?: string;
   dateTo?: string;
   searchTerm?: string;
+  /** "1" = SIGH, "2" = Histórico. */
+  origin?: string;
   pageNumber?: number;
   pageSize?: number;
   sortBy?: string;
@@ -126,6 +138,8 @@ export interface MeasureReportFilters {
   appliedFrom?: string;
   appliedTo?: string;
   searchTerm?: string;
+  /** "1" = SIGH, "2" = Histórico. */
+  origin?: string;
   pageNumber?: number;
   pageSize?: number;
 }

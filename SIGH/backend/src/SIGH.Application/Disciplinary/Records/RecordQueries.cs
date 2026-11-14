@@ -63,6 +63,11 @@ public sealed class RecordQueries : IRecordQueries
         public DateTimeOffset OpenedAt { get; init; }
         public Guid OpenedBy { get; init; }
         public string? OpenedByName { get; init; }
+        public DisciplinaryCaseKind Kind { get; init; }
+        public DateTimeOffset? MeasureEffectiveFrom { get; init; }
+        public DateTimeOffset? MeasureEffectiveUntil { get; init; }
+        public int? MeasureSuspensionDays { get; init; }
+        public DateTimeOffset? ImportedAt { get; init; }
     }
 
     /// <summary>Medidas visíveis, já com o escopo.</summary>
@@ -70,7 +75,7 @@ public sealed class RecordQueries : IRecordQueries
     {
         var scope = await _scope.GetFilterAsync(cancellationToken);
         return _db.DisciplinaryCases.AsNoTracking()
-            .Where(c => c.Kind == DisciplinaryCaseKind.Record)
+            .Where(c => c.Kind == DisciplinaryCaseKind.Record || c.Kind == DisciplinaryCaseKind.Historical)
             .InScope(_db.DisciplinaryCaseEmployees, _db.Employees, scope);
     }
 
@@ -79,6 +84,7 @@ public sealed class RecordQueries : IRecordQueries
         let accusedId = c.Employees.Where(e => e.Role == CaseEmployeeRole.Accused).Select(e => e.EmployeeId).FirstOrDefault()
         let d = c.Decisions.OrderByDescending(x => x.DecidedAt).FirstOrDefault()
         let infractionId = c.Occurrences.Where(o => o.Status != OccurrenceStatus.Rejected).Select(o => (Guid?)o.InfractionTypeId).FirstOrDefault()
+        let m = c.Measures.Where(x => x.Status != DisciplinaryMeasureStatus.Cancelled).FirstOrDefault()
         join emp in _db.Employees on accusedId equals emp.Id
         join unit in _db.ManagementUnits on emp.ManagementUnitId equals unit.Id into units
         from unit in units.DefaultIfEmpty()
@@ -100,7 +106,8 @@ public sealed class RecordQueries : IRecordQueries
             UnitCode = unit.Code,
             UnitName = unit.Name,
             DepartmentName = dept.Name,
-            MeasureType = d!.ProposedMeasureType,
+            // Histórico não tem decisão: o tipo vem da medida.
+            MeasureType = d!.ProposedMeasureType ?? (DisciplinaryMeasureType?)m!.MeasureType,
             MeasureDate = d.MeasureDate,
             SuspensionStart = d.SuspensionStart,
             SuspensionEnd = d.SuspensionEnd,
@@ -110,6 +117,11 @@ public sealed class RecordQueries : IRecordQueries
             OpenedAt = c.OpenedAt,
             OpenedBy = c.OpenedByUserId,
             OpenedByName = user.FullName,
+            Kind = c.Kind,
+            MeasureEffectiveFrom = (DateTimeOffset?)m!.EffectiveFrom,
+            MeasureEffectiveUntil = m.EffectiveUntil,
+            MeasureSuspensionDays = m.SuspensionDays,
+            ImportedAt = _db.DisciplinaryHistoryImportBatches.Where(b => b.Id == c.HistoryImportBatchId).Select(b => b.AppliedAt).FirstOrDefault(),
         };
 
     public async Task<PagedResult<RecordSummaryDto>> GetPagedAsync(GetRecordsQuery query, CancellationToken cancellationToken = default)
@@ -120,8 +132,16 @@ public sealed class RecordQueries : IRecordQueries
         {
             RecordStatus.PendingApproval => cases.Where(c => c.Status == DisciplinaryCaseStatus.AwaitingDecision && c.Decisions.Any(d => d.Status == DecisionStatus.PendingApproval)),
             RecordStatus.Rejected => cases.Where(c => c.Status == DisciplinaryCaseStatus.AwaitingDecision && !c.Decisions.Any(d => d.Status == DecisionStatus.PendingApproval)),
-            RecordStatus.Approved => cases.Where(c => c.Status == DisciplinaryCaseStatus.Completed),
+            RecordStatus.Approved => cases.Where(c => c.Kind == DisciplinaryCaseKind.Record && c.Status == DisciplinaryCaseStatus.Completed),
+            RecordStatus.Historical => cases.Where(c => c.Kind == DisciplinaryCaseKind.Historical),
             RecordStatus.Cancelled => cases.Where(c => c.Status == DisciplinaryCaseStatus.Cancelled),
+            _ => cases
+        };
+
+        cases = query.Origin switch
+        {
+            RecordOrigin.Sigh => cases.Where(c => c.Kind == DisciplinaryCaseKind.Record),
+            RecordOrigin.Historical => cases.Where(c => c.Kind == DisciplinaryCaseKind.Historical),
             _ => cases
         };
 
@@ -139,10 +159,17 @@ public sealed class RecordQueries : IRecordQueries
             rows = rows.Where(r => r.EmployeeUnitId == unitId);
         if (query.DepartmentId is { } departmentId)
             rows = rows.Where(r => r.EmployeeDepartmentId == departmentId);
+        // Período pela data da medida; no histórico (sem decisão) é a data da ocorrência (= DATA da planilha).
         if (query.From is { } from)
-            rows = rows.Where(r => r.MeasureDate >= from);
+        {
+            var fromInstant = BusinessCalendar.StartOf(from);
+            rows = rows.Where(r => r.MeasureDate != null ? r.MeasureDate >= from : r.FirstOccurrence >= fromInstant);
+        }
         if (query.To is { } to)
-            rows = rows.Where(r => r.MeasureDate <= to);
+        {
+            var toInstant = BusinessCalendar.StartOf(to.AddDays(1));
+            rows = rows.Where(r => r.MeasureDate != null ? r.MeasureDate <= to : r.FirstOccurrence < toInstant);
+        }
         if (!string.IsNullOrWhiteSpace(query.Employee))
         {
             var term = query.Employee.Trim();
@@ -203,15 +230,16 @@ public sealed class RecordQueries : IRecordQueries
         var canReview = pending && _currentUser.HasPermission(PermissionCodes.DisciplinaryRecords.Approve)
                         && me != entity.OpenedByUserId && me != currentDecider;
         var canRegister = _currentUser.HasPermission(PermissionCodes.DisciplinaryRecords.Register);
-        var attachable = summary.Status is RecordStatus.PendingApproval or RecordStatus.Approved;
+        // Anexos: pendente, aprovada ou histórico (carta assinada antiga); nunca cancelada.
+        var attachable = summary.Status is RecordStatus.PendingApproval or RecordStatus.Approved or RecordStatus.Historical;
 
         return new RecordDetailDto(
             summary,
             entity.Description,
             entity.Occurrences.Where(o => o.Status != OccurrenceStatus.Rejected)
                 .Select(o => BusinessCalendar.DateOf(o.OccurrenceDate)).Distinct().Order().ToList(),
-            row.SuspensionStart,
-            row.SuspensionEnd,
+            PeriodOf(row).Start,
+            PeriodOf(row).End,
             unitAtTime,
             approved?.ApprovedAt,
             NameOf(approved?.ApprovedByUserId),
@@ -278,7 +306,7 @@ public sealed class RecordQueries : IRecordQueries
             cancellationToken);
     }
 
-    private static RecordStatus StatusOf(Row row) => row.CaseStatus switch
+    private static RecordStatus StatusOf(Row row) => row.Kind == DisciplinaryCaseKind.Historical ? RecordStatus.Historical : row.CaseStatus switch
     {
         DisciplinaryCaseStatus.Completed => RecordStatus.Approved,
         DisciplinaryCaseStatus.Cancelled => RecordStatus.Cancelled,
@@ -289,12 +317,29 @@ public sealed class RecordQueries : IRecordQueries
     {
         var status = StatusOf(row);
         var type = row.MeasureType ?? DisciplinaryMeasureType.Other;
-        int? days = row.SuspensionStart is { } s && row.SuspensionEnd is { } e ? e.DayNumber - s.DayNumber + 1 : null;
+        var historical = row.Kind == DisciplinaryCaseKind.Historical;
+        var (start, end) = PeriodOf(row);
+        int? days = row.MeasureSuspensionDays ?? (start is { } s && end is { } e ? e.DayNumber - s.DayNumber + 1 : null);
+        var firstOccurrence = row.FirstOccurrence is { } f ? BusinessCalendar.DateOf(f) : (DateOnly?)null;
         return new RecordSummaryDto(
             row.Id, row.CaseNumber, status, RecordLabels.Of(status),
             row.EmployeeId, row.EmployeeNumber, row.EmployeeName, row.UnitCode, row.UnitName, row.DepartmentName,
             type, RecordLabels.Of(type), row.InfractionTypeId, row.InfractionTypeName,
-            row.MeasureDate, row.FirstOccurrence is { } f ? BusinessCalendar.DateOf(f) : null, days,
-            row.OpenedAt, row.OpenedBy, row.OpenedByName);
+            historical ? firstOccurrence : row.MeasureDate, firstOccurrence, type == DisciplinaryMeasureType.Suspension ? days : null,
+            row.OpenedAt, row.OpenedBy, row.OpenedByName,
+            historical ? RecordOrigin.Historical : RecordOrigin.Sigh,
+            historical ? "Histórico" : "SIGH",
+            historical ? row.ImportedAt : null,
+            type == DisciplinaryMeasureType.Suspension && days is null);
+    }
+
+    /// <summary>Período da suspensão: da decisão (SIGH) ou da própria medida (histórico, quando houver).</summary>
+    private static (DateOnly? Start, DateOnly? End) PeriodOf(Row row)
+    {
+        if (row.Kind != DisciplinaryCaseKind.Historical)
+            return (row.SuspensionStart, row.SuspensionEnd);
+        return row.MeasureEffectiveUntil is { } until && row.MeasureEffectiveFrom is { } from
+            ? (BusinessCalendar.DateOf(from), BusinessCalendar.DateOf(until))
+            : (null, null);
     }
 }

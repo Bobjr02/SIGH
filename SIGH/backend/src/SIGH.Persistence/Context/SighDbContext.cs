@@ -43,6 +43,8 @@ public class SighDbContext : DbContext, IApplicationDbContext
     public DbSet<DisciplinaryDecision> DisciplinaryDecisions => Set<DisciplinaryDecision>();
     public DbSet<DisciplinaryMeasure> DisciplinaryMeasures => Set<DisciplinaryMeasure>();
     public DbSet<InfractionType> InfractionTypes => Set<InfractionType>();
+    public DbSet<DisciplinaryHistoryImportBatch> DisciplinaryHistoryImportBatches => Set<DisciplinaryHistoryImportBatch>();
+    public DbSet<HistoryImportState> HistoryImportStates => Set<HistoryImportState>();
 
     // Módulo de Notificações
     public DbSet<Notification> Notifications => Set<Notification>();

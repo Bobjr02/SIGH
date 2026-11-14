@@ -111,6 +111,10 @@ export interface DecisionSupport {
   measuresLast6Months: number;
   measuresLast12Months: number;
   sources: string[];
+  /** "2 advertências — 1 histórica, 1 no SIGH". */
+  byOrigin?: { label: string; total: number; historical: number; sigh: number }[];
+  historicalMeasures?: number;
+  sighMeasures?: number;
 }
 
 export interface FieldChange {

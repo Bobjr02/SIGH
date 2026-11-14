@@ -45,6 +45,12 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
             dbQuery = dbQuery.Where(x => scopedEmployees.Any(e => e.Id == x.Measure.EmployeeId));
         }
 
+        if (query.Origin is { } origin)
+        {
+            var historical = origin == SIGH.Application.Disciplinary.Records.RecordOrigin.Historical;
+            dbQuery = dbQuery.Where(x => (x.DisciplinaryCase.Kind == SIGH.Domain.Disciplinary.Enums.DisciplinaryCaseKind.Historical) == historical);
+        }
+
         if (query.EmployeeId.HasValue)
         {
             dbQuery = dbQuery.Where(x => x.Measure.EmployeeId == query.EmployeeId.Value);
@@ -118,7 +124,10 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
             AppliedByUserName = x.Measure.AppliedByUserId.HasValue &&
                                 appliedByUsersMap.TryGetValue(x.Measure.AppliedByUserId.Value, out var appName)
                 ? appName
-                : null
+                : null,
+            Origin = OriginOf(x.DisciplinaryCase.Kind),
+            SuspensionDays = x.Measure.MeasureType == SIGH.Domain.Disciplinary.Enums.DisciplinaryMeasureType.Suspension ? DaysOf(x.Measure) : null,
+            SuspensionDaysUnknown = x.Measure.MeasureType == SIGH.Domain.Disciplinary.Enums.DisciplinaryMeasureType.Suspension && DaysOf(x.Measure) is null
         }).ToList();
 
         return new PagedResult<DisciplinaryMeasureSummaryDto>(resultDtos, query.PageNumber, query.PageSize, totalCount);
@@ -190,6 +199,12 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
         if (query.ResponsibleEmployeeId.HasValue)
         {
             dbQuery = dbQuery.Where(c => c.ResponsibleEmployeeId == query.ResponsibleEmployeeId.Value);
+        }
+
+        if (query.Origin is { } origin)
+        {
+            var historical = origin == SIGH.Application.Disciplinary.Records.RecordOrigin.Historical;
+            dbQuery = dbQuery.Where(c => (c.Kind == SIGH.Domain.Disciplinary.Enums.DisciplinaryCaseKind.Historical) == historical);
         }
 
         if (query.EmployeeId.HasValue)
@@ -308,8 +323,18 @@ public class DisciplinaryReportQueryRepository : IDisciplinaryReportQueryReposit
                 OccurrencesCount = c.Occurrences.Count(o => !o.IsDeleted),
                 EvidencesCount = c.Evidences.Count(e => !e.IsDeleted),
                 DecisionsCount = c.Decisions.Count(d => !d.IsDeleted),
-                MeasuresCount = c.Measures.Count(m => !m.IsDeleted)
+                MeasuresCount = c.Measures.Count(m => !m.IsDeleted),
+                Origin = OriginOf(c.Kind)
             };
         }).ToList();
     }
+
+    private static string OriginOf(SIGH.Domain.Disciplinary.Enums.DisciplinaryCaseKind kind) =>
+        kind == SIGH.Domain.Disciplinary.Enums.DisciplinaryCaseKind.Historical ? "Histórico" : "SIGH";
+
+    /// <summary>Dias informados, senão o período; nulo = não informado.</summary>
+    private static int? DaysOf(SIGH.Domain.Disciplinary.Entities.DisciplinaryMeasure m) =>
+        m.SuspensionDays ?? (m.EffectiveUntil is { } until
+            ? DateOnly.FromDateTime(until.Date).DayNumber - DateOnly.FromDateTime(m.EffectiveFrom.Date).DayNumber + 1
+            : null);
 }

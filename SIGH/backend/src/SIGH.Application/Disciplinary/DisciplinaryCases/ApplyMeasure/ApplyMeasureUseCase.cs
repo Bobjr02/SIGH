@@ -70,7 +70,7 @@ public class ApplyMeasureUseCase : IApplyMeasureUseCase
         var response = new ApplyMeasureResponse(
             measure.Id,
             caseObj.Id,
-            measure.DisciplinaryDecisionId,
+            request.DisciplinaryDecisionId,
             employee.Id,
             measure.MeasureType,
             measure.Reason,

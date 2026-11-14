@@ -65,7 +65,7 @@ public record DecisionDto(
 
 public record MeasureDto(
     Guid Id,
-    Guid DisciplinaryDecisionId,
+    Guid? DisciplinaryDecisionId,
     Guid EmployeeId,
     DisciplinaryMeasureType MeasureType,
     string Reason,

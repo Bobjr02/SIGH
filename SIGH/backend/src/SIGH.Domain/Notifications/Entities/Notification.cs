@@ -56,7 +56,9 @@ public class Notification : AuditableEntity
         Priority = string.IsNullOrWhiteSpace(priority) ? "Medium" : priority.Trim();
         DueDate = dueDate;
         Metadata = metadata;
-        DisciplinaryCaseId = disciplinaryCaseId;
+        // O vínculo com o processo é o que o escopo por gerência usa: se não vier explícito, sai do Metadata
+        // ("SourceEntity=DisciplinaryCase;SourceId=<id>", usado pelos alertas de prazo).
+        DisciplinaryCaseId = disciplinaryCaseId ?? CaseIdFromMetadata(metadata);
         IsRead = false;
         ReadAt = null;
         IsExpired = false;
@@ -74,6 +76,32 @@ public class Notification : AuditableEntity
         Guid? disciplinaryCaseId = null)
     {
         return new Notification(companyId, userId, title, message, type, priority, dueDate, metadata, disciplinaryCaseId);
+    }
+
+    /// <summary>
+    /// Id do processo referenciado no Metadata (formato chave=valor separado por ";"):
+    /// SourceEntity=DisciplinaryCase + SourceId=&lt;guid&gt;, ou DisciplinaryCaseId=&lt;guid&gt;.
+    /// </summary>
+    public static Guid? CaseIdFromMetadata(string? metadata)
+    {
+        if (string.IsNullOrWhiteSpace(metadata))
+            return null;
+
+        var pairs = metadata.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(p => p.Split('=', 2))
+            .Where(p => p.Length == 2)
+            .GroupBy(p => p[0].Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First()[1].Trim(), StringComparer.OrdinalIgnoreCase);
+
+        if (pairs.TryGetValue("DisciplinaryCaseId", out var direct) && Guid.TryParse(direct, out var directId))
+            return directId;
+
+        return pairs.TryGetValue("SourceEntity", out var entity)
+               && string.Equals(entity, "DisciplinaryCase", StringComparison.OrdinalIgnoreCase)
+               && pairs.TryGetValue("SourceId", out var source)
+               && Guid.TryParse(source, out var sourceId)
+            ? sourceId
+            : null;
     }
 
     public void MarkAsRead(DateTimeOffset readAt)

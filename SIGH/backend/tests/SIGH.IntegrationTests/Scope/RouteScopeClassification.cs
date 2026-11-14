@@ -22,11 +22,8 @@ public static class RouteScopeClassification
         "/api/v1/disciplinary-records/pending-count",
         // Processos (legado, fora do menu) e trilha de auditoria de um processo
         "/api/v1/disciplinary-cases",
-        "/api/v1/DisciplinaryCases",
         "/api/v1/disciplinary-cases/{id:guid}",
-        "/api/v1/DisciplinaryCases/{id:guid}",
         "/api/v1/disciplinary-cases/{id:guid}/audit-trail",
-        "/api/v1/DisciplinaryCases/{id:guid}/audit-trail",
         // Download de evidências (anexos das medidas)
         "/api/v1/disciplinary-cases/{caseId:guid}/evidences/{evidenceId:guid}/file",
         // Relatórios, dashboard e exportação CSV
@@ -47,9 +44,7 @@ public static class RouteScopeClassification
     public static readonly IReadOnlyDictionary<string, string> NotApplicable = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["/api/v1"] = "informação do sistema",
-        ["/health"] = "saúde da aplicação",
         ["/api/v1/health"] = "saúde da aplicação",
-        ["/api/v1/health-check"] = "saúde da aplicação",
         ["/api/v1/auth/me"] = "dados do próprio usuário",
         ["/api/v1/users"] = "cadastro de usuários do sistema (não de funcionários); exige Users.View",
         ["/api/v1/users/{id:guid}"] = "cadastro de usuários do sistema; exige Users.View",
@@ -57,9 +52,9 @@ public static class RouteScopeClassification
         ["/api/v1/roles"] = "catálogo de perfis",
         ["/api/v1/management-units"] = "catálogo das 9 gerências (sem funcionários); exige Users.View",
         ["/api/v1/infraction-types"] = "catálogo de motivos",
-        ["/api/v1/InfractionTypes"] = "catálogo de motivos",
         ["/api/v1/infraction-types/{id:guid}"] = "catálogo de motivos",
-        ["/api/v1/InfractionTypes/{id:guid}"] = "catálogo de motivos",
         ["/api/v1/employees/import/batches"] = "lotes de importação: só contagens agregadas, sem dado de funcionário; exige Employees.Import",
+        ["/api/v1/disciplinary-history/import/batches"] = "lotes do histórico: só contagens agregadas, sem dado de funcionário; exige Disciplinary.History.Import",
+        ["/api/v1/disciplinary-history/import/status"] = "estado da importação do histórico (aberta/encerrada); exige Disciplinary.History.Import",
     };
 }

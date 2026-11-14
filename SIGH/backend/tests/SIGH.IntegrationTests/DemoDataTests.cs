@@ -54,6 +54,11 @@ public class DemoDataTests : IntegrationTestBase
         var demoUsers = await db.Users.Where(u => u.Email.EndsWith("@demo.local")).ToListAsync();
         demoUsers.Should().HaveCount(6).And.OnlyContain(u => !u.MustChangePassword && u.Status == SIGH.Domain.Enums.UserStatus.Active);
 
+        // b. histórico fictício pelo importador do histórico, uma vez só.
+        (await db.DisciplinaryCases.CountAsync(c => c.Kind == DisciplinaryCaseKind.Historical)).Should().Be(14);
+        (await db.DisciplinaryHistoryImportBatches.CountAsync()).Should().Be(1);
+        (await db.InfractionTypes.CountAsync(i => i.Name == "USO DE CELULAR EM SERVIÇO")).Should().Be(1);
+
         var records = await db.DisciplinaryCases.Include(c => c.Decisions).Include(c => c.Evidences)
             .Where(c => c.Kind == DisciplinaryCaseKind.Record).ToListAsync();
         records.Should().HaveCount(8);
@@ -62,7 +67,9 @@ public class DemoDataTests : IntegrationTestBase
         records.Count(c => c.Status == DisciplinaryCaseStatus.AwaitingDecision && c.Decision != null).Should().Be(2, "pendentes");
         records.Count(c => c.Status == DisciplinaryCaseStatus.AwaitingDecision && c.Decision == null).Should().Be(1, "rejeitada aguardando correção");
         records.Should().ContainSingle(c => c.Evidences.Any(e => e.HasFile && e.OriginalFileName == "carta-assinada-ficticia.pdf"));
-        (await db.DisciplinaryMeasures.CountAsync(m => m.MeasureType == DisciplinaryMeasureType.Suspension && m.Status == DisciplinaryMeasureStatus.Applied)).Should().Be(1);
+        var recordIds = records.Select(r => r.Id).ToList();
+        (await db.DisciplinaryMeasures.CountAsync(m => recordIds.Contains(m.DisciplinaryCaseId)
+            && m.MeasureType == DisciplinaryMeasureType.Suspension && m.Status == DisciplinaryMeasureStatus.Applied)).Should().Be(1, "a suspensão aprovada no SIGH");
 
         // Os usuários entram com a senha de demonstração, sem troca obrigatória, e o escopo vale.
         var client = Factory.CreateClient();
@@ -71,6 +78,7 @@ public class DemoDataTests : IntegrationTestBase
         client.DefaultRequestHeaders.Authorization = new("Bearer", login.AccessToken);
         var seen = (await client.GetFromJsonAsync<Result<PagedResult<RecordSummaryDto>>>("/api/v1/disciplinary-records?pageSize=50"))!.Data!.Items;
         seen.Should().NotBeEmpty().And.OnlyContain(r => r.ManagementUnitCode == "USGA131");
+        seen.Should().Contain(r => r.Origin == RecordOrigin.Historical, "o gestor vê o histórico da gerência dele");
     }
 
     [Fact]

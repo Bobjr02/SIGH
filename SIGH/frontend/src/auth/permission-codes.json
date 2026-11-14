@@ -35,6 +35,7 @@
   "Disciplinary.Cases.ApplyMeasure",
   "Disciplinary.Cases.Cancel",
   "Disciplinary.Cases.Conclude",
+  "Disciplinary.History.Import",
   "Disciplinary.InfractionTypes.View",
   "Disciplinary.InfractionTypes.Create",
   "Disciplinary.InfractionTypes.Update",

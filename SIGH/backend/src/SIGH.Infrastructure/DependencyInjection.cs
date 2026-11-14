@@ -90,7 +90,9 @@ public static class DependencyInjection
         services.AddHostedService<EmailOutboxDispatcher>();
         services.AddSingleton<SIGH.Application.Interfaces.Storage.IFileStorage, LocalFileStorage>();
         services.AddSingleton<SIGH.Application.Interfaces.Storage.IMalwareScanner, NoOpMalwareScanner>();
-        services.AddSingleton<SIGH.Application.Employees.Import.IHrSpreadsheetReader, SIGH.Infrastructure.Import.ExcelHrSpreadsheetReader>();
+        services.AddSingleton<SIGH.Infrastructure.Import.ExcelHrSpreadsheetReader>();
+        services.AddSingleton<SIGH.Application.Employees.Import.IHrSpreadsheetReader>(sp => sp.GetRequiredService<SIGH.Infrastructure.Import.ExcelHrSpreadsheetReader>());
+        services.AddSingleton<SIGH.Application.Employees.Import.ISpreadsheetTableReader>(sp => sp.GetRequiredService<SIGH.Infrastructure.Import.ExcelHrSpreadsheetReader>());
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IDeadlineCalculator, DeadlineCalculator>();
         services.AddSingleton<IBackgroundJobScheduler, BackgroundJobScheduler>();
@@ -99,6 +101,7 @@ public static class DependencyInjection
         services.AddHostedService<SIGH.Infrastructure.BackgroundWorkers.DisciplinaryDeadlineBackgroundWorker>();
         services.AddHostedService<SIGH.Infrastructure.BackgroundWorkers.PasswordResetRequestWorker>();
         services.AddHostedService<SIGH.Infrastructure.BackgroundWorkers.RecordPendingAlertWorker>();
+        services.AddHostedService<SIGH.Infrastructure.BackgroundWorkers.HistoryImportStateStartup>();
 
         // Registros de Segurança e Criptografia
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();

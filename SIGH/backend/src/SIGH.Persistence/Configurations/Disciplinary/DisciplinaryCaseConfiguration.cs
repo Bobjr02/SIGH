@@ -99,6 +99,11 @@ public class DisciplinaryCaseConfiguration : IEntityTypeConfiguration<Disciplina
             .HasDefaultValue(SIGH.Domain.Disciplinary.Enums.DisciplinaryCaseKind.Process)
             .ValueGeneratedNever();
 
+        builder.Property(c => c.HistoryKey).HasMaxLength(DisciplinaryCase.HistoryKeyMaxLength);
+        // Idempotência da importação do histórico: uma linha da planilha = um registro.
+        builder.HasIndex(c => c.HistoryKey).IsUnique().HasFilter("[HistoryKey] IS NOT NULL");
+        builder.HasIndex(c => c.HistoryImportBatchId);
+
         builder.HasIndex(c => c.Status);
         builder.HasIndex(c => new { c.Kind, c.Status });
         builder.HasIndex(c => c.Priority);

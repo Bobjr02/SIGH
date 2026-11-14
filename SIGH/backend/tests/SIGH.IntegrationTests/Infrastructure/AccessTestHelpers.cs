@@ -65,6 +65,22 @@ public static class AccessTestHelpers
         return client;
     }
 
+    /// <summary>Perfil só de teste com as permissões informadas (idempotente).</summary>
+    public static async Task<string> CreateRoleAsync(CustomWebApplicationFactory factory, string name, params string[] permissions)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<SighDbContext>();
+        if (!await db.Roles.AnyAsync(r => r.Name == name))
+        {
+            var role = new Role(Guid.NewGuid()) { Name = name, Description = "Somente testes" };
+            db.Roles.Add(role);
+            foreach (var permission in await db.Permissions.Where(p => permissions.Contains(p.Code)).ToListAsync())
+                db.RolePermissions.Add(new RolePermission(Guid.NewGuid()) { RoleId = role.Id, PermissionId = permission.Id });
+            await db.SaveChangesAsync();
+        }
+        return name;
+    }
+
     /// <summary>Fixture admin@sigh.com (Administrador + perfil de teste com tudo).</summary>
     public static Task<HttpClient> FixtureAdminAsync(CustomWebApplicationFactory factory) => LoginAsync(factory, "admin@sigh.com");
 }

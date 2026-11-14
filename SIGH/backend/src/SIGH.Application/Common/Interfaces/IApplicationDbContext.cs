@@ -13,6 +13,8 @@ public interface IApplicationDbContext
     DbSet<DisciplinaryDecision> DisciplinaryDecisions { get; }
     DbSet<DisciplinaryMeasure> DisciplinaryMeasures { get; }
     DbSet<InfractionType> InfractionTypes { get; }
+    DbSet<DisciplinaryHistoryImportBatch> DisciplinaryHistoryImportBatches { get; }
+    DbSet<HistoryImportState> HistoryImportStates { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<NotificationLog> NotificationLogs { get; }
     DbSet<SIGH.Domain.Entities.PasswordResetToken> PasswordResetTokens { get; }

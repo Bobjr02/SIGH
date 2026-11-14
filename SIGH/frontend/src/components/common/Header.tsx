@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Box, Button, IconButton, Tooltip, Badge } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { recordKeys, recordsApi } from '../../features/records/api/recordsApi';
-import { Shield, BookOpen, Gavel, PlusCircle, LogOut, UserRound, ScrollText, Users, UserCog, Building2, ClipboardCheck } from 'lucide-react';
+import { Shield, BookOpen, Gavel, PlusCircle, LogOut, UserRound, ScrollText, Users, UserCog, Building2, ClipboardCheck, History } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { PERMISSIONS, type PermissionCode } from '../../auth/permissions';
 import { NotificationBadge } from '../../features/notifications/components/NotificationBadge';
@@ -76,6 +76,13 @@ export const MENU_ITEMS: MenuItem[] = [
     activePrefix: '/admin/gerencias',
     permission: PERMISSIONS.MANAGEMENT_UNITS_MANAGE,
     icon: <Building2 size={18} />,
+  },
+  {
+    label: 'Importar histórico',
+    path: '/admin/history-import',
+    activePrefix: '/admin/history-import',
+    permission: PERMISSIONS.DISCIPLINARY_HISTORY_IMPORT,
+    icon: <History size={18} />,
   },
   {
     label: 'Auditoria',
