@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeContextProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppRoutes } from './routes';
+import { DemoBanner } from './components/common/DemoBanner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,6 +19,7 @@ export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeContextProvider>
+        <DemoBanner />
         <BrowserRouter>
           <AuthProvider>
             <AppRoutes />
