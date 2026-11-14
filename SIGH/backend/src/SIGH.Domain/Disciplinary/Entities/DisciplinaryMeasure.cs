@@ -8,7 +8,8 @@ namespace SIGH.Domain.Disciplinary.Entities;
 public class DisciplinaryMeasure : AuditableEntity
 {
     public Guid DisciplinaryCaseId { get; private set; }
-    public Guid DisciplinaryDecisionId { get; private set; }
+    /// <summary>Decisão que originou a medida. Nula só em medidas históricas importadas (não passaram pelo SIGH).</summary>
+    public Guid? DisciplinaryDecisionId { get; private set; }
     public Guid EmployeeId { get; private set; }
     public DisciplinaryMeasureType MeasureType { get; private set; }
     public string Reason { get; private set; } = string.Empty;
@@ -18,6 +19,12 @@ public class DisciplinaryMeasure : AuditableEntity
     public Guid? AppliedByUserId { get; private set; }
     public DisciplinaryMeasureStatus Status { get; private set; } = DisciplinaryMeasureStatus.Pending;
     public string? Notes { get; private set; }
+
+    /// <summary>
+    /// Dias de suspensão. Com período, é o período (contando os dois extremos). Nulo = desconhecido
+    /// (suspensão histórica sem dias nem período): nunca zero, e não entra na soma de dias.
+    /// </summary>
+    public int? SuspensionDays { get; private set; }
 
     // EF Core
     protected DisciplinaryMeasure() : base() { }
@@ -78,9 +85,72 @@ public class DisciplinaryMeasure : AuditableEntity
             EffectiveFrom = effectiveFrom,
             EffectiveUntil = effectiveUntil,
             Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
-            Status = DisciplinaryMeasureStatus.Pending
+            Status = DisciplinaryMeasureStatus.Pending,
+            SuspensionDays = measureType == DisciplinaryMeasureType.Suspension && effectiveUntil.HasValue
+                ? DaysBetween(effectiveFrom, effectiveUntil.Value)
+                : null
         };
     }
+
+    /// <summary>
+    /// Medida histórica, importada da planilha de penalidades: já aplicada fora do SIGH. Sem decisão,
+    /// sem quem aplicou (AppliedByUserId nulo) — os dados não podem dizer que ela passou pelo SIGH.
+    /// Suspensão pode vir sem período (dias desconhecidos) ou só com os dias.
+    /// </summary>
+    internal static DisciplinaryMeasure CreateHistorical(
+        Guid disciplinaryCaseId,
+        Guid employeeId,
+        DisciplinaryMeasureType measureType,
+        string reason,
+        DateTimeOffset measureDate,
+        DateTimeOffset effectiveFrom,
+        DateTimeOffset? effectiveUntil,
+        int? suspensionDays)
+    {
+        if (disciplinaryCaseId == Guid.Empty || employeeId == Guid.Empty)
+            throw new BusinessRuleValidationException("Processo e funcionário são obrigatórios.");
+        if (measureType == DisciplinaryMeasureType.Undefined || !Enum.IsDefined(measureType))
+            throw new BusinessRuleValidationException("O tipo de medida disciplinar é inválido.");
+        if (effectiveUntil.HasValue && effectiveUntil.Value < effectiveFrom)
+            throw new BusinessRuleValidationException("A data final de vigência não pode ser anterior à data inicial.");
+        if (suspensionDays is <= 0)
+            throw new BusinessRuleValidationException("Dias de suspensão devem ser positivos ou desconhecidos (nulo).");
+
+        var trimmed = string.IsNullOrWhiteSpace(reason) ? "Medida histórica importada." : reason.Trim();
+        if (trimmed.Length > DisciplinaryDomainConstants.ReasonMaxLength)
+            trimmed = trimmed[..DisciplinaryDomainConstants.ReasonMaxLength];
+
+        return new DisciplinaryMeasure
+        {
+            DisciplinaryCaseId = disciplinaryCaseId,
+            DisciplinaryDecisionId = null,
+            EmployeeId = employeeId,
+            MeasureType = measureType,
+            Reason = trimmed,
+            EffectiveFrom = effectiveFrom,
+            EffectiveUntil = effectiveUntil,
+            AppliedAt = measureDate,
+            AppliedByUserId = null,
+            Status = DisciplinaryMeasureStatus.Applied,
+            SuspensionDays = measureType == DisciplinaryMeasureType.Suspension ? suspensionDays : null
+        };
+    }
+
+    /// <summary>Correção vinda da reimportação de uma planilha corrigida (só medidas históricas).</summary>
+    internal void CorrectHistoricalPeriod(DateTimeOffset effectiveFrom, DateTimeOffset? effectiveUntil, int? suspensionDays)
+    {
+        if (DisciplinaryDecisionId is not null)
+            throw new BusinessRuleValidationException("Só medidas históricas importadas são corrigidas pela reimportação.");
+        if (effectiveUntil.HasValue && effectiveUntil.Value < effectiveFrom)
+            throw new BusinessRuleValidationException("A data final de vigência não pode ser anterior à data inicial.");
+
+        EffectiveFrom = effectiveFrom;
+        EffectiveUntil = effectiveUntil;
+        SuspensionDays = MeasureType == DisciplinaryMeasureType.Suspension ? suspensionDays : null;
+    }
+
+    private static int DaysBetween(DateTimeOffset from, DateTimeOffset until) =>
+        Math.Max(1, (int)Math.Floor((until - from).TotalDays) + 1);
 
     internal void Apply(DateTimeOffset appliedAt, Guid appliedByUserId)
     {

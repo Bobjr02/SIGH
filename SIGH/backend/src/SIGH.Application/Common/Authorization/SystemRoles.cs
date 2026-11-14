@@ -48,6 +48,7 @@ public static class SystemRoles
             PermissionCodes.Users.ManageRoles,
             PermissionCodes.Employees.View,
             PermissionCodes.Employees.Import,
+            PermissionCodes.DisciplinaryHistory.Import,
             PermissionCodes.ManagementUnits.Manage,
             PermissionCodes.InfractionTypes.View,
             PermissionCodes.InfractionTypes.Create,

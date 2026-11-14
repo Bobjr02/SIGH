@@ -20,8 +20,9 @@ public class DisciplinaryMeasureConfiguration : IEntityTypeConfiguration<Discipl
         builder.Property(m => m.DisciplinaryCaseId)
             .IsRequired();
 
+        // Nulo só em medidas históricas importadas (sem decisão: não passaram pelo SIGH).
         builder.Property(m => m.DisciplinaryDecisionId)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(m => m.EmployeeId)
             .IsRequired();
@@ -48,6 +49,7 @@ public class DisciplinaryMeasureConfiguration : IEntityTypeConfiguration<Discipl
         builder.HasOne<DisciplinaryDecision>()
             .WithMany()
             .HasForeignKey(m => m.DisciplinaryDecisionId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<Employee>()

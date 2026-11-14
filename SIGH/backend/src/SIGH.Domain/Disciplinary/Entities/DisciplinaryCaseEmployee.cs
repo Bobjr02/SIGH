@@ -75,6 +75,14 @@ public class DisciplinaryCaseEmployee : AuditableEntity
         Role = newRole;
     }
 
+    /// <summary>Correção da gerência da época (só pela reimportação do histórico).</summary>
+    internal void ChangeManagementUnitAtTime(Guid managementUnitId)
+    {
+        if (managementUnitId == Guid.Empty)
+            throw new BusinessRuleValidationException("A gerência é obrigatória.");
+        ManagementUnitIdAtTime = managementUnitId;
+    }
+
     internal void MarkAsPrimarySubject()
     {
         IsPrimarySubject = true;

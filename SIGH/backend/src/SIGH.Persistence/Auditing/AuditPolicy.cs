@@ -23,6 +23,7 @@ public static class AuditPolicy
         typeof(DisciplinaryDecision),
         typeof(DisciplinaryMeasure),
         typeof(InfractionType),
+        typeof(HistoryImportState),
         typeof(Employee),
         typeof(User),
         typeof(UserRole),

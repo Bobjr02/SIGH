@@ -9,7 +9,7 @@ namespace SIGH.Infrastructure.Import;
 /// fechada (<see cref="HrImportColumns"/>) são convertidas para texto; as demais nem são lidas para
 /// objetos nossos, e nenhuma exceção ou mensagem inclui conteúdo de célula.
 /// </summary>
-public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
+public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader, ISpreadsheetTableReader
 {
     /// <summary>O cabeçalho é procurado nas primeiras linhas (a exportação pode ter título acima).</summary>
     private const int MaxHeaderSearchRows = 20;
@@ -20,6 +20,18 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
         System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
     public HrSheet Read(Stream xlsx)
+    {
+        var columns = HrImportColumns.All
+            .Select(c => new SheetColumn(c.Field.ToString(), c.Header, c.Required, c.Label))
+            .ToList();
+        var table = Read(xlsx, columns, HrField.EmployeeNumber.ToString());
+        var rows = table.Rows
+            .Select(r => new HrRawRow(r.RowNumber, r.Cells.ToDictionary(kv => Enum.Parse<HrField>(kv.Key), kv => kv.Value)))
+            .ToList();
+        return new HrSheet(rows, table.Warnings);
+    }
+
+    public SheetTable Read(Stream xlsx, IReadOnlyList<SheetColumn> columns, string anchorKey)
     {
         IExcelDataReader reader;
         try
@@ -33,9 +45,9 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
 
         using (reader)
         {
-            Dictionary<HrField, int>? map = null;
+            Dictionary<string, int>? map = null;
             var warnings = new List<string>();
-            var rows = new List<HrRawRow>();
+            var rows = new List<SheetRow>();
             var excelRow = 0;
             var bestMissing = new List<string>();
 
@@ -48,7 +60,7 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
                     if (map is null)
                     {
                         if (excelRow > MaxHeaderSearchRows) break;
-                        var (candidate, missing, duplicated, missingOptional) = MapHeader(reader);
+                        var (candidate, missing, duplicated, missingOptional) = MapHeader(reader, columns, anchorKey);
                         if (candidate is null)
                         {
                             if (bestMissing.Count == 0 || (missing.Count > 0 && missing.Count < bestMissing.Count)) bestMissing = missing;
@@ -63,15 +75,15 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
                         continue;
                     }
 
-                    var cells = new Dictionary<HrField, HrCell>(map.Count);
+                    var cells = new Dictionary<string, HrCell>(map.Count);
                     var empty = true;
-                    foreach (var (field, index) in map)
+                    foreach (var (key, index) in map)
                     {
                         var cell = ToCell(index < reader.FieldCount ? reader.GetValue(index) : null);
                         if (cell.Text.Length > 0) empty = false;
-                        cells[field] = cell;
+                        cells[key] = cell;
                     }
-                    if (!empty) rows.Add(new HrRawRow(excelRow, cells));
+                    if (!empty) rows.Add(new SheetRow(excelRow, cells));
                 }
             }
             catch (HrSpreadsheetException)
@@ -80,27 +92,29 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
             }
             catch (Exception)
             {
-                throw new HrSpreadsheetException("Não foi possível ler a planilha. Verifique se o arquivo é a exportação .xlsx do SAP.");
+                throw new HrSpreadsheetException("Não foi possível ler a planilha. Verifique se o arquivo é uma planilha .xlsx válida.");
             }
 
             if (map is null)
             {
                 var names = bestMissing.Count > 0
                     ? bestMissing
-                    : HrImportColumns.All.Where(c => c.Required).Select(c => c.Header).ToList();
+                    : columns.Where(c => c.Required).Select(c => c.Header).ToList();
                 throw new HrSpreadsheetException(
                     $"Coluna(s) obrigatória(s) não encontrada(s) no cabeçalho: {string.Join(", ", names.Select(n => $"\"{n}\""))}.");
             }
 
-            return new HrSheet(rows, warnings);
+            return new SheetTable(rows, warnings);
         }
     }
 
     /// <summary>
-    /// Tenta usar a linha atual como cabeçalho. Só é cabeçalho se tiver "Matrícula"; nesse caso todas
+    /// Tenta usar a linha atual como cabeçalho. Só é cabeçalho se tiver a coluna âncora; nesse caso todas
     /// as obrigatórias precisam estar presentes. Cabeçalhos duplicados ("Estado" duas vezes) são tolerados.
+    /// Colunas com ReadValues = false são conferidas mas nunca lidas.
     /// </summary>
-    private static (Dictionary<HrField, int>? Map, List<string> Missing, List<string> Duplicated, List<HrColumn> MissingOptional) MapHeader(IExcelDataReader reader)
+    private static (Dictionary<string, int>? Map, List<string> Missing, List<string> Duplicated, List<SheetColumn> MissingOptional) MapHeader(
+        IExcelDataReader reader, IReadOnlyList<SheetColumn> columns, string anchorKey)
     {
         var positions = new Dictionary<string, int>();
         var duplicatedKeys = new HashSet<string>();
@@ -111,15 +125,15 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
             if (!positions.TryAdd(key, i)) duplicatedKeys.Add(key);
         }
 
-        var employeeNumberKey = HrImportColumns.Normalize(HrImportColumns.All.First(c => c.Field == HrField.EmployeeNumber).Header);
-        if (!positions.ContainsKey(employeeNumberKey))
-            return (null, new List<string>(), new List<string>(), new List<HrColumn>());
+        var anchorHeader = HrImportColumns.Normalize(columns.First(c => c.Key == anchorKey).Header);
+        if (!positions.ContainsKey(anchorHeader))
+            return (null, new List<string>(), new List<string>(), new List<SheetColumn>());
 
-        var map = new Dictionary<HrField, int>();
+        var map = new Dictionary<string, int>();
         var missing = new List<string>();
         var duplicated = new List<string>();
-        var missingOptional = new List<HrColumn>();
-        foreach (var column in HrImportColumns.All)
+        var missingOptional = new List<SheetColumn>();
+        foreach (var column in columns)
         {
             var key = HrImportColumns.Normalize(column.Header);
             if (!positions.ContainsKey(key))
@@ -128,7 +142,8 @@ public sealed class ExcelHrSpreadsheetReader : IHrSpreadsheetReader
                 else missingOptional.Add(column);
                 continue;
             }
-            map[column.Field] = positions[key];
+            if (column.ReadValues)
+                map[column.Key] = positions[key];
             if (duplicatedKeys.Contains(key)) duplicated.Add(column.Header);
         }
 

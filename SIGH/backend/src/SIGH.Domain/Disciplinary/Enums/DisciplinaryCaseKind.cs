@@ -8,5 +8,10 @@ namespace SIGH.Domain.Disciplinary.Enums;
 public enum DisciplinaryCaseKind
 {
     Process = 1,
-    Record = 2
+    Record = 2,
+    /// <summary>
+    /// Medida da planilha de penalidades anterior ao SIGH, importada. Não tem decisão nem aprovação (a medida
+    /// não passou pelo SIGH) e é somente leitura; só a reimportação a corrige, por um caminho próprio.
+    /// </summary>
+    Historical = 3
 }

@@ -41,6 +41,7 @@ export const PERMISSIONS = {
   DISCIPLINARY_CASES_APPLY_MEASURE: 'Disciplinary.Cases.ApplyMeasure',
   DISCIPLINARY_CASES_CANCEL: 'Disciplinary.Cases.Cancel',
   DISCIPLINARY_CASES_CONCLUDE: 'Disciplinary.Cases.Conclude',
+  DISCIPLINARY_HISTORY_IMPORT: 'Disciplinary.History.Import',
   DISCIPLINARY_INFRACTION_TYPES_VIEW: 'Disciplinary.InfractionTypes.View',
   DISCIPLINARY_INFRACTION_TYPES_CREATE: 'Disciplinary.InfractionTypes.Create',
   DISCIPLINARY_INFRACTION_TYPES_UPDATE: 'Disciplinary.InfractionTypes.Update',

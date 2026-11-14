@@ -73,6 +73,12 @@ public static class PermissionCodes
         public const string Conclude = "Disciplinary.Cases.Conclude";
     }
 
+    /// <summary>Importação do histórico disciplinar (planilha de penalidades), até o go-live.</summary>
+    public static class DisciplinaryHistory
+    {
+        public const string Import = "Disciplinary.History.Import";
+    }
+
     public static class InfractionTypes
     {
         public const string View = "Disciplinary.InfractionTypes.View";
@@ -150,6 +156,9 @@ public static class PermissionCodes
         new(DisciplinaryCases.ApplyMeasure, "Aplicar medidas disciplinares", "Aplicar medidas disciplinares aos funcionários envolvidos."),
         new(DisciplinaryCases.Cancel, "Cancelar processos disciplinares", "Cancelar processos disciplinares informando o motivo."),
         new(DisciplinaryCases.Conclude, "Concluir processos disciplinares", "Concluir formalmente processos disciplinares."),
+
+        // Histórico disciplinar
+        new(DisciplinaryHistory.Import, "Importar histórico disciplinar", "Importar a planilha de penalidades anterior ao SIGH e encerrar essa importação."),
 
         // Tipos de infração
         new(InfractionTypes.View, "Visualizar tipos de infração", "Consultar o catálogo de tipos de infração."),
