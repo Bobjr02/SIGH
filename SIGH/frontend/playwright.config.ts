@@ -42,6 +42,8 @@ export default defineConfig({
       dependencies: ['employees'],
       use: { ...devices['Desktop Chrome'] },
     },
+    // Por último: importa a carga do pacote (desliga por ausência os funcionários sintéticos) e o histórico.
+    { name: 'history', testMatch: /history\.spec\.ts/, dependencies: ['app'], use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: [
     {
