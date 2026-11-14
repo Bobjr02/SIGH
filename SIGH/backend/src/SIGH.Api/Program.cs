@@ -51,6 +51,33 @@ try
         form.ValueCountLimit = 64;
     });
 
+    // Dados de demonstração: Seed:DemoData só em Development/Demo; em outro ambiente a API não sobe.
+    builder.Services.AddOptions<SIGH.Api.Demo.DemoDataOptions>()
+        .Bind(builder.Configuration.GetSection(SIGH.Api.Demo.DemoDataOptions.SectionName))
+        .Validate(o => SIGH.Api.Demo.DemoDataGuard.IsAllowed(o, builder.Environment.EnvironmentName), SIGH.Api.Demo.DemoDataGuard.RefusedMessage)
+        .Validate(o => !o.DemoData || !string.IsNullOrWhiteSpace(o.DemoPassword), "Seed:DemoData=true exige Seed:DemoPassword (senha dos usuários de demonstração).")
+        .ValidateOnStart();
+    builder.Services.AddScoped<SIGH.Api.Demo.DemoDataSeeder>();
+
+    // Atrás de um proxy reverso (nginx do container web): IP real e esquema vêm dos cabeçalhos X-Forwarded-*.
+    // ReverseProxy:KnownProxies (IPs separados por vírgula) restringe quem pode enviá-los; sem lista, confia
+    // em qualquer origem — só use assim quando a API não for acessível diretamente (caso do compose.app.yml).
+    var reverseProxyEnabled = builder.Configuration.GetValue<bool>("ReverseProxy:Enabled");
+    if (reverseProxyEnabled)
+    {
+        builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                                       | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+            options.ForwardLimit = 1;
+            var known = builder.Configuration["ReverseProxy:KnownProxies"];
+            options.KnownNetworks.Clear();
+            options.KnownProxies.Clear();
+            foreach (var ip in (known ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                options.KnownProxies.Add(System.Net.IPAddress.Parse(ip));
+        });
+    }
+
     // Suporte a ProblemDetails
     builder.Services.AddProblemDetails();
 
@@ -180,10 +207,15 @@ try
             var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
             await seeder.SeedAsync();
             Log.Information("Migrations e seed aplicados com sucesso.");
+
+            if (scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<SIGH.Api.Demo.DemoDataOptions>>().Value.DemoData)
+                await scope.ServiceProvider.GetRequiredService<SIGH.Api.Demo.DemoDataSeeder>().SeedAsync();
         }
     }
 
     // Middlewares em Ordem de Execução
+    if (reverseProxyEnabled)
+        app.UseForwardedHeaders();
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseMiddleware<GlobalExceptionMiddleware>();
     app.UseMiddleware<SecurityHeadersMiddleware>();
