@@ -1,6 +1,6 @@
 # SIGH completo em containers, para rodar na máquina local com dados FICTÍCIOS de demonstração.
 # Mesma estrutura de produção: o web (nginx sem root) serve o front e encaminha /api para a API
-# (mesma origem); a API e o banco não ficam expostos.
+# (mesma origem); a API e o banco não ficam expostos, e o web e o Mailpit só escutam no localhost (127.0.0.1).
 #
 # Use os scripts (eles geram o .env.local com segredos aleatórios na primeira vez):
 #   Windows:  scripts\local-up.ps1   |   Linux/macOS:  scripts/local-up.sh
@@ -39,8 +39,9 @@ services:
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    # Só no localhost: a demonstração não fica acessível a outras máquinas da rede.
     ports:
-      - "${SIGH_MAILPIT_PORT:-8025}:8025"
+      - "127.0.0.1:${SIGH_MAILPIT_PORT:-8025}:8025"
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
       interval: 10s
@@ -107,8 +108,9 @@ services:
         condition: service_healthy
     environment:
       SIGH_API_UPSTREAM: http://api:3000
+    # Só no localhost: a demonstração não fica acessível a outras máquinas da rede.
     ports:
-      - "${SIGH_WEB_PORT:-8080}:8080"
+      - "127.0.0.1:${SIGH_WEB_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
       interval: 10s

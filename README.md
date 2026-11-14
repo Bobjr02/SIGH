@@ -112,6 +112,9 @@ A primeira vez baixa as imagens e compila (alguns minutos). O script:
 - sobe banco, e-mail, API e web, espera tudo ficar saudável e cria os dados de demonstração;
 - no final mostra o endereço, o e-mail e a senha do administrador, os usuários de demonstração e a senha deles.
 
+O SIGH local só responde **neste computador** (http://localhost:8080 e http://localhost:8025): as portas são
+publicadas só em 127.0.0.1, então outras máquinas da rede não conseguem abrir a demonstração.
+
 As próximas vezes reaproveitam o `.env.local` e sobem em menos de um minuto.
 
 ### 4. Entrar e conferir cada perfil
@@ -127,8 +130,10 @@ Abra **http://localhost:8080** (Chrome ou Edge). A senha dos usuários abaixo é
 | `preposto@demo.local` | RH – Registro + RH – Aprovador | A fila de aprovação e as próprias medidas (não aprova as que ele mesmo registrar) |
 | `admin@demo.local` | Administrador | Pede a troca de senha no primeiro acesso; **Usuários**, **Gerências**, importação de funcionários e auditoria. Não registra nem aprova medidas |
 
-Os dados de demonstração têm 40 funcionários fictícios e 8 medidas em todos os estados (aprovadas, uma
-suspensão, pendentes, uma rejeitada aguardando correção, uma cancelada e uma com carta em PDF anexada).
+Os dados de demonstração têm 40 funcionários fictícios, o **histórico disciplinar fictício** importado da
+planilha de penalidades (14 registros, com o selo "Histórico importado") e 8 medidas do SIGH em todos os estados
+(aprovadas, uma suspensão, pendentes, uma rejeitada aguardando correção, uma cancelada e uma com carta em PDF
+anexada). No funcionário 50090007, o quadro de apoio à decisão mostra o histórico separado das medidas do SIGH.
 
 ### 5. Ver os e-mails
 Nada sai para a internet: todos os e-mails (conta criada, medida registrada, aprovada, rejeitada...) ficam
