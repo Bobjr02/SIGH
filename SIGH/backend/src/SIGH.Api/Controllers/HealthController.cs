@@ -9,10 +9,14 @@ namespace SIGH.Api.Controllers;
 public class HealthController : BaseController
 {
     private readonly SighDbContext _dbContext;
+    private readonly IWebHostEnvironment _environment;
+    private readonly ILogger<HealthController> _logger;
 
-    public HealthController(SighDbContext dbContext)
+    public HealthController(SighDbContext dbContext, IWebHostEnvironment environment, ILogger<HealthController> logger)
     {
         _dbContext = dbContext;
+        _environment = environment;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -20,7 +24,6 @@ public class HealthController : BaseController
     public async Task<ActionResult<Result<HealthStatusResponse>>> GetHealthStatus(CancellationToken cancellationToken)
     {
         var isDbHealthy = false;
-        string? dbError = null;
 
         try
         {
@@ -28,7 +31,8 @@ public class HealthController : BaseController
         }
         catch (Exception ex)
         {
-            dbError = ex.Message;
+            // Endpoint público: o detalhe do erro vai para o log, nunca para a resposta.
+            _logger.LogWarning(ex, "Health: falha ao conectar no banco de dados.");
         }
 
         var status = isDbHealthy ? "Healthy" : "Degraded";
@@ -41,9 +45,11 @@ public class HealthController : BaseController
                 ["Api"] = new HealthComponentStatus("Healthy", "API do SIGH está operacional."),
                 ["Database"] = new HealthComponentStatus(
                     isDbHealthy ? "Healthy" : "Unhealthy",
-                    isDbHealthy ? "Conexão com o banco de dados estabelecida com sucesso." : $"Falha de conexão com o banco de dados: {dbError}"
+                    isDbHealthy ? "Conexão com o banco de dados estabelecida com sucesso." : "Falha de conexão com o banco de dados."
                 )
-            }
+            },
+            // Só um booleano: o front mostra a faixa "AMBIENTE DE DEMONSTRAÇÃO" (Development ou Demo).
+            Demo: SIGH.Api.Demo.DemoDataGuard.IsDemoEnvironment(_environment.EnvironmentName)
         );
 
         return OkResult(response, "Status de saúde do sistema obtido com sucesso.");
@@ -53,7 +59,8 @@ public class HealthController : BaseController
 public record HealthStatusResponse(
     string Status,
     DateTimeOffset Timestamp,
-    Dictionary<string, HealthComponentStatus> Components
+    Dictionary<string, HealthComponentStatus> Components,
+    bool Demo
 );
 
 public record HealthComponentStatus(
