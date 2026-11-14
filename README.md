@@ -75,6 +75,89 @@ SIGH/
 
 ---
 
+## Rodar na sua máquina (Windows)
+
+Este passo a passo é para quem quer **ver o SIGH funcionando** no próprio computador, sem ser desenvolvedor.
+Tudo roda em containers, com a mesma estrutura de produção (um servidor web que entrega as telas e encaminha
+`/api` para a API), e com **dados fictícios de demonstração**: todos os nomes terminam com "TESTE" e uma
+faixa laranja "AMBIENTE DE DEMONSTRAÇÃO" aparece no topo de todas as telas.
+
+### 1. Instalar o Rancher Desktop
+1. Baixe e instale o **Rancher Desktop** (gratuito e de código aberto): https://rancherdesktop.io
+   — não usamos o Docker Desktop porque a licença dele é paga para empresas do porte da USGA.
+2. Se o Windows pedir, ative a virtualização/WSL2: abra o **PowerShell como administrador**, rode
+   `wsl --install` e reinicie o computador. (Se o computador não tiver a virtualização ligada, veja "Problemas comuns".)
+3. Abra o Rancher Desktop. Na primeira tela, em **Container Engine**, escolha **dockerd (moby)**.
+   O Kubernetes pode ficar desligado.
+4. Em **Preferences → Virtual Machine**, deixe pelo menos **4 GB de memória** (o banco usa cerca de 2 GB).
+5. Confira num PowerShell comum: `docker compose version` deve mostrar a versão.
+
+### 2. Baixar o SIGH
+1. Instale o **Git para Windows**: https://git-scm.com/download/win (pode aceitar as opções padrão).
+2. No PowerShell:
+   ```powershell
+   cd $HOME\Documents
+   git clone https://github.com/Bobjr02/SIGH.git
+   cd SIGH
+   ```
+
+### 3. Subir o SIGH
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass   # só se o Windows bloquear o script; vale só para esta janela
+.\scripts\local-up.ps1
+```
+A primeira vez baixa as imagens e compila (alguns minutos). O script:
+- cria o arquivo `.env.local` com senhas aleatórias e fortes, **só desta máquina** (ele está no `.gitignore`
+  pela regra `.env.*` e nunca vai para o git);
+- sobe banco, e-mail, API e web, espera tudo ficar saudável e cria os dados de demonstração;
+- no final mostra o endereço, o e-mail e a senha do administrador, os usuários de demonstração e a senha deles.
+
+As próximas vezes reaproveitam o `.env.local` e sobem em menos de um minuto.
+
+### 4. Entrar e conferir cada perfil
+Abra **http://localhost:8080** (Chrome ou Edge). A senha dos usuários abaixo é a que o script mostrou.
+
+| Usuário | Perfil | O que deve aparecer |
+|---|---|---|
+| `auxiliar@demo.local` | RH – Registro | "Minhas medidas", com a rejeitada destacada; botão **Registrar medida** |
+| `encarregado@demo.local` | RH – Aprovador | "Aguardando a sua aprovação" (2 medidas) e o contador em **Aprovações pendentes** |
+| `juridico@demo.local` | Jurídico | Todas as medidas, de todas as gerências; **Auditoria** no menu |
+| `gestor.industrial@demo.local` | Gestor da USGA131 | Só as medidas e funcionários da Industrial (USGA131) |
+| `gestor.agricola@demo.local` | Gestor da USGA137 e USGA141 | Só as medidas e funcionários das gerências agrícolas |
+| `preposto@demo.local` | RH – Registro + RH – Aprovador | A fila de aprovação e as próprias medidas (não aprova as que ele mesmo registrar) |
+| `admin@demo.local` | Administrador | Pede a troca de senha no primeiro acesso; **Usuários**, **Gerências**, importação de funcionários e auditoria. Não registra nem aprova medidas |
+
+Os dados de demonstração têm 40 funcionários fictícios e 8 medidas em todos os estados (aprovadas, uma
+suspensão, pendentes, uma rejeitada aguardando correção, uma cancelada e uma com carta em PDF anexada).
+
+### 5. Ver os e-mails
+Nada sai para a internet: todos os e-mails (conta criada, medida registrada, aprovada, rejeitada...) ficam
+no **Mailpit**: http://localhost:8025
+
+### 6. Parar, reiniciar e zerar
+```powershell
+.\scripts\local-down.ps1    # para; os dados ficam guardados
+.\scripts\local-up.ps1      # sobe de novo, com os mesmos dados
+.\scripts\local-reset.ps1   # APAGA os dados do SIGH local (pede para digitar APAGAR); o próximo local-up recria tudo
+```
+O `local-reset` apaga só os volumes deste SIGH local (projeto compose `sigh-local`); não mexe em mais nada.
+
+### 7. Problemas comuns
+- **"A porta 8080 (ou 8025) já está em uso"**: outro programa usa a porta. Feche-o, ou troque `SIGH_WEB_PORT`
+  (ou `SIGH_MAILPIT_PORT`) no arquivo `.env.local` e rode o `local-up` de novo.
+- **Fica lento, o banco não sobe ou cai**: falta memória. O SQL Server precisa de cerca de **2 GB livres**;
+  aumente a memória em Rancher Desktop → Preferences → Virtual Machine (4 GB ou mais) e feche programas pesados.
+- **Rancher Desktop não inicia / erro de WSL ou virtualização**: a virtualização está desligada. Ative
+  "Intel VT-x" ou "AMD-V/SVM" na BIOS/UEFI do computador (procure o modelo + "ativar virtualização") e rode
+  `wsl --install` como administrador.
+- **"docker" não é reconhecido**: o Rancher Desktop não está aberto, ou o motor escolhido não é o dockerd (moby).
+- **O script não roda ("execução de scripts foi desabilitada")**: use a linha `Set-ExecutionPolicy -Scope Process ...` acima.
+- **Ver o que deu errado**: `docker compose -p sigh-local -f compose.app.yml logs api`.
+
+> Para desenvolvedores: a stack é `compose.app.yml` (separado do `docker-compose.yml` de desenvolvimento, que
+> continua igual para `dotnet run` + `npm run dev`). No Linux/macOS use `scripts/local-up.sh`. O teste de ponta a
+> ponta contra a stack em containers é `npx playwright test -c playwright.local.config.ts` (em `SIGH/frontend`).
+
 ## Como Executar
 
 ### 1. Pré-requisitos
