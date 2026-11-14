@@ -68,6 +68,9 @@ public class EmployeeDisciplinaryHistoryQueryRepository : IEmployeeDisciplinaryH
         }
 
         var caseEmployeesList = await caseEmployeesQuery.ToListAsync(cancellationToken);
+        var batchIds = caseEmployeesList.Where(c => c.HistoryImportBatchId != null).Select(c => c.HistoryImportBatchId!.Value).Distinct().ToList();
+        var batchDates = await _context.DisciplinaryHistoryImportBatches.AsNoTracking()
+            .Where(b => batchIds.Contains(b.Id)).ToDictionaryAsync(b => b.Id, b => b.AppliedAt ?? b.PreviewedAt, cancellationToken);
 
         var casesList = caseEmployeesList.Select(c => {
             return new EmployeeDisciplinaryCaseSummaryDto
@@ -82,9 +85,13 @@ public class EmployeeDisciplinaryHistoryQueryRepository : IEmployeeDisciplinaryH
                 ResponsibleEmployee = c.ResponsibleEmployeeId?.ToString() ?? "Não atribuído",
                 OccurrencesCount = c.Occurrences.Count(o => !o.IsDeleted),
                 DecisionsCount = c.Decisions.Count(d => !d.IsDeleted),
-                MeasuresCount = c.Measures.Count(m => !m.IsDeleted)
+                MeasuresCount = c.Measures.Count(m => !m.IsDeleted),
+                Origin = c.Kind == SIGH.Domain.Disciplinary.Enums.DisciplinaryCaseKind.Historical ? "Histórico" : "SIGH",
+                ImportedAt = c.HistoryImportBatchId is { } b && batchDates.TryGetValue(b, out var at) ? at : null,
+                // Histórico: a data é a da medida (ClosedAt); o OpenedAt é o momento da importação.
+                OccurredAt = c.Kind == SIGH.Domain.Disciplinary.Enums.DisciplinaryCaseKind.Historical && c.ClosedAt is { } closed ? closed : c.OpenedAt
             };
-        }).OrderByDescending(c => c.OpenedAt).ToList();
+        }).OrderByDescending(c => c.OccurredAt).ToList();
 
         var totalMeasures = casesList.Sum(c => c.MeasuresCount);
         var totalCases = casesList.Count;

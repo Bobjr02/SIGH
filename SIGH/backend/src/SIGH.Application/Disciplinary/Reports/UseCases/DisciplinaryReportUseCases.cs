@@ -249,7 +249,7 @@ public class ExportDisciplinaryCaseReportCsvUseCase : IExportDisciplinaryCaseRep
         csvBuilder.Append('\uFEFF');
 
         // CSV Header
-        csvBuilder.AppendLine($"Número do Processo{sep}Título{sep}Empresa{sep}Setor{sep}Status{sep}Prioridade{sep}Responsável{sep}Acusado Principal{sep}Data de Abertura{sep}Data de Conclusão{sep}Tempo Resolução (Dias){sep}Ocorrências{sep}Provas{sep}Decisões{sep}Medidas");
+        csvBuilder.AppendLine($"Número do Processo{sep}Título{sep}Empresa{sep}Setor{sep}Status{sep}Prioridade{sep}Responsável{sep}Acusado Principal{sep}Data de Abertura{sep}Data de Conclusão{sep}Tempo Resolução (Dias){sep}Ocorrências{sep}Provas{sep}Decisões{sep}Medidas{sep}Origem");
 
         foreach (var item in items)
         {
@@ -268,7 +268,8 @@ public class ExportDisciplinaryCaseReportCsvUseCase : IExportDisciplinaryCaseRep
                 item.OccurrencesCount,
                 item.EvidencesCount,
                 item.DecisionsCount,
-                item.MeasuresCount
+                item.MeasuresCount,
+                CsvSanitizer.SanitizeField(item.Origin, sep)
             );
             csvBuilder.AppendLine(line);
         }

@@ -14,6 +14,11 @@ public class DisciplinaryMeasureSummaryDto
     public DateTimeOffset? EffectiveTo { get; set; }
     public Guid? AppliedByUserId { get; set; }
     public string? AppliedByUserName { get; set; }
+    /// <summary>"SIGH" ou "Histórico" (importado da planilha de penalidades).</summary>
+    public string Origin { get; set; } = "SIGH";
+    /// <summary>Dias de suspensão; nulo em suspensão = "não informado" (fora da soma de dias).</summary>
+    public int? SuspensionDays { get; set; }
+    public bool SuspensionDaysUnknown { get; set; }
 }
 
 public class DisciplinaryCaseReportItemDto
@@ -34,4 +39,6 @@ public class DisciplinaryCaseReportItemDto
     public int EvidencesCount { get; set; }
     public int DecisionsCount { get; set; }
     public int MeasuresCount { get; set; }
+    /// <summary>"SIGH" ou "Histórico".</summary>
+    public string Origin { get; set; } = "SIGH";
 }

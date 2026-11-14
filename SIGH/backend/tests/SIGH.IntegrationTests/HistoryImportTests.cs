@@ -329,6 +329,48 @@ public class HistoryImportTests : IntegrationTestBase
         SystemRoles.All.Where(r => r.Name != SystemRoles.Administrator).Should().OnlyContain(r => !r.Permissions.Contains(PermissionCodes.DisciplinaryHistory.Import));
     }
 
+    [Fact]
+    public async Task HistoricalRecords_AppearInListsReportsCsvAndTimeline_WithOrigin_AndFollowTheScope()
+    {
+        using var admin = await AdminAsync();
+        var import = await ImportAsync(admin, History);
+
+        async Task<PagedResult<RecordSummaryDto>> List(HttpClient client, string query) =>
+            (await client.GetFromJsonAsync<Result<PagedResult<RecordSummaryDto>>>($"/api/v1/disciplinary-records?pageSize=100&{query}"))!.Data!;
+
+        // Filtro Origem.
+        (await List(admin, $"origin={(int)RecordOrigin.Historical}")).TotalCount.Should().Be(14);
+        (await List(admin, $"origin={(int)RecordOrigin.Sigh}")).TotalCount.Should().Be(0);
+        var unknown = (await List(admin, "employee=50090000")).Items.Single();
+        unknown.Should().Match<RecordSummaryDto>(r => r.Origin == RecordOrigin.Historical && r.Status == RecordStatus.Historical
+            && r.SuspensionDays == null && r.SuspensionDaysUnknown && r.ImportedAt != null && r.MeasureDate == new DateOnly(2025, 9, 1));
+
+        // Relatório de medidas: dias "não informado"; CSV com a coluna Origem.
+        var measures = await admin.GetStringAsync("/api/v1/disciplinary-reports/measures?pageSize=100&origin=2");
+        var items = JsonDocument.Parse(measures).RootElement.GetProperty("data").GetProperty("items").EnumerateArray().ToList();
+        items.Should().HaveCount(14).And.OnlyContain(i => i.GetProperty("origin").GetString() == "Histórico");
+        items.Count(i => i.GetProperty("suspensionDaysUnknown").GetBoolean()).Should().Be(1);
+        var csv = await admin.GetStringAsync("/api/v1/disciplinary-reports/cases/export");
+        csv.Split('\n')[0].TrimEnd('\r').Should().EndWith("Origem");
+        csv.Should().Contain("Histórico");
+
+        // Linha do tempo do funcionário: selo do lote.
+        var e07 = await ReferenceData.EmployeeIdAsync(Factory, "50090007");
+        var history = await admin.GetStringAsync($"/api/v1/disciplinary-reports/employees/{e07}/history");
+        var cases = JsonDocument.Parse(history).RootElement.GetProperty("data").GetProperty("cases").EnumerateArray().ToList();
+        cases.Should().HaveCount(3).And.OnlyContain(c => c.GetProperty("origin").GetString() == "Histórico" && c.GetProperty("importedAt").ValueKind != JsonValueKind.Null);
+
+        // Escopo (mesma regra do sprint 6: gerência ATUAL do funcionário). 50090012 tem GERÊNCIA da época = USGA132,
+        // mas está hoje na USGA131: o gestor da 132 não o vê; vê a 50090000 (USGA132).
+        await AccessTestHelpers.CreateUserAsync(Factory, "g132@sigh.test", SystemRoles.Manager, "USGA132");
+        using var g132 = await AccessTestHelpers.LoginAsync(Factory, "g132@sigh.test");
+        var seen = await List(g132, "");
+        seen.Items.Select(r => r.EmployeeNumber).Should().BeEquivalentTo(["50090000"]);
+        var hidden = (await List(admin, "employee=50090012")).Items.Single();
+        (await g132.GetAsync($"/api/v1/disciplinary-records/{hidden.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        import.Imported.Should().Be(14);
+    }
+
     /// <summary>Edita células (inline) e remove uma linha da planilha, em memória.</summary>
     private static byte[] EditSheet(byte[] xlsx, Action<Action<string, string>> edits, int? removeRow = null)
     {

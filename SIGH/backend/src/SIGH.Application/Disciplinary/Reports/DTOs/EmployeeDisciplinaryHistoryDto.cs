@@ -29,4 +29,10 @@ public class EmployeeDisciplinaryCaseSummaryDto
     public int OccurrencesCount { get; set; }
     public int DecisionsCount { get; set; }
     public int MeasuresCount { get; set; }
+    /// <summary>"SIGH" ou "Histórico".</summary>
+    public string Origin { get; set; } = "SIGH";
+    /// <summary>Histórico: data do lote que importou ("Histórico importado — lote de dd/MM/yyyy").</summary>
+    public DateTimeOffset? ImportedAt { get; set; }
+    /// <summary>Data da medida (histórico) ou da abertura (SIGH): ordena a linha do tempo.</summary>
+    public DateTimeOffset OccurredAt { get; set; }
 }
