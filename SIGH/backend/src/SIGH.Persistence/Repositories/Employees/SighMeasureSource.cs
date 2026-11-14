@@ -5,10 +5,12 @@ using SIGH.Persistence.Context;
 
 namespace SIGH.Persistence.Repositories.Employees;
 
-/// <summary>Medidas aplicadas ou cumpridas registradas no próprio SIGH.</summary>
+/// <summary>
+/// Medidas aplicadas ou cumpridas: as aprovadas no SIGH e as do histórico importado (origem "Histórico").
+/// </summary>
 public sealed class SighMeasureSource : IEmployeeMeasureSource
 {
-    public const string SourceName = "SIGH";
+    public const string SourceName = MeasureSources.Sigh;
 
     private readonly SighDbContext _context;
 
@@ -19,10 +21,11 @@ public sealed class SighMeasureSource : IEmployeeMeasureSource
 
     public async Task<IReadOnlyList<MeasureFact>> GetAppliedMeasuresAsync(Guid employeeId, CancellationToken cancellationToken)
     {
-        var measures = await _context.DisciplinaryMeasures.AsNoTracking()
-            .Where(m => m.EmployeeId == employeeId
-                        && (m.Status == DisciplinaryMeasureStatus.Applied || m.Status == DisciplinaryMeasureStatus.Completed))
-            .Select(m => new { m.DisciplinaryCaseId, m.MeasureType, m.AppliedAt, m.EffectiveFrom, m.EffectiveUntil })
+        var measures = await (from m in _context.DisciplinaryMeasures.AsNoTracking()
+                              join c in _context.DisciplinaryCases.AsNoTracking() on m.DisciplinaryCaseId equals c.Id
+                              where m.EmployeeId == employeeId
+                                    && (m.Status == DisciplinaryMeasureStatus.Applied || m.Status == DisciplinaryMeasureStatus.Completed)
+                              select new { m.DisciplinaryCaseId, m.MeasureType, m.AppliedAt, m.EffectiveFrom, m.EffectiveUntil, m.SuspensionDays, c.Kind })
             .ToListAsync(cancellationToken);
 
         if (measures.Count == 0)
@@ -38,11 +41,12 @@ public sealed class SighMeasureSource : IEmployeeMeasureSource
             .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(i => i.Name).Distinct().ToList());
 
         return measures.Select(m => new MeasureFact(
-            SourceName,
+            m.Kind == DisciplinaryCaseKind.Historical ? MeasureSources.Historical : MeasureSources.Sigh,
             m.MeasureType,
             m.AppliedAt ?? m.EffectiveFrom,
             m.EffectiveFrom,
             m.EffectiveUntil,
-            byCase.TryGetValue(m.DisciplinaryCaseId, out var names) ? names : [])).ToList();
+            byCase.TryGetValue(m.DisciplinaryCaseId, out var names) ? names : [],
+            m.SuspensionDays)).ToList();
     }
 }

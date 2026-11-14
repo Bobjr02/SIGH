@@ -57,6 +57,10 @@ public static class DependencyInjection
 
         services.AddScoped<SIGH.Application.Common.Authorization.ICaseVisibility, SIGH.Application.Common.Authorization.CaseVisibility>();
 
+        // Importação do histórico disciplinar (planilha de penalidades), até o go-live
+        services.Configure<SIGH.Application.Disciplinary.History.HistoryImportOptions>(configuration.GetSection(SIGH.Application.Disciplinary.History.HistoryImportOptions.SectionName));
+        services.AddScoped<SIGH.Application.Disciplinary.History.IHistoryImportService, SIGH.Application.Disciplinary.History.HistoryImportService>();
+
         // Medidas disciplinares: fachada do fluxo simplificado (registrar → aprovar/rejeitar)
         services.Configure<SIGH.Application.Disciplinary.Records.RecordsOptions>(configuration.GetSection(SIGH.Application.Disciplinary.Records.RecordsOptions.SectionName));
         services.AddScoped<SIGH.Application.Disciplinary.Records.RecordNotifier>();

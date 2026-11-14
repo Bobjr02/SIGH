@@ -54,5 +54,7 @@ public static class RouteScopeClassification
         ["/api/v1/infraction-types"] = "catálogo de motivos",
         ["/api/v1/infraction-types/{id:guid}"] = "catálogo de motivos",
         ["/api/v1/employees/import/batches"] = "lotes de importação: só contagens agregadas, sem dado de funcionário; exige Employees.Import",
+        ["/api/v1/disciplinary-history/import/batches"] = "lotes do histórico: só contagens agregadas, sem dado de funcionário; exige Disciplinary.History.Import",
+        ["/api/v1/disciplinary-history/import/status"] = "estado da importação do histórico (aberta/encerrada); exige Disciplinary.History.Import",
     };
 }

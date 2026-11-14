@@ -4,14 +4,37 @@ using SIGH.Domain.Repositories;
 
 namespace SIGH.Application.Employees.DecisionSupport;
 
-/// <summary>Uma medida aplicada a um funcionário, de qualquer origem (SIGH hoje; histórico importado no próximo sprint).</summary>
+/// <summary>Origem de uma medida no quadro de apoio à decisão.</summary>
+public static class MeasureSources
+{
+    public const string Sigh = "SIGH";
+    public const string Historical = "Histórico";
+}
+
+/// <summary>Uma medida aplicada a um funcionário, de qualquer origem (SIGH ou histórico importado).</summary>
+/// <param name="SuspensionDays">Dias informados da suspensão; nulo = calcular pelo período (ou desconhecido, sem período).</param>
 public sealed record MeasureFact(
     string Source,
     DisciplinaryMeasureType MeasureType,
     DateTimeOffset Date,
     DateTimeOffset? EffectiveFrom,
     DateTimeOffset? EffectiveUntil,
-    IReadOnlyList<string> InfractionTypes);
+    IReadOnlyList<string> InfractionTypes,
+    int? SuspensionDays = null)
+{
+    public bool IsHistorical => Source == MeasureSources.Historical;
+
+    /// <summary>Dias da suspensão: os informados, senão o período (os dois extremos); nulo = desconhecido.</summary>
+    public int? KnownSuspensionDays =>
+        MeasureType != DisciplinaryMeasureType.Suspension ? null
+        : SuspensionDays is { } days ? days
+        : EffectiveFrom is { } from && EffectiveUntil is { } until && until >= from
+            ? DateOnly.FromDateTime(until.Date).DayNumber - DateOnly.FromDateTime(from.Date).DayNumber + 1
+            : null;
+}
+
+/// <summary>"2 advertências — 1 histórica, 1 no SIGH".</summary>
+public sealed record OriginBreakdown(string Label, int Total, int Historical, int Sigh);
 
 /// <summary>
 /// Fonte de medidas aplicadas. Novas origens (ex.: registros históricos importados) entram registrando
@@ -39,14 +62,19 @@ public sealed record EmployeeDecisionSupportDto(
     DateTimeOffset? LastMeasureAt,
     int MeasuresLast6Months,
     int MeasuresLast12Months,
-    IReadOnlyList<string> Sources);
+    IReadOnlyList<string> Sources,
+    IReadOnlyList<OriginBreakdown> ByOrigin,
+    int HistoricalMeasures,
+    int SighMeasures);
 
 /// <summary>
 /// Quadro de apoio à decisão (só informativo). Regras:
 /// - conta medidas aplicadas ou cumpridas (pendentes e canceladas ficam de fora; cada fonte já filtra);
 /// - advertências = verbais + escritas;
-/// - dias de suspensão = dias corridos de EffectiveFrom a EffectiveUntil, incluindo os dois dias;
-///   suspensão sem data final entra em SuspensionsWithoutPeriod e não soma dias;
+/// - dias de suspensão = os dias informados da medida, senão os dias corridos de EffectiveFrom a EffectiveUntil
+///   (incluindo os dois dias); suspensão sem dias nem período (dias desconhecidos) entra em
+///   SuspensionsWithoutPeriod e não soma dias;
+/// - origem separada: histórico importado × medidas aprovadas no SIGH (ByOrigin);
 /// - por motivo: tipos de infração das ocorrências do processo da medida (a medida conta uma vez em
 ///   cada tipo distinto do processo; sem ocorrência, "Sem tipo de infração");
 /// - janelas de 6 e 12 meses pela data da medida (aplicação), relativas a <c>now</c>.
@@ -60,9 +88,8 @@ public static class EmployeeDecisionSupportCalculator
         int Count(DisciplinaryMeasureType type) => facts.Count(f => f.MeasureType == type);
 
         var suspensions = facts.Where(f => f.MeasureType == DisciplinaryMeasureType.Suspension).ToList();
-        var suspensionDays = suspensions
-            .Where(f => f.EffectiveFrom.HasValue && f.EffectiveUntil.HasValue && f.EffectiveUntil >= f.EffectiveFrom)
-            .Sum(f => DateOnly.FromDateTime(f.EffectiveUntil!.Value.Date).DayNumber - DateOnly.FromDateTime(f.EffectiveFrom!.Value.Date).DayNumber + 1);
+        // Dias desconhecidos (histórico sem dias nem período) não entram na soma: contam à parte.
+        var suspensionDays = suspensions.Sum(f => f.KnownSuspensionDays ?? 0);
 
         var verbal = Count(DisciplinaryMeasureType.VerbalWarning);
         var written = Count(DisciplinaryMeasureType.WrittenWarning);
@@ -87,14 +114,36 @@ public static class EmployeeDecisionSupportCalculator
             written,
             suspensions.Count,
             suspensionDays,
-            suspensions.Count(f => !f.EffectiveFrom.HasValue || !f.EffectiveUntil.HasValue),
+            suspensions.Count(f => f.KnownSuspensionDays is null),
             facts.Count - verbal - written - suspensions.Count,
             byType,
             byInfraction,
             facts.Count == 0 ? null : facts.Max(f => f.Date),
             facts.Count(f => f.Date >= now.AddMonths(-6)),
             facts.Count(f => f.Date >= now.AddMonths(-12)),
-            facts.Select(f => f.Source).Distinct().OrderBy(s => s, StringComparer.Ordinal).ToList());
+            facts.Select(f => f.Source).Distinct().OrderBy(s => s, StringComparer.Ordinal).ToList(),
+            ByOrigin(facts),
+            facts.Count(f => f.IsHistorical),
+            facts.Count(f => !f.IsHistorical));
+    }
+
+    private static IReadOnlyList<OriginBreakdown> ByOrigin(IReadOnlyList<MeasureFact> facts)
+    {
+        OriginBreakdown Of(string label, Func<MeasureFact, bool> match)
+        {
+            var group = facts.Where(match).ToList();
+            return new OriginBreakdown(label, group.Count, group.Count(f => f.IsHistorical), group.Count(f => !f.IsHistorical));
+        }
+
+        var rows = new List<OriginBreakdown>
+        {
+            Of("Advertências", f => f.MeasureType is DisciplinaryMeasureType.VerbalWarning or DisciplinaryMeasureType.WrittenWarning),
+            Of("Suspensões", f => f.MeasureType == DisciplinaryMeasureType.Suspension),
+            Of("Demissões por justa causa", f => f.MeasureType == DisciplinaryMeasureType.JustCauseTermination),
+            Of("Outras", f => f.MeasureType is not (DisciplinaryMeasureType.VerbalWarning or DisciplinaryMeasureType.WrittenWarning
+                or DisciplinaryMeasureType.Suspension or DisciplinaryMeasureType.JustCauseTermination)),
+        };
+        return rows.Where(r => r.Total > 0).ToList();
     }
 
     public static string TypeLabel(DisciplinaryMeasureType type) => type switch

@@ -37,7 +37,16 @@ public enum RecordStatus
     /// <summary>Voltou para o registrante, que corrige e reenvia ou cancela.</summary>
     Rejected = 2,
     Approved = 3,
-    Cancelled = 4
+    Cancelled = 4,
+    /// <summary>Histórico importado da planilha de penalidades: somente leitura, sem decisão no SIGH.</summary>
+    Historical = 5
+}
+
+/// <summary>Origem da medida: registrada no SIGH ou histórico importado.</summary>
+public enum RecordOrigin
+{
+    Sigh = 1,
+    Historical = 2
 }
 
 public static class RecordLabels
@@ -68,6 +77,7 @@ public static class RecordLabels
         RecordStatus.Rejected => "Rejeitada",
         RecordStatus.Approved => "Aprovada",
         RecordStatus.Cancelled => "Cancelada",
+        RecordStatus.Historical => "Histórico importado",
         _ => status.ToString()
     };
 }
@@ -115,7 +125,13 @@ public sealed record RecordSummaryDto(
     int? SuspensionDays,
     DateTimeOffset RegisteredAt,
     Guid RegisteredByUserId,
-    string? RegisteredByName);
+    string? RegisteredByName,
+    RecordOrigin Origin = RecordOrigin.Sigh,
+    string OriginLabel = "SIGH",
+    /// <summary>Histórico: data do lote que importou o registro ("Histórico importado — lote de dd/MM/yyyy").</summary>
+    DateTimeOffset? ImportedAt = null,
+    /// <summary>Suspensão com dias desconhecidos ("não informado"; fora da soma de dias).</summary>
+    bool SuspensionDaysUnknown = false);
 
 public sealed record RecordEvidenceDto(
     Guid Id, string Title, string? Description, string EvidenceType, bool HasFile, string? OriginalFileName,
@@ -159,7 +175,9 @@ public sealed record GetRecordsQuery(
     /// <summary>Nome ou matrícula do funcionário.</summary>
     string? Employee = null,
     /// <summary>Só as medidas registradas pelo usuário (página inicial do registrante).</summary>
-    bool Mine = false);
+    bool Mine = false,
+    /// <summary>Origem: SIGH ou Histórico (vazio = todas).</summary>
+    RecordOrigin? Origin = null);
 
 public sealed record OptionDto(Guid Id, string? Code, string Name);
 
