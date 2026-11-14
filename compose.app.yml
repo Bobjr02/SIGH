@@ -1,0 +1,120 @@
+# SIGH completo em containers, para rodar na máquina local com dados FICTÍCIOS de demonstração.
+# Mesma estrutura de produção: o web (nginx sem root) serve o front e encaminha /api para a API
+# (mesma origem); a API e o banco não ficam expostos.
+#
+# Use os scripts (eles geram o .env.local com segredos aleatórios na primeira vez):
+#   Windows:  scripts\local-up.ps1   |   Linux/macOS:  scripts/local-up.sh
+# Ou diretamente:
+#   docker compose -f compose.app.yml --env-file .env.local up -d --build --wait
+#
+# Arquivo separado do docker-compose.yml (dev) de propósito: o de dev tem nomes fixos de container
+# (sigh-sqlserver, sigh-mailpit) e expõe o SQL na 1433 para o "dotnet run"; aqui o projeto tem nome
+# próprio, volumes próprios e nada além do web e do Mailpit exposto. Os dois podem coexistir.
+
+name: ${SIGH_LOCAL_PROJECT:-sigh-local}
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${SIGH_SA_PASSWORD:?Rode scripts/local-up para gerar o .env.local}
+      # O SQL Server precisa de ~2 GB; o limite evita que ele tome a memória toda da máquina.
+      MSSQL_MEMORY_LIMIT_MB: "2048"
+    volumes:
+      - db-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  # E-mails capturados (nada sai para a internet). Só a interface web é exposta.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "${SIGH_MAILPIT_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: SIGH/backend/Dockerfile
+    image: sigh-api:local
+    restart: unless-stopped
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    # Sem "ports": a API só é acessível pelo web, na rede interna do compose.
+    environment:
+      # Demo: aceita Seed:DemoData e mostra a faixa "AMBIENTE DE DEMONSTRAÇÃO". Swagger fica desligado.
+      ASPNETCORE_ENVIRONMENT: Demo
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=SIGH_DEMO;User Id=sa;Password=${SIGH_SA_PASSWORD};TrustServerCertificate=True;"
+      JwtOptions__SecretKey: ${SIGH_JWT_SECRET:?Rode scripts/local-up para gerar o .env.local}
+      JwtOptions__Issuer: SIGH.Api
+      JwtOptions__Audience: SIGH.Client
+      Database__ApplyMigrationsOnStartup: "true"
+      Seed__AdminEmail: ${SIGH_ADMIN_EMAIL:-admin@demo.local}
+      Seed__AdminPassword: ${SIGH_ADMIN_PASSWORD:?Rode scripts/local-up para gerar o .env.local}
+      Seed__DefaultCompanyName: "Usina Serra Grande S.A. (DEMONSTRAÇÃO)"
+      Seed__DemoData: "true"
+      Seed__DemoPassword: ${SIGH_DEMO_PASSWORD:?Rode scripts/local-up para gerar o .env.local}
+      Seed__DemoDataPath: /demo-data
+      Storage__Local__RootPath: /var/lib/sigh/evidences
+      Email__Enabled: "true"
+      Email__Smtp__Host: mailpit
+      Email__Smtp__Port: "1025"
+      Email__Smtp__UseStartTls: "false"
+      Email__From: nao-responda@demo.local
+      App__PublicBaseUrl: http://localhost:${SIGH_WEB_PORT:-8080}
+      # O web (nginx) é o único cliente: IP real e esquema vêm do X-Forwarded-*.
+      ReverseProxy__Enabled: "true"
+      # Seis usuários de demonstração entram do mesmo computador: o limite de produção (10/min) é apertado.
+      RateLimits__Login__PermitLimit: "30"
+    volumes:
+      - evidences:/var/lib/sigh/evidences
+      # Arquivos FICTÍCIOS do pacote de referência (funcionários), só leitura.
+      - ./SIGH/docs/referencias:/demo-data:ro
+    healthcheck:
+      # A imagem aspnet não tem curl: bash + /dev/tcp. Saudável = API de pé e banco conectado.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3000 && printf 'GET /api/v1/health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"Healthy\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      # Primeira subida: migrations + dados de demonstração.
+      start_period: 120s
+
+  web:
+    build:
+      context: SIGH/frontend
+    image: sigh-web:local
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      SIGH_API_UPSTREAM: http://api:3000
+    ports:
+      - "${SIGH_WEB_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-data:
+  evidences:
