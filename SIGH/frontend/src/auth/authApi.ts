@@ -32,10 +32,11 @@ export interface ChangePasswordResponse {
 // withCredentials só nas rotas que gravam, leem ou apagam o cookie sigh_rt (Path=/api/v1/auth).
 // Em mesma origem o navegador já envia o cookie; a flag importa se o front for servido em outra origem.
 export const authApi = {
-  login: async (email: string, password: string): Promise<LoginResponse> => {
+  /** rememberMe = false: o cookie do refresh token é de sessão (some ao fechar o navegador). */
+  login: async (email: string, password: string, rememberMe = true): Promise<LoginResponse> => {
     const response = await api.post<ApiResult<LoginResponse>>(
       '/v1/auth/login',
-      { email, password },
+      { email, password, rememberMe },
       { withCredentials: true, skipAuthRefresh: true },
     );
     return response.data.data;

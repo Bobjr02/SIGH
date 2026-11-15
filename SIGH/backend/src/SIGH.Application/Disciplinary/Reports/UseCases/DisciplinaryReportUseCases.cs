@@ -249,7 +249,7 @@ public class ExportDisciplinaryCaseReportCsvUseCase : IExportDisciplinaryCaseRep
         csvBuilder.Append('\uFEFF');
 
         // CSV Header
-        csvBuilder.AppendLine($"Número do Processo{sep}Título{sep}Empresa{sep}Setor{sep}Status{sep}Prioridade{sep}Responsável{sep}Acusado Principal{sep}Data de Abertura{sep}Data de Conclusão{sep}Tempo Resolução (Dias){sep}Ocorrências{sep}Provas{sep}Decisões{sep}Medidas{sep}Origem");
+        csvBuilder.AppendLine($"Número do Processo{sep}Título{sep}Empresa{sep}Setor{sep}Situação{sep}Prioridade{sep}Responsável{sep}Acusado Principal{sep}Data de Abertura{sep}Data de Conclusão{sep}Tempo Resolução (Dias){sep}Ocorrências{sep}Provas{sep}Decisões{sep}Medidas{sep}Origem");
 
         foreach (var item in items)
         {
@@ -258,13 +258,13 @@ public class ExportDisciplinaryCaseReportCsvUseCase : IExportDisciplinaryCaseRep
                 CsvSanitizer.SanitizeField(item.Title, sep),
                 CsvSanitizer.SanitizeField(item.CompanyName, sep),
                 CsvSanitizer.SanitizeField(item.DepartmentName, sep),
-                CsvSanitizer.SanitizeField(item.Status, sep),
-                CsvSanitizer.SanitizeField(item.Priority, sep),
+                CsvSanitizer.SanitizeField(SIGH.Application.Common.PortugueseLabels.CaseStatus(item.Status), sep),
+                CsvSanitizer.SanitizeField(SIGH.Application.Common.PortugueseLabels.CasePriority(item.Priority), sep),
                 CsvSanitizer.SanitizeField(item.ResponsibleEmployeeName, sep),
                 CsvSanitizer.SanitizeField(item.MainAccusedEmployeeName, sep),
-                item.OpenedAt.ToString("yyyy-MM-dd HH:mm:ss"),
-                item.ConcludedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "",
-                item.ResolutionTimeInDays?.ToString("F1") ?? "",
+                item.OpenedAt.ToOffset(SIGH.Application.Disciplinary.Records.BusinessCalendar.Offset).ToString("dd/MM/yyyy HH:mm"),
+                item.ConcludedAt?.ToOffset(SIGH.Application.Disciplinary.Records.BusinessCalendar.Offset).ToString("dd/MM/yyyy HH:mm") ?? "",
+                item.ResolutionTimeInDays?.ToString("F1", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) ?? "",
                 item.OccurrencesCount,
                 item.EvidencesCount,
                 item.DecisionsCount,

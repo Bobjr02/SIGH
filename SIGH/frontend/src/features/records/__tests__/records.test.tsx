@@ -158,7 +158,7 @@ describe('registrar medida', () => {
     renderApp('/medidas/registrar');
     const user = userEvent.setup();
 
-    const employee = await screen.findByRole('combobox', { name: /funcionário/i });
+    const employee = await screen.findByRole('combobox', { name: /^funcionário/i });
     await user.type(employee, '5009');
     await user.click(await screen.findByRole('option', { name: /50090006/ }, { timeout: 2000 }));
 
@@ -222,7 +222,7 @@ describe('aprovação e rejeição', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Menu principal' });
     expect(await within(nav).findByText('4')).toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: /registrar medida/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: /registrar medida/i })).not.toBeInTheDocument();
 
     await user.click(await screen.findByRole('button', { name: 'Aprovar' }));
 
@@ -324,7 +324,7 @@ describe('escopo por gerência', () => {
     // Gestor só consulta: nem registrar, nem aprovar.
     expect(screen.queryByRole('button', { name: /registrar medida/i })).not.toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Menu principal' });
-    expect(within(nav).queryByRole('button', { name: /aprovações pendentes/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: /aprovações/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('combobox', { name: /gerência/i }));
     const listbox = await screen.findByRole('listbox');

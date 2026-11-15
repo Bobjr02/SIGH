@@ -51,7 +51,7 @@ export const ResetPasswordPage: React.FC = () => {
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', p: 2 }}>
       <Paper elevation={0} sx={{ p: 4, width: '100%', maxWidth: 440, border: '1px solid', borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <KeyRound size={30} color="#2563eb" />
+          <KeyRound size={30} color="var(--sigh-primary-text)" />
           <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
             {title}
           </Typography>

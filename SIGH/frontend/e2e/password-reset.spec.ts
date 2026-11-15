@@ -23,7 +23,7 @@ test('forgot password: the e-mail reaches Mailpit and its link resets the passwo
 
   // Esqueci minha senha, pela tela.
   await page.goto('/login');
-  await page.getByRole('link', { name: 'Esqueci minha senha' }).click();
+  await page.getByRole('link', { name: 'Esqueceu sua senha?' }).click();
   await expect(page.getByRole('heading', { name: 'Esqueci minha senha' })).toBeVisible();
   await page.getByLabel('E-mail').fill(email);
   await page.getByRole('button', { name: 'Enviar link' }).click();

@@ -2,6 +2,8 @@ import React from 'react';
 import { Paper, Box, Typography, Chip, Button } from '@mui/material';
 import { CheckCircle2, AlertTriangle, Info, Bell, Clock } from 'lucide-react';
 import { NotificationDto } from '../types';
+import { formatDate, formatDateTime } from '../../../utils/formatters';
+import { label } from '../../../i18n/labels';
 
 interface NotificationItemProps {
   notification: NotificationDto;
@@ -18,12 +20,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     switch (notification.type.toLowerCase()) {
       case 'escalation':
       case 'error':
-        return <AlertTriangle size={20} color="#dc2626" />;
+        return <AlertTriangle size={20} color="var(--sigh-danger)" />;
       case 'reminder':
       case 'warning':
-        return <Clock size={20} color="#d97706" />;
+        return <Clock size={20} color="var(--sigh-warning)" />;
       default:
-        return <Info size={20} color="#2563eb" />;
+        return <Info size={20} color="var(--sigh-primary-text)" />;
     }
   };
 
@@ -48,7 +50,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         borderRadius: 2,
         borderLeft: 4,
         borderLeftColor: notification.isRead
-          ? 'grey.300'
+          ? 'var(--sigh-border)'
           : notification.priority.toLowerCase() === 'high' || notification.priority.toLowerCase() === 'critical'
           ? 'error.main'
           : 'primary.main',
@@ -71,7 +73,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
             </Box>
 
             <Typography variant="caption" color="text.secondary">
-              {new Date(notification.createdAt).toLocaleString('pt-BR')}
+              {formatDateTime(notification.createdAt)}
             </Typography>
           </Box>
 
@@ -81,16 +83,16 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip label={`Tipo: ${notification.type}`} size="small" variant="outlined" />
+              <Chip label={`Tipo: ${label('NotificationType', notification.type)}`} size="small" variant="outlined" />
               <Chip
-                label={`Prioridade: ${notification.priority}`}
+                label={`Prioridade: ${label('NotificationPriority', notification.priority)}`}
                 size="small"
                 color={getPriorityColor() as any}
                 variant="outlined"
               />
               {notification.dueDate && (
                 <Typography variant="caption" color="warning.main" sx={{ fontWeight: 600 }}>
-                  Vencimento: {new Date(notification.dueDate).toLocaleDateString('pt-BR')}
+                  Vencimento: {formatDate(notification.dueDate)}
                 </Typography>
               )}
             </Box>

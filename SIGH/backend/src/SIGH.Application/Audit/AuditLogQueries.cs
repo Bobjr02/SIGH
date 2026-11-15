@@ -10,7 +10,12 @@ public record AuditLogFilter(
     DateTimeOffset? From = null,
     DateTimeOffset? To = null,
     int PageNumber = 1,
-    int PageSize = 50);
+    int PageSize = 50,
+    /// <summary>Número da medida (MED-…) ou matrícula do funcionário: troca o "Id da entidade" na tela.</summary>
+    string? Reference = null);
+
+/// <summary>Usuário para o seletor da auditoria (busca por nome).</summary>
+public record AuditUserOptionDto(Guid Id, string FullName, string Email);
 
 public record AuditLogDto(
     Guid Id,
@@ -31,6 +36,9 @@ public interface IAuditLogQueryService
     public const int MaxPageSize = 200;
 
     Task<PagedResult<AuditLogDto>> SearchAsync(AuditLogFilter filter, CancellationToken cancellationToken = default);
+
+    /// <summary>Até 20 usuários cujo nome ou e-mail contém o termo (seletor "Usuário" da auditoria).</summary>
+    Task<IReadOnlyList<AuditUserOptionDto>> SearchUsersAsync(string? term, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Linha do tempo de um processo: registros do processo e das subentidades (ocorrências,

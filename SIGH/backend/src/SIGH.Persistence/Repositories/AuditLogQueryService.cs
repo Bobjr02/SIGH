@@ -16,7 +16,7 @@ public sealed class AuditLogQueryService : IAuditLogQueryService
         _scope = scope;
     }
 
-    public Task<PagedResult<AuditLogDto>> SearchAsync(AuditLogFilter filter, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<AuditLogDto>> SearchAsync(AuditLogFilter filter, CancellationToken cancellationToken = default)
     {
         var query = _context.AuditLogs.AsNoTracking();
 
@@ -38,7 +38,44 @@ public sealed class AuditLogQueryService : IAuditLogQueryService
         if (filter.To.HasValue)
             query = query.Where(a => a.CreatedAt <= filter.To.Value);
 
-        return PageAsync(query, filter.PageNumber, filter.PageSize, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(filter.Reference))
+        {
+            var ids = await ResolveReferenceAsync(filter.Reference.Trim(), cancellationToken);
+            query = query.Where(a => a.EntityId != null && ids.Contains(a.EntityId));
+        }
+
+        return await PageAsync(query, filter.PageNumber, filter.PageSize, cancellationToken);
+    }
+
+    /// <summary>
+    /// "MED-…": a medida e as subentidades dela (como na linha do tempo). Só dígitos: o funcionário com essa
+    /// matrícula. Sem correspondência: lista vazia (nunca "tudo").
+    /// </summary>
+    private async Task<List<string>> ResolveReferenceAsync(string reference, CancellationToken cancellationToken)
+    {
+        if (reference.StartsWith("MED-", StringComparison.OrdinalIgnoreCase))
+        {
+            var upper = reference.ToUpperInvariant();
+            var caseId = await _context.DisciplinaryCases.IgnoreQueryFilters().Where(c => c.CaseNumber == upper).Select(c => (Guid?)c.Id).FirstOrDefaultAsync(cancellationToken);
+            return caseId is { } id ? (await CaseEntityIdsAsync(id, cancellationToken)).Select(x => x.ToString()).ToList() : [];
+        }
+
+        var employeeIds = await _context.Employees.IgnoreQueryFilters().Where(e => e.EmployeeNumber == reference).Select(e => e.Id).ToListAsync(cancellationToken);
+        return employeeIds.Select(x => x.ToString()).ToList();
+    }
+
+    public async Task<IReadOnlyList<AuditUserOptionDto>> SearchUsersAsync(string? term, CancellationToken cancellationToken = default)
+    {
+        var query = _context.Users.IgnoreQueryFilters().AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(term))
+        {
+            var t = term.Trim();
+            query = query.Where(u => u.FullName.Contains(t) || u.Email.Contains(t));
+        }
+
+        return await query.OrderBy(u => u.FullName).Take(20)
+            .Select(u => new AuditUserOptionDto(u.Id, u.FullName, u.Email))
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<PagedResult<AuditLogDto>?> GetDisciplinaryCaseTrailAsync(Guid caseId, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
@@ -47,6 +84,15 @@ public sealed class AuditLogQueryService : IAuditLogQueryService
         if (!exists)
             return null;
 
+        var idStrings = (await CaseEntityIdsAsync(caseId, cancellationToken)).Select(id => id.ToString()).ToList();
+        var query = _context.AuditLogs.AsNoTracking().Where(a => a.EntityId != null && idStrings.Contains(a.EntityId));
+
+        return await PageAsync(query, pageNumber, pageSize, cancellationToken);
+    }
+
+    /// <summary>O processo e as subentidades dele (inclusive as removidas logicamente).</summary>
+    private async Task<List<Guid>> CaseEntityIdsAsync(Guid caseId, CancellationToken cancellationToken)
+    {
         // Subentidades removidas logicamente também fazem parte da história do processo.
         var ids = new List<Guid> { caseId };
         ids.AddRange(await _context.DisciplinaryOccurrences.IgnoreQueryFilters().Where(x => x.DisciplinaryCaseId == caseId).Select(x => x.Id).ToListAsync(cancellationToken));
@@ -54,11 +100,7 @@ public sealed class AuditLogQueryService : IAuditLogQueryService
         ids.AddRange(await _context.DisciplinaryEvidences.IgnoreQueryFilters().Where(x => x.DisciplinaryCaseId == caseId).Select(x => x.Id).ToListAsync(cancellationToken));
         ids.AddRange(await _context.DisciplinaryDecisions.IgnoreQueryFilters().Where(x => x.DisciplinaryCaseId == caseId).Select(x => x.Id).ToListAsync(cancellationToken));
         ids.AddRange(await _context.DisciplinaryMeasures.IgnoreQueryFilters().Where(x => x.DisciplinaryCaseId == caseId).Select(x => x.Id).ToListAsync(cancellationToken));
-
-        var idStrings = ids.Select(id => id.ToString()).ToList();
-        var query = _context.AuditLogs.AsNoTracking().Where(a => a.EntityId != null && idStrings.Contains(a.EntityId));
-
-        return await PageAsync(query, pageNumber, pageSize, cancellationToken);
+        return ids;
     }
 
     private async Task<PagedResult<AuditLogDto>> PageAsync(IQueryable<AuditLog> query, int pageNumber, int pageSize, CancellationToken cancellationToken)

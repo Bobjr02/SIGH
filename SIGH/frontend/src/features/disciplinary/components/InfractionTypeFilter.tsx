@@ -26,7 +26,7 @@ export const InfractionTypeFilter: React.FC<InfractionTypeFilterProps> = ({
         alignItems: 'center',
         mb: 3,
         p: 2,
-        backgroundColor: '#f8fafc',
+        backgroundColor: 'var(--sigh-surface2)',
         borderRadius: 2,
         border: '1px solid',
         borderColor: 'divider',
@@ -40,7 +40,7 @@ export const InfractionTypeFilter: React.FC<InfractionTypeFilterProps> = ({
         sx={{ minWidth: 280, flexGrow: 1 }}
         slotProps={{
           input: {
-            startAdornment: <Search size={18} style={{ marginRight: 8, color: '#64748b' }} />,
+            startAdornment: <Search size={18} style={{ marginRight: 8, color: 'var(--sigh-text-muted)' }} />,
           },
         }}
       />

@@ -175,7 +175,7 @@ describe('logout between tabs', () => {
 
     tab.channel.postMessage({ type: 'logout' } satisfies CrossTabMessage);
 
-    expect(await screen.findByRole('heading', { name: 'Entrar no SIGH' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bem-vindo de volta!' })).toBeInTheDocument();
     expect(tokenStore.get()).toBeNull();
   });
 

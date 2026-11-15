@@ -41,7 +41,7 @@ test('import employees and history, decision support of 50090007 with history, t
   await expect(page.getByText(/Importação aplicada/)).toBeVisible();
 
   // 2. Histórico disciplinar, pela tela /admin/history-import.
-  await page.getByRole('navigation', { name: 'Menu principal' }).getByRole('button', { name: 'Importar histórico' }).click();
+  await page.getByRole('navigation', { name: 'Menu principal' }).getByRole('link', { name: 'Importar histórico' }).click();
   await page.getByLabel('Planilha de penalidades').setInputFiles(HISTORY);
   await page.getByRole('button', { name: 'Pré-visualizar' }).click();
   await expect(page.getByTestId('history-summary')).toContainText('16 linhas com dados: 14 a importar');

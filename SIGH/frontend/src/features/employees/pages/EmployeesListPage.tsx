@@ -1,30 +1,19 @@
 import React, { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  MenuItem,
-  Pagination,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material';
-import { Upload, Users } from 'lucide-react';
+import { Button, MenuItem, TextField } from '@mui/material';
+import { Eye, Search, Upload, Users } from 'lucide-react';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { DataTable } from '../../../components/ui/DataTable';
+import { InitialsAvatar } from '../../../components/ui/InitialsAvatar';
+import { EmployeeStatusChip } from '../../../components/ui/StatusChip';
+import { ActionIcon } from '../../../components/ui/ActionIcon';
+import { label } from '../../../i18n/labels';
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS } from '../../../auth/permissions';
 import {
   EmployeeGroup,
   EmployeeStatus,
-  GROUP_LABELS,
-  STATUS_LABELS,
   employeeKeys,
   employeesApi,
   formatDate,
@@ -33,9 +22,6 @@ import {
 } from '../api/employeesApi';
 
 const PAGE_SIZE = 20;
-
-const statusColor = (status: EmployeeStatus): 'success' | 'warning' | 'default' =>
-  status === EmployeeStatus.Active ? 'success' : status === EmployeeStatus.OnLeave ? 'warning' : 'default';
 
 export const EmployeesListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -67,31 +53,31 @@ export const EmployeesListPage: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Users size={28} /> Funcionários
-        </Typography>
-        {hasPermission(PERMISSIONS.EMPLOYEES_IMPORT) && (
-          <Button variant="outlined" startIcon={<Upload size={16} />} onClick={() => navigate('/employees/import')}>
-            Importar do SAP
-          </Button>
-        )}
-      </Box>
+    <div>
+      <PageHeader
+        icon={<Users size={22} />}
+        title="Funcionários"
+        subtitle="Funcionários importados do SAP, no escopo do seu perfil"
+        actions={
+          hasPermission(PERMISSIONS.EMPLOYEES_IMPORT) && (
+            <Button variant="outlined" startIcon={<Upload size={16} />} onClick={() => navigate('/employees/import')}>
+              Importar do SAP
+            </Button>
+          )
+        }
+      />
 
-      <Paper
-        component="form"
+      <form
         aria-label="Filtros de funcionários"
         onSubmit={apply}
-        elevation={0}
-        sx={{ p: 2, border: '1px solid', borderColor: 'divider', display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' } }}
+        className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-line bg-surface p-4 shadow-card sm:grid-cols-2 lg:grid-cols-3"
       >
         <TextField size="small" label="Nome ou matrícula" value={draft.searchTerm} onChange={set('searchTerm')} />
         <TextField select size="small" label="Situação" value={draft.status} onChange={set('status')}>
           <MenuItem value="">Todas</MenuItem>
           {[EmployeeStatus.Active, EmployeeStatus.OnLeave, EmployeeStatus.Terminated].map((s) => (
             <MenuItem key={s} value={String(s)}>
-              {STATUS_LABELS[s]}
+              {label('EmployeeStatus', s)}
             </MenuItem>
           ))}
         </TextField>
@@ -99,7 +85,7 @@ export const EmployeesListPage: React.FC = () => {
           <MenuItem value="">Todos</MenuItem>
           {[EmployeeGroup.Field, EmployeeGroup.Industry].map((g) => (
             <MenuItem key={g} value={String(g)}>
-              {GROUP_LABELS[g]}
+              {label('EmployeeGroup', g)}
             </MenuItem>
           ))}
         </TextField>
@@ -119,75 +105,65 @@ export const EmployeesListPage: React.FC = () => {
             </MenuItem>
           ))}
         </TextField>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <Button type="submit" variant="contained">
+        <div className="flex items-center justify-end">
+          <Button type="submit" variant="contained" startIcon={<Search size={16} />}>
             Filtrar
           </Button>
-        </Box>
-      </Paper>
+        </div>
+      </form>
 
-      {list.isError && <Alert severity="error">{(list.error as Error).message}</Alert>}
-
-      {list.data && (
-        <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', overflowX: 'auto' }}>
-          <Table size="small" aria-label="Funcionários">
-            <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Matrícula</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Nome</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>CPF</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Situação</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Grupo</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Gerência</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Setor</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Admissão</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {list.data.items.map((e) => (
-                <TableRow
-                  key={e.id}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/employees/${e.id}`)}
-                  data-testid={`employee-row-${e.employeeNumber}`}
-                >
-                  <TableCell sx={{ fontFamily: 'monospace' }}>{e.employeeNumber}</TableCell>
-                  <TableCell>{e.fullName}</TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace' }}>{maskCpf(e.cpfMasked)}</TableCell>
-                  <TableCell>
-                    <Chip size="small" color={statusColor(e.status)} label={STATUS_LABELS[e.status] ?? e.status} />
-                  </TableCell>
-                  <TableCell>{e.group ? GROUP_LABELS[e.group] : '-'}</TableCell>
-                  <TableCell>{e.managementUnitName ?? '-'}</TableCell>
-                  <TableCell>{e.departmentName ?? '-'}</TableCell>
-                  <TableCell>{formatDate(e.admissionDate)}</TableCell>
-                </TableRow>
-              ))}
-              {list.data.items.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} align="center">
-                    Nenhum funcionário encontrado.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5 }}>
-            <Typography variant="body2" color="text.secondary">
-              {list.data.totalCount} funcionário(s)
-            </Typography>
-            {list.data.totalPages > 1 && (
-              <Pagination
-                count={list.data.totalPages}
-                page={list.data.pageNumber}
-                onChange={(_, page) => setFilters((f) => ({ ...f, pageNumber: page }))}
-              />
-            )}
-          </Box>
-        </Paper>
-      )}
-    </Box>
+      <DataTable
+        ariaLabel="Funcionários"
+        rows={list.data?.items}
+        rowKey={(e) => e.id}
+        rowTestIdOf={(e) => `employee-row-${e.employeeNumber}`}
+        isLoading={list.isLoading}
+        error={list.isError ? (list.error as Error).message : null}
+        onRetry={() => list.refetch()}
+        emptyMessage="Nenhum funcionário encontrado."
+        emptyIcon={<Users size={32} />}
+        columns={[
+          {
+            key: 'name',
+            header: 'Nome',
+            render: (e) => (
+              <span className="flex items-center gap-2.5">
+                <InitialsAvatar name={e.fullName} />
+                <span>
+                  <button type="button" onClick={() => navigate(`/employees/${e.id}`)} className="text-left font-medium text-ink hover:underline">
+                    {e.fullName}
+                  </button>
+                  <span className="block text-xs text-muted">Matrícula {e.employeeNumber}</span>
+                </span>
+              </span>
+            ),
+          },
+          { key: 'cpf', header: 'CPF', render: (e) => <span className="whitespace-nowrap font-mono text-xs">{maskCpf(e.cpfMasked)}</span>, hideOnMobile: true },
+          { key: 'status', header: 'Situação', render: (e) => <EmployeeStatusChip status={e.status} /> },
+          { key: 'group', header: 'Grupo', render: (e) => (e.group ? label('EmployeeGroup', e.group) : '—'), hideOnMobile: true },
+          { key: 'unit', header: 'Gerência', render: (e) => e.managementUnitName ?? '—', hideOnMobile: true },
+          { key: 'dept', header: 'Setor', render: (e) => e.departmentName ?? '—', hideOnMobile: true },
+          { key: 'admission', header: 'Admissão', render: (e) => formatDate(e.admissionDate), hideOnMobile: true },
+          {
+            key: 'actions',
+            header: 'Ações',
+            align: 'right',
+            render: (e) => <ActionIcon title="Ver funcionário" icon={<Eye size={17} />} to={`/employees/${e.id}`} />,
+          },
+        ]}
+        paging={
+          list.data
+            ? {
+                pageNumber: list.data.pageNumber,
+                pageSize: list.data.pageSize,
+                totalCount: list.data.totalCount,
+                onPageChange: (page) => setFilters((f) => ({ ...f, pageNumber: page })),
+                noun: list.data.totalCount === 1 ? 'funcionário' : 'funcionários',
+              }
+            : undefined
+        }
+      />
+    </div>
   );
 };
 

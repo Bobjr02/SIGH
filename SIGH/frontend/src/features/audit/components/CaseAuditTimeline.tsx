@@ -1,40 +1,38 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Box, CircularProgress, Typography } from '@mui/material';
+import { ScrollText } from 'lucide-react';
 import { auditApi, auditKeys } from '../api/auditApi';
+import { EmptyState, ErrorState } from '../../../components/ui/States';
+import { formatNumber } from '../../../utils/formatters';
 import { AuditEntryCard } from './AuditEntryCard';
 
-/** Linha do tempo de auditoria do processo e das subentidades (exige Audit.View). */
+/** Histórico (auditoria) da medida e das subentidades (exige Audit.View). */
 export const CaseAuditTimeline: React.FC<{ caseId: string }> = ({ caseId }) => {
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: auditKeys.caseTrail(caseId, 1),
     queryFn: () => auditApi.caseTrail(caseId),
   });
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-        <CircularProgress aria-label="Carregando histórico" />
-      </Box>
+      <div className="flex flex-col gap-3" aria-busy="true" aria-label="Carregando histórico">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-20 animate-pulse rounded-lg bg-surface-2" />
+        ))}
+      </div>
     );
   }
-
-  if (isError) return <Alert severity="error">{(error as Error).message}</Alert>;
+  if (isError) return <ErrorState message={(error as Error).message} onRetry={() => refetch()} />;
 
   const items = data?.items ?? [];
-
   return (
-    <Box component="section" aria-label="Histórico de auditoria" sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-      <Typography variant="h6" component="h2" sx={{ fontWeight: 700 }}>
-        Histórico ({data?.totalCount ?? 0})
-      </Typography>
+    <section aria-label="Histórico de auditoria" className="flex flex-col gap-3">
+      <h2 className="text-base font-semibold text-ink">Histórico ({formatNumber(data?.totalCount ?? 0)})</h2>
       {items.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
-          Nenhum registro de auditoria para este processo.
-        </Typography>
+        <EmptyState message="Nenhum registro de auditoria para esta medida." icon={<ScrollText size={32} />} />
       ) : (
         items.map((log) => <AuditEntryCard key={log.id} log={log} />)
       )}
-    </Box>
+    </section>
   );
 };

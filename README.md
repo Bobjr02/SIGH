@@ -123,17 +123,19 @@ Abra **http://localhost:8080** (Chrome ou Edge). A senha dos usuários abaixo é
 | Usuário | Perfil | O que deve aparecer |
 |---|---|---|
 | `auxiliar@demo.local` | RH – Registro | "Minhas medidas", com a rejeitada destacada; botão **Registrar medida** |
-| `encarregado@demo.local` | RH – Aprovador | "Aguardando a sua aprovação" (2 medidas) e o contador em **Aprovações pendentes** |
-| `juridico@demo.local` | Jurídico | Todas as medidas, de todas as gerências; **Auditoria** no menu |
-| `gestor.industrial@demo.local` | Gestor da USGA131 | Só as medidas e funcionários da Industrial (USGA131) |
-| `gestor.agricola@demo.local` | Gestor da USGA137 e USGA141 | Só as medidas e funcionários das gerências agrícolas |
+| `encarregado@demo.local` | RH – Aprovador | "Aguardando a sua aprovação" (2 medidas) e o contador em **Aprovações** no menu |
+| `juridico@demo.local` | Jurídico | O **Painel** (indicadores de todas as gerências); **Auditoria** no menu |
+| `gestor.industrial@demo.local` | Gestor da USGA131 | O **Painel**, as medidas e os funcionários só da Industrial (USGA131) |
+| `gestor.agricola@demo.local` | Gestor da USGA137 e USGA141 | O **Painel**, as medidas e os funcionários só das gerências agrícolas |
 | `preposto@demo.local` | RH – Registro + RH – Aprovador | A fila de aprovação e as próprias medidas (não aprova as que ele mesmo registrar) |
-| `admin@demo.local` | Administrador | Pede a troca de senha no primeiro acesso; **Usuários**, **Gerências**, importação de funcionários e auditoria. Não registra nem aprova medidas |
+| `admin@demo.local` | Administrador | Pede a troca de senha no primeiro acesso; o **Painel** e, em **Administração**, Usuários, Gerências, Importar funcionários, Importar histórico e Motivos. Não registra nem aprova medidas |
 
 Os dados de demonstração têm 40 funcionários fictícios, o **histórico disciplinar fictício** importado da
 planilha de penalidades (14 registros, com o selo "Histórico importado") e 8 medidas do SIGH em todos os estados
 (aprovadas, uma suspensão, pendentes, uma rejeitada aguardando correção, uma cancelada e uma com carta em PDF
-anexada). No funcionário 50090007, o quadro de apoio à decisão mostra o histórico separado das medidas do SIGH.
+anexada). No funcionário 50090007, a aba **Apoio à decisão** mostra o histórico separado das medidas do SIGH.
+O tema escuro é o padrão; o botão de lua (no topo) troca para o claro. As capturas de todas as telas, nos dois
+temas, estão em [`SIGH/docs/telas`](SIGH/docs/telas).
 
 ### 5. Ver os e-mails
 Nada sai para a internet: todos os e-mails (conta criada, medida registrada, aprovada, rejeitada...) ficam
@@ -223,6 +225,16 @@ O refresh token **nunca** aparece no corpo das respostas: `login`, `refresh` e `
 `sigh_rt` (`HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`, com a expiração do refresh token).
 `POST /auth/refresh` lê o cookie e ignora o corpo; `POST /auth/logout` revoga o token e apaga o cookie.
 `GET /auth/me` devolve o usuário com perfis e permissões efetivas lidas do banco.
+
+**"Lembrar-me"** (campo opcional `rememberMe` no `POST /auth/login`):
+- desmarcado (`false`, o padrão da tela): o cookie `sigh_rt` é gravado **sem** `Expires` — cookie de sessão, que o
+  navegador apaga ao ser fechado. O refresh token continua expirando no servidor no prazo normal;
+- marcado (`true`) ou omitido (clientes antigos): comportamento anterior, o cookie expira junto com o refresh token.
+
+A escolha fica em `RefreshTokens.IsPersistent` e passa para o token novo a cada `refresh` (inclusive na janela de
+tolerância entre abas) e na `change-password` (que herda a escolha do cookie da sessão atual). Tokens emitidos antes
+desta mudança continuam persistentes (a migration `RefreshTokenRememberMe` cria a coluna com `true`).
+Testes: `RememberMeTests` (integração, os dois casos e o campo omitido).
 
 Origens de CORS: `Cors:AllowedOrigins` (lista). Em dev o front usa o proxy do Vite e não precisa de CORS.
 
@@ -378,6 +390,26 @@ segurança (login, falha, bloqueio, troca/redefinição de senha, logout, reuso 
 download de evidência) são gravados explicitamente. Senhas, hashes de token, segredos, caminho do storage, CPF e conteúdo
 de arquivo nunca são gravados (`AuditPolicy`). A trilha só recebe inserções. Consulta: `GET /api/v1/audit-logs`
 (permissão `Audit.View`) e `GET /api/v1/disciplinary-cases/{id}/audit-trail`.
+Na tela, a busca é por número da medida (`reference=MED-…`, traz a medida e as subentidades) ou matrícula
+(`reference=50090006`), e o usuário é escolhido pelo nome (`GET /api/v1/audit-logs/users?search=`). Campos e valores
+aparecem em português (datas em dd/MM/aaaa HH:mm de Maceió, Sim/Não, "(oculto)" para `[redacted]`, "—" para vazio);
+os IDs técnicos ficam em "Detalhes técnicos".
+
+#### Português na tela
+Todo valor de enum que chega ao front está em `SIGH/frontend/src/i18n/enum-values.json`, gerado a partir do backend
+por `EnumValuesFrontendSyncTests` (para regenerar: `UPDATE_ENUM_VALUES=1 dotnet test tests/SIGH.UnitTests --filter
+EnumValuesFrontendSyncTests`). Os rótulos ficam em `src/i18n/labels.ts`; `enumLabels.test.ts` falha se algum valor não
+tiver rótulo. Números, percentuais e datas usam `src/utils/formatters.ts` (1.248; 12,5%; dd/MM/aaaa).
+As mensagens padrão do ASP.NET (ProblemDetails, binding, JSON) e do FluentValidation saem em português.
+
+#### Relatórios e painel
+- `GET /api/v1/disciplinary-records/stats`: distribuição por situação e por tipo (mesmos filtros da lista);
+- `GET /api/v1/disciplinary-records/export`: CSV (UTF-8 com BOM, `;`) com cabeçalhos em português;
+- `GET /api/v1/disciplinary-records/overview?period=Last30Days|Last90Days|Last12Months|CurrentYear`: indicadores do
+  período comparados ao período anterior de mesmo tamanho, evolução mensal e atividades recentes.
+
+Todos respeitam o escopo por gerência. Os endpoints antigos de `/api/v1/disciplinary-reports/*` continuam existindo
+(e testados no escopo), mas a tela usa só os novos.
 
 #### Testes
 ```bash
@@ -396,6 +428,27 @@ npm run dev        # http://localhost:3000, com proxy de /api para a API em http
 Outros comandos: `npm run typecheck`, `npm test` (Vitest + Testing Library + msw), `npm run build`,
 `npm run check:bundle` (falha se o chunk de entrada passar de 500 kB) e `npm run e2e` (Playwright, local; veja
 `SIGH/frontend/e2e/README.md`).
+
+`SIGH_API_TARGET=http://localhost:8080 npm run dev` usa a stack em contêineres como API (o nginx repassa `/api`).
+
+**Telas com os dados de demonstração** (`SIGH/frontend/e2e-demo`): `npx playwright test -c playwright.demo.config.ts`
+sobe a API num banco descartável `SIGH_E2E_<data>` com o seed de demonstração e o apaga no final. Roda:
+- `no-english.spec`: percorre todas as páginas do menu, os detalhes e as abas com cada perfil (administrador e os 6
+  usuários de demonstração) e falha se achar um termo em inglês (os nomes de todos os enums e palavras como Pending,
+  Loading, Save, Not found…; palavra inteira, sem diferenciar maiúsculas);
+- `accessibility.spec`: axe-core (WCAG 2.1 AA) nas telas principais, nos temas escuro e claro;
+- `screenshots.spec`: com `SIGH_SCREENSHOTS=1`, grava as capturas em `SIGH/docs/telas/`.
+
+**Tema**: os tokens (cores, tipografia, raios, sombras) estão em `src/styles/tokens.ts` e viram variáveis CSS
+(`--sigh-*`) usadas pelo tema do MUI e pelo Tailwind (`src/index.css`). Escuro é o padrão; o claro fica salvo no
+navegador (`localStorage["sigh.theme"]`). Fonte Inter empacotada (`@fontsource-variable/inter`), sem CDN.
+
+**Logo oficial**: `SIGH/docs/design/logo/` (ver `LOGO.md`). Os SVGs ficam em `src/assets/logo/` sem nenhuma alteração
+(nem svgo) e são usados por `<SighLogo variant="horizontal|completo|simbolo" />` como `<img alt="SIGH">`: todos os
+arquivos usam os mesmos ids internos nos degradês, que colidiriam se embutidos na mesma página, e assim não pesam no JS.
+O horizontal e o completo trocam entre as versões para fundo escuro e claro conforme o tema. A cor de destaque do tema
+(`primary`) é o azul do escudo, `#0062FE`. Ícones: `public/favicon.ico`, `sigh-32.png`, `sigh-180.png` e `sigh-512.png`
+(no `manifest.webmanifest`).
 
 O access token fica só em memória; ao recarregar a página a sessão é restaurada com `POST /auth/refresh` (cookie)
 e `GET /auth/me`. As permissões do front (`src/auth/permissions.ts`) espelham `PermissionCodes.All` via

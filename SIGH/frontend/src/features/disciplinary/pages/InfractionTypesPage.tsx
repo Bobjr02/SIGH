@@ -138,7 +138,7 @@ export const InfractionTypesPage: React.FC = () => {
   if (!canViewInfractionTypes) {
     return (
       <Paper elevation={0} sx={{ p: 4, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
-        <ShieldAlert size={48} color="#ef4444" style={{ marginBottom: 16 }} />
+        <ShieldAlert size={48} color="var(--sigh-danger)" style={{ marginBottom: 16 }} />
         <Typography variant="h6" color="error" gutterBottom>
           Acesso Negado
         </Typography>
@@ -173,7 +173,7 @@ export const InfractionTypesPage: React.FC = () => {
         }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: '#1e293b' }}>
+          <Typography variant="h4" sx={{ fontWeight: 800 }}>
             Tipos de Infração
           </Typography>
           <Typography variant="body2" color="text.secondary">

@@ -1,0 +1,212 @@
+{
+  "RecordStatus": {
+    "PendingApproval": 1,
+    "Rejected": 2,
+    "Approved": 3,
+    "Cancelled": 4,
+    "Historical": 5
+  },
+  "RecordOrigin": {
+    "Sigh": 1,
+    "Historical": 2
+  },
+  "RecordActivityKind": {
+    "Registered": 1,
+    "Approved": 2,
+    "Rejected": 3
+  },
+  "OverviewPeriod": {
+    "Last30Days": 1,
+    "Last90Days": 2,
+    "Last12Months": 3,
+    "CurrentYear": 4
+  },
+  "DisciplinaryMeasureType": {
+    "Undefined": 0,
+    "Guidance": 1,
+    "VerbalWarning": 2,
+    "WrittenWarning": 3,
+    "Suspension": 4,
+    "TerminationRecommendation": 5,
+    "Other": 6,
+    "JustCauseTermination": 7
+  },
+  "DisciplinaryMeasureStatus": {
+    "Undefined": 0,
+    "Pending": 1,
+    "Applied": 2,
+    "Completed": 3,
+    "Cancelled": 4
+  },
+  "DisciplinaryCaseStatus": {
+    "Undefined": 0,
+    "Draft": 1,
+    "Open": 2,
+    "UnderInvestigation": 3,
+    "AwaitingDecision": 4,
+    "Decided": 5,
+    "Completed": 6,
+    "Cancelled": 7
+  },
+  "DecisionStatus": {
+    "Undefined": 0,
+    "Draft": 1,
+    "PendingApproval": 2,
+    "Approved": 3,
+    "Rejected": 4,
+    "Invalidated": 5
+  },
+  "DecisionType": {
+    "Undefined": 0,
+    "NoViolation": 1,
+    "InformalGuidance": 2,
+    "FormalWarning": 3,
+    "Suspension": 4,
+    "TerminationRecommendation": 5,
+    "Other": 6,
+    "JustCauseTermination": 7
+  },
+  "DisciplinaryCaseKind": {
+    "Process": 1,
+    "Record": 2,
+    "Historical": 3
+  },
+  "DisciplinaryCasePriority": {
+    "Undefined": 0,
+    "Low": 1,
+    "Normal": 2,
+    "High": 3,
+    "Critical": 4
+  },
+  "ConfidentialityLevel": {
+    "Undefined": 0,
+    "Public": 1,
+    "Internal": 2,
+    "Restricted": 3,
+    "Confidential": 4
+  },
+  "InfractionSeverity": {
+    "Undefined": 0,
+    "Low": 1,
+    "Moderate": 2,
+    "High": 3,
+    "Critical": 4
+  },
+  "CaseEmployeeRole": {
+    "Undefined": 0,
+    "Accused": 1,
+    "Victim": 2,
+    "Witness": 3,
+    "Reporter": 4,
+    "Other": 5
+  },
+  "EvidenceStatus": {
+    "Undefined": 0,
+    "PendingVerification": 1,
+    "Verified": 2,
+    "Rejected": 3
+  },
+  "OccurrenceStatus": {
+    "Undefined": 0,
+    "Reported": 1,
+    "Validated": 2,
+    "Rejected": 3
+  },
+  "EvidenceType": {
+    "Undefined": 0,
+    "Document": 1,
+    "Image": 2,
+    "Video": 3,
+    "Audio": 4,
+    "Text": 5,
+    "Other": 6
+  },
+  "UserStatus": {
+    "Active": 1,
+    "Inactive": 2,
+    "Locked": 3,
+    "PendingFirstAccess": 4,
+    "Suspended": 5
+  },
+  "ValidityState": {
+    "Active": 1,
+    "Scheduled": 2,
+    "Expired": 3
+  },
+  "EmployeeStatus": {
+    "PendingAdmission": 1,
+    "Active": 2,
+    "OnLeave": 3,
+    "Inactive": 4,
+    "Terminated": 5
+  },
+  "EmployeeGroup": {
+    "Field": 1,
+    "Industry": 2
+  },
+  "Role": {
+    "Administrator": "Administrator",
+    "HrRegistrar": "HrRegistrar",
+    "HrApprover": "HrApprover",
+    "Legal": "Legal",
+    "Manager": "Manager"
+  },
+  "AuditAction": {
+    "Created": "Created",
+    "Updated": "Updated",
+    "Deleted": "Deleted",
+    "SoftDeleted": "SoftDeleted",
+    "Security.LoginSucceeded": "Security.LoginSucceeded",
+    "Security.LoginFailed": "Security.LoginFailed",
+    "Security.AccountLocked": "Security.AccountLocked",
+    "Security.PasswordChanged": "Security.PasswordChanged",
+    "Security.PasswordResetRequested": "Security.PasswordResetRequested",
+    "Security.PasswordReset": "Security.PasswordReset",
+    "Security.Logout": "Security.Logout",
+    "Security.RefreshTokenReuseDetected": "Security.RefreshTokenReuseDetected",
+    "Security.RolesOrPermissionsChanged": "Security.RolesOrPermissionsChanged",
+    "Security.EvidenceDownloaded": "Security.EvidenceDownloaded",
+    "Security.RoleAssigned": "Security.RoleAssigned",
+    "Security.RoleRevoked": "Security.RoleRevoked",
+    "Security.ManagementUnitAssigned": "Security.ManagementUnitAssigned",
+    "Security.ManagementUnitRevoked": "Security.ManagementUnitRevoked",
+    "Security.RefreshTokensRevoked": "Security.RefreshTokensRevoked",
+    "History.ImportClosed": "History.ImportClosed",
+    "History.ImportClosedByConfiguration": "History.ImportClosedByConfiguration",
+    "History.ImportReopenedByConfiguration": "History.ImportReopenedByConfiguration",
+    "History.ImportApplied": "History.ImportApplied"
+  },
+  "AuditEntity": {
+    "AccessControl": "AccessControl",
+    "DisciplinaryCase": "DisciplinaryCase",
+    "DisciplinaryCaseEmployee": "DisciplinaryCaseEmployee",
+    "DisciplinaryDecision": "DisciplinaryDecision",
+    "DisciplinaryEvidence": "DisciplinaryEvidence",
+    "DisciplinaryMeasure": "DisciplinaryMeasure",
+    "DisciplinaryOccurrence": "DisciplinaryOccurrence",
+    "Employee": "Employee",
+    "HistoryImportState": "HistoryImportState",
+    "InfractionType": "InfractionType",
+    "ManagementUnit": "ManagementUnit",
+    "Permission": "Permission",
+    "Role": "Role",
+    "RolePermission": "RolePermission",
+    "User": "User",
+    "UserManagementUnit": "UserManagementUnit",
+    "UserRole": "UserRole"
+  },
+  "NotificationType": {
+    "Info": "Info",
+    "Warning": "Warning",
+    "RecordRegistered": "RecordRegistered",
+    "RecordApproved": "RecordApproved",
+    "RecordRejected": "RecordRejected",
+    "RecordPendingApproval": "RecordPendingApproval"
+  },
+  "NotificationPriority": {
+    "Low": "Low",
+    "Medium": "Medium",
+    "High": "High",
+    "Urgent": "Urgent"
+  }
+}

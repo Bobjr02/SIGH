@@ -85,7 +85,7 @@ public class RefreshTokenService : IRefreshTokenService
                 var successor = await FindActiveSuccessorAsync(tokenEntity, now, cancellationToken);
                 if (successor != null)
                 {
-                    return await IssueTokensAsync(successor.UserId, request, now, rotate: null, cancellationToken);
+                    return await IssueTokensAsync(successor.UserId, request, now, rotate: null, successor.IsPersistent, cancellationToken);
                 }
             }
 
@@ -103,7 +103,7 @@ public class RefreshTokenService : IRefreshTokenService
             throw new BusinessRuleValidationException("Token de atualização expirado. Por favor, faça login novamente.");
         }
 
-        return await IssueTokensAsync(tokenEntity.UserId, request, now, rotate: tokenEntity, cancellationToken);
+        return await IssueTokensAsync(tokenEntity.UserId, request, now, rotate: tokenEntity, tokenEntity.IsPersistent, cancellationToken);
     }
 
     private bool IsRecentlyRotated(RefreshTokenEntity token, DateTimeOffset now) =>
@@ -172,6 +172,7 @@ public class RefreshTokenService : IRefreshTokenService
         RefreshTokenRequest request,
         DateTimeOffset now,
         RefreshTokenEntity? rotate,
+        bool isPersistent,
         CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetByIdWithRolesAndPermissionsAsync(userId, cancellationToken);
@@ -197,7 +198,9 @@ public class RefreshTokenService : IRefreshTokenService
             TokenHash = newTokenHash,
             ExpiresAt = now.AddDays(_tokenOptions.RefreshTokenExpirationInDays),
             IpAddress = request.IpAddress,
-            UserAgent = request.UserAgent
+            UserAgent = request.UserAgent,
+            // "Lembrar-me" do login segue o token na rotação.
+            IsPersistent = isPersistent
         };
 
         await _userRepository.AddRefreshTokenAsync(newTokenEntity, cancellationToken);
@@ -210,7 +213,8 @@ public class RefreshTokenService : IRefreshTokenService
             newAccessToken,
             newRawRefreshToken,
             _jwtOptions.ExpiryInMinutes > 0 ? _jwtOptions.ExpiryInMinutes : 60,
-            newTokenEntity.ExpiresAt
+            newTokenEntity.ExpiresAt,
+            newTokenEntity.IsPersistent
         );
     }
 }

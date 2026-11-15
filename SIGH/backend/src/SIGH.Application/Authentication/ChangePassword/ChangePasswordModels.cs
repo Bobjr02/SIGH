@@ -5,7 +5,9 @@ public record ChangePasswordRequest(
     string CurrentPassword,
     string NewPassword,
     string? IpAddress = null,
-    string? UserAgent = null
+    string? UserAgent = null,
+    /// <summary>Refresh token do cookie atual: o novo token herda o "Lembrar-me" dele.</summary>
+    string? CurrentRefreshToken = null
 );
 
 /// <summary>
@@ -19,5 +21,6 @@ public record ChangePasswordResponse(
     string AccessToken,
     string RefreshToken,
     int ExpiresInMinutes,
-    DateTimeOffset RefreshTokenExpiresAt
+    DateTimeOffset RefreshTokenExpiresAt,
+    bool IsPersistent = true
 );

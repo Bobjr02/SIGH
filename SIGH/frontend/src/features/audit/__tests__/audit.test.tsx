@@ -60,12 +60,20 @@ describe('CaseAuditTimeline', () => {
     const entries = await screen.findAllByTestId('audit-entry');
     expect(requested).toBe('/api/v1/disciplinary-cases/case-1/audit-trail');
     expect(screen.getByRole('heading', { name: 'Histórico (3)' })).toBeInTheDocument();
-    expect(within(entries[0]).getByText('Download de evidência')).toBeInTheDocument();
+    expect(within(entries[0]).getByText('Download de anexo')).toBeInTheDocument();
     expect(within(entries[0]).getByText(/João Auditor/)).toBeInTheDocument();
+    expect(within(entries[0]).getByTestId('audit-change')).toHaveTextContent('Nome do arquivo: laudo.pdf');
     expect(within(entries[1]).getByText('Alteração')).toBeInTheDocument();
-    expect(within(entries[1]).getByText(/∅ → laudo\.pdf/)).toBeInTheDocument();
+    // Campo em português e vazio como "—".
+    expect(within(entries[1]).getByTestId('audit-change')).toHaveTextContent('Nome do arquivo: — → laudo.pdf');
     expect(within(entries[2]).getByText('Criação')).toBeInTheDocument();
-    expect(within(entries[2]).getByText(/IP 10\.0\.0\.5/)).toBeInTheDocument();
+    // Enum com o rótulo pt-BR (Status do processo "Draft" → "Rascunho"), nunca o código.
+    const createdChanges = within(entries[2]).getAllByTestId('audit-change').map((li) => li.textContent);
+    expect(createdChanges).toEqual(['Título: Processo X', 'Situação: Rascunho']);
+    // Data/hora dd/MM/aaaa HH:mm no horário de Maceió; IDs e IP só no detalhe técnico.
+    expect(within(entries[2]).getByText(/12\/11\/2026 10:00/)).toBeInTheDocument();
+    expect(within(entries[2]).getByText('Detalhes técnicos')).toBeInTheDocument();
+    expect(within(entries[2]).getByText('10.0.0.5')).toBeInTheDocument();
   });
 });
 
@@ -76,7 +84,7 @@ describe('/audit page', () => {
     renderApp('/audit');
 
     expect(await screen.findByRole('heading', { name: /403/ })).toBeInTheDocument();
-    expect(within(screen.getByRole('navigation', { name: 'Menu principal' })).queryByRole('button', { name: /auditoria/i })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Menu principal' })).queryByRole('link', { name: /auditoria/i })).not.toBeInTheDocument();
   });
 
   it('lists the logs and sends the chosen filters to the API', async () => {
@@ -88,25 +96,34 @@ describe('/audit page', () => {
         queries.push(new URL(request.url).searchParams);
         return HttpResponse.json(page([created]));
       }),
+      http.get('/api/v1/audit-logs/users', () =>
+        HttpResponse.json({ success: true, data: [{ id: 'u-maria', fullName: 'Maria Gestora', email: 'maria@sigh.test' }] }),
+      ),
     );
 
     renderApp('/audit');
 
     expect(await screen.findByRole('heading', { name: 'Auditoria' })).toBeInTheDocument();
-    expect(within(screen.getByRole('navigation', { name: 'Menu principal' })).getByRole('button', { name: /auditoria/i })).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Menu principal' })).getByRole('link', { name: /auditoria/i })).toBeInTheDocument();
     expect(await screen.findByText('1 registro(s)')).toBeInTheDocument();
     expect(queries[0].get('pageNumber')).toBe('1');
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText('Id da entidade'), 'case-1');
+    // Sem campos de ID técnico: busca por medida/matrícula e seletor de usuário por nome.
+    expect(screen.queryByLabelText('Id da entidade')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Id do usuário')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Medida ou matrícula'), 'MED-2026-ABC');
+    await user.type(screen.getByLabelText('Usuário'), 'Maria');
+    await user.click(await screen.findByRole('option', { name: /Maria Gestora/ }));
     await user.click(screen.getByLabelText('Ação'));
-    await user.click(await screen.findByRole('option', { name: 'Remoção lógica' }));
+    await user.click(await screen.findByRole('option', { name: 'Remoção' }));
     await user.click(screen.getByRole('button', { name: 'Filtrar' }));
 
     await waitFor(() => expect(queries.length).toBeGreaterThan(1));
     const last = queries[queries.length - 1];
-    expect(last.get('entityId')).toBe('case-1');
+    expect(last.get('reference')).toBe('MED-2026-ABC');
+    expect(last.get('userId')).toBe('u-maria');
     expect(last.get('action')).toBe('SoftDeleted');
-    expect(last.has('userId')).toBe(false);
+    expect(last.has('entityId')).toBe(false);
   });
 });

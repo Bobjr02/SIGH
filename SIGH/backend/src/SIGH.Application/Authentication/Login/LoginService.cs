@@ -149,7 +149,8 @@ public class LoginService : ILoginService
             TokenHash = tokenHash,
             ExpiresAt = now.AddDays(_tokenOptions.RefreshTokenExpirationInDays),
             IpAddress = request.IpAddress,
-            UserAgent = request.UserAgent
+            UserAgent = request.UserAgent,
+            IsPersistent = request.RememberMe ?? true
         };
 
         await _userRepository.AddRefreshTokenAsync(refreshTokenEntity, cancellationToken);
@@ -190,7 +191,8 @@ public class LoginService : ILoginService
             _jwtOptions.ExpiryInMinutes > 0 ? _jwtOptions.ExpiryInMinutes : 60,
             user.MustChangePassword,
             userDto,
-            refreshTokenEntity.ExpiresAt
+            refreshTokenEntity.ExpiresAt,
+            refreshTokenEntity.IsPersistent
         );
     }
 }

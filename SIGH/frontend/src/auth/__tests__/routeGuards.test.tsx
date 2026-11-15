@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { http } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import { server } from '../../test/server';
-import { API, makeUser, meReturns, ok, refreshFails, refreshSucceeds, renderApp } from '../../test/auth';
+import { API, makeUser, meReturns, ok, refreshFails, refreshSucceeds, renderApp, EMPTY_OVERVIEW } from '../../test/auth';
 import { ProtectedRoute } from '../ProtectedRoute';
 import { RequirePermission } from '../RequirePermission';
 import { PERMISSIONS } from '../permissions';
@@ -108,22 +108,24 @@ describe('header', () => {
         }),
       ),
       http.get(`${API}/disciplinary-records`, () => ok({ items: [], pageNumber: 1, pageSize: 10, totalCount: 0, totalPages: 0 })),
+      http.get(`${API}/disciplinary-records/overview`, () => ok(EMPTY_OVERVIEW)),
     );
 
     renderApp('/');
 
     const nav = await screen.findByRole('navigation', { name: 'Menu principal' });
-    expect(within(nav).getByRole('button', { name: /^medidas$/i })).toBeInTheDocument();
-    expect(within(nav).getByRole('button', { name: 'Dashboard' })).toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: 'Relatórios' })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: 'Histórico' })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: /tipos de infração/i })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: /registrar medida/i })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: /aprovações pendentes/i })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: /usuários/i })).not.toBeInTheDocument();
+    expect(within(nav).getByRole('link', { name: /^medidas$/i })).toBeInTheDocument();
+    expect(within(nav).getByRole('link', { name: 'Painel' })).toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: 'Relatórios' })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: /motivos/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: /registrar medida/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: /aprovações/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: /usuários/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByText('Administração')).not.toBeInTheDocument();
     // O processo em etapas saiu do menu.
-    expect(within(nav).queryByRole('button', { name: /processos/i })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole('button', { name: /novo processo/i })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole('link', { name: /processos/i })).not.toBeInTheDocument();
+    // Jurídico/gestor/administrador: a página inicial é o Painel.
+    expect(await screen.findByTestId('dashboard')).toBeInTheDocument();
   });
 
   it('logout revokes the session on the API, clears the token and goes to /login', async () => {
@@ -143,7 +145,7 @@ describe('header', () => {
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Sair' }));
 
-    expect(await screen.findByRole('heading', { name: 'Entrar no SIGH' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bem-vindo de volta!' })).toBeInTheDocument();
     expect(logoutCalls).toBe(1);
     expect(tokenStore.get()).toBeNull();
   });

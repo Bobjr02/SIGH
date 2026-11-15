@@ -58,14 +58,14 @@ export const DisciplinaryCaseFilter: React.FC<DisciplinaryCaseFilterProps> = ({
       sx={{
         p: 2.5,
         mb: 3,
-        backgroundColor: '#f8fafc',
+        backgroundColor: 'var(--sigh-surface2)',
         borderRadius: 2,
         border: '1px solid',
         borderColor: 'divider',
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <Filter size={18} color="#475569" />
+        <Filter size={18} color="var(--sigh-text-muted)" />
         <Box component="span" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.9rem' }}>
           Filtros de Pesquisa
         </Box>
@@ -82,7 +82,7 @@ export const DisciplinaryCaseFilter: React.FC<DisciplinaryCaseFilterProps> = ({
             fullWidth
             slotProps={{
               input: {
-                startAdornment: <Search size={16} style={{ marginRight: 6, color: '#94a3b8' }} />,
+                startAdornment: <Search size={16} style={{ marginRight: 6, color: 'var(--sigh-text-muted)' }} />,
               },
             }}
           />

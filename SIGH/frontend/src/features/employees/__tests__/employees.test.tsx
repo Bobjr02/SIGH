@@ -114,18 +114,30 @@ describe('/employees/:id', () => {
         sources: ['SIGH'],
       }),
     ),
-    http.get('/api/v1/disciplinary-reports/employees/emp-1/history', () =>
-      ok({
-        employeeId: 'emp-1',
-        cases: [
-          { caseId: 'c-1', caseNumber: 'PROC-1', title: 'Faltas', status: 'Completed', openedAt: '2026-09-01T10:00:00Z', measuresCount: 1 },
-        ],
-      }),
-    ),
-    http.get('/api/v1/disciplinary-reports/measures', ({ request }) => {
-      // O relatório envia os filtros em PascalCase (o ASP.NET não diferencia maiúsculas).
-      expect(new URL(request.url).searchParams.get('EmployeeId')).toBe('emp-1');
-      return page([{ measureId: 'm-1', caseId: 'c-1', caseNumber: 'PROC-1', measureType: 'Suspensão', appliedAt: '2026-10-05T12:00:00Z' }]);
+    http.get('/api/v1/disciplinary-records', ({ request }) => {
+      expect(new URL(request.url).searchParams.get('employeeId')).toBe('emp-1');
+      return page([
+        {
+          id: 'rec-1',
+          caseNumber: 'MED-2026-0001',
+          status: 3,
+          statusLabel: 'Aprovada',
+          employeeId: 'emp-1',
+          employeeNumber: '50090001',
+          employeeName: 'Ana Sintética',
+          measureType: 4,
+          measureTypeLabel: 'Suspensão',
+          measureDate: '2026-10-05',
+          suspensionDays: 3,
+          suspensionStart: '2026-10-06',
+          suspensionEnd: '2026-10-08',
+          appliedByName: 'Encarregado do RH',
+          daysToApproval: 1,
+          registeredAt: '2026-10-04T12:00:00Z',
+          registeredByUserId: 'u-1',
+          origin: 1,
+        },
+      ]);
     }),
   ];
 
@@ -134,7 +146,7 @@ describe('/employees/:id', () => {
       refreshSucceeds(),
       meReturns(
         makeUser({
-          permissions: [PERMISSIONS.EMPLOYEES_VIEW, PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY, PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_MEASURES],
+          permissions: [PERMISSIONS.EMPLOYEES_VIEW, PERMISSIONS.DISCIPLINARY_RECORDS_VIEW, PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY],
         }),
       ),
       ...detailHandlers(),
@@ -143,6 +155,8 @@ describe('/employees/:id', () => {
     renderApp('/employees/emp-1');
 
     expect(await screen.findByTestId('employee-cpf')).toHaveTextContent('123.982.247-00');
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Apoio à decisão' }));
     const box = within(await screen.findByRole('region', { name: 'Apoio à decisão' }));
     expect(box.getByText('Informativo')).toBeInTheDocument();
     expect(box.getByText('1 verbal(is), 1 escrita(s)')).toBeInTheDocument();
@@ -150,10 +164,13 @@ describe('/employees/:id', () => {
     expect(box.getByText('05/10/2026')).toBeInTheDocument();
     expect(within(box.getByRole('list', { name: 'Medidas por motivo' })).getByText(/Falta não justificada/)).toBeInTheDocument();
 
-    const timeline = await screen.findAllByTestId('timeline-item');
-    expect(timeline).toHaveLength(2);
-    expect(timeline[0]).toHaveTextContent('05/10/2026 · Suspensão');
-    expect(timeline[1]).toHaveTextContent('Processo PROC-1 - Faltas');
+    await user.click(screen.getByRole('tab', { name: 'Histórico disciplinar' }));
+    const history = within(await screen.findByRole('region', { name: 'Histórico disciplinar' }));
+    const row = await history.findByTestId('record-row');
+    expect(row).toHaveTextContent('MED-2026-0001');
+    expect(row).toHaveTextContent('Suspensão (3 dias)');
+    expect(row).toHaveTextContent('06/10/2026 a 08/10/2026');
+    expect(within(row).getByTestId('applied-by')).toHaveTextContent('Encarregado do RH');
   });
 
   it('without disciplinary permissions shows only the registration data', async () => {
@@ -162,8 +179,8 @@ describe('/employees/:id', () => {
     renderApp('/employees/emp-1');
 
     expect(await screen.findByTestId('employee-cpf')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Apoio à decisão' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Histórico disciplinar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Apoio à decisão' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Histórico disciplinar' })).not.toBeInTheDocument();
   });
 });
 

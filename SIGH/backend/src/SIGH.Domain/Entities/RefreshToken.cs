@@ -13,6 +13,12 @@ public class RefreshToken : AuditableEntity
     public string? IpAddress { get; set; }
     public string? UserAgent { get; set; }
 
+    /// <summary>
+    /// "Lembrar-me" no login. Falso: o cookie do refresh token é de SESSÃO (some ao fechar o navegador).
+    /// Verdadeiro: o cookie expira junto com o token. A escolha passa de token para token na rotação.
+    /// </summary>
+    public bool IsPersistent { get; set; } = true;
+
     public RefreshToken() : base() { }
 
     public RefreshToken(Guid id) : base(id) { }

@@ -17,7 +17,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, FilePlus2 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS } from '../../../auth/permissions';
 import { employeeKeys, employeesApi, EmployeeStatus, type EmployeeListItem } from '../../employees/api/employeesApi';
@@ -35,6 +35,7 @@ import {
   type PossibleDuplicate,
   type RecordInput,
 } from '../api/recordsApi';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 interface FormState {
   employee: EmployeeListItem | null;
@@ -171,9 +172,11 @@ export const RecordFormPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-        {correcting ? 'Corrigir medida rejeitada' : 'Registrar medida'}
-      </Typography>
+      <PageHeader
+        icon={<FilePlus2 size={22} />}
+        title={correcting ? 'Corrigir medida rejeitada' : 'Registrar medida'}
+        subtitle="Registre a medida já decidida; ela segue para a aprovação do encarregado do RH"
+      />
       {correcting && existing.data?.lastRejectionReason && (
         <Alert severity="warning" data-testid="rejection-reason">
           Rejeitada por {existing.data.lastRejectedByName ?? 'aprovador'}: {existing.data.lastRejectionReason}

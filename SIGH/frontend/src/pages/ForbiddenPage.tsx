@@ -9,7 +9,7 @@ export const ForbiddenPage: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
       <Paper elevation={0} sx={{ p: 5, maxWidth: 480, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
-        <ShieldOff size={48} color="#e11d48" style={{ marginBottom: 12 }} />
+        <ShieldOff size={48} color="var(--sigh-danger)" style={{ marginBottom: 12 }} />
         <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
           403 — Acesso negado
         </Typography>

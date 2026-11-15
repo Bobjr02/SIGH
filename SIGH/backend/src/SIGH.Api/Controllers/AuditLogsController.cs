@@ -34,12 +34,19 @@ public class AuditLogsController : BaseController
         [FromQuery] string? action,
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
+        [FromQuery] string? reference,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
         var result = await _queryService.SearchAsync(
-            new AuditLogFilter(entityName, entityId, userId, action, from, to, pageNumber, pageSize), cancellationToken);
+            new AuditLogFilter(entityName, entityId, userId, action, from, to, pageNumber, pageSize, reference), cancellationToken);
         return OkResult(result);
     }
+
+    /// <summary>Seletor "Usuário" da auditoria: busca por nome ou e-mail (até 20). Exige Audit.View.</summary>
+    [HttpGet("users")]
+    [Permission(PermissionCodes.Audit.View)]
+    public async Task<ActionResult<Result<IReadOnlyList<AuditUserOptionDto>>>> SearchUsers([FromQuery] string? search, CancellationToken cancellationToken = default) =>
+        OkResult(await _queryService.SearchUsersAsync(search, cancellationToken));
 }

@@ -76,6 +76,10 @@ public class ScopeEnforcementTests : IntegrationTestBase
         ["/api/v1/disciplinary-records"] = new ScopeCase(Contains(_ => "/api/v1/disciplinary-records?pageSize=100", s => s.Record131.ToString())),
         ["/api/v1/disciplinary-records/{id:guid}"] = new ScopeCase(Found(s => $"/api/v1/disciplinary-records/{s.Record131}")),
         ["/api/v1/disciplinary-records/options"] = new ScopeCase(Contains(_ => "/api/v1/disciplinary-records/options", _ => "USGA131")),
+        // Relatórios e painel sobre as medidas: a USGA131 tem 2 medidas (aprovada + pendente); a USGA132, 1.
+        ["/api/v1/disciplinary-records/stats"] = new ScopeCase(Number(_ => "/api/v1/disciplinary-records/stats", d => d.GetProperty("total").GetInt32(), 2)),
+        ["/api/v1/disciplinary-records/export"] = new ScopeCase(Contains(_ => "/api/v1/disciplinary-records/export", s => s.Record131Number)),
+        ["/api/v1/disciplinary-records/overview"] = new ScopeCase(Contains(_ => "/api/v1/disciplinary-records/overview", s => s.Record131Number)),
         // Só a medida pendente da USGA131 conta; a da USGA132 já foi aprovada.
         ["/api/v1/disciplinary-records/pending-count"] = new ScopeCase(Number(_ => "/api/v1/disciplinary-records/pending-count", d => d.GetInt32(), 1)),
 

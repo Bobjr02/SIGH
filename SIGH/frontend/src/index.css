@@ -1,1 +1,48 @@
 @import "tailwindcss";
+
+/*
+ * Tokens do SIGH para o Tailwind: as cores apontam para as variáveis CSS geradas de styles/tokens.ts
+ * (as mesmas do tema do MUI). Assim bg-surface, text-muted, border-line… mudam com o tema claro/escuro.
+ */
+@theme inline {
+  --font-sans: var(--sigh-font);
+  --color-page: var(--sigh-bg);
+  --color-sidebar: var(--sigh-sidebar);
+  --color-surface: var(--sigh-surface);
+  --color-surface-2: var(--sigh-surface2);
+  --color-surface-3: var(--sigh-surface3);
+  --color-line: var(--sigh-border);
+  --color-line-strong: var(--sigh-border-strong);
+  --color-ink: var(--sigh-text);
+  --color-muted: var(--sigh-text-muted);
+  --color-primary: var(--sigh-primary);
+  --color-primary-hover: var(--sigh-primary-hover);
+  --color-primary-text: var(--sigh-primary-text);
+  --color-primary-soft: var(--sigh-primary-soft);
+  --color-success: var(--sigh-success);
+  --color-success-solid: var(--sigh-success-solid);
+  --color-success-soft: var(--sigh-success-soft);
+  --color-warning: var(--sigh-warning);
+  --color-warning-solid: var(--sigh-warning-solid);
+  --color-warning-soft: var(--sigh-warning-soft);
+  --color-danger: var(--sigh-danger);
+  --color-danger-solid: var(--sigh-danger-solid);
+  --color-danger-soft: var(--sigh-danger-soft);
+  --color-info: var(--sigh-info);
+  --color-info-soft: var(--sigh-info-soft);
+  --radius-sm: var(--sigh-radius-sm);
+  --radius-md: var(--sigh-radius-md);
+  --radius-lg: var(--sigh-radius-lg);
+  --shadow-card: var(--sigh-shadow-card);
+}
+
+/* Primeira pintura (antes do React): fundo do tema escuro padrão, sem clarão branco. */
+html {
+  background: #0b1324;
+}
+html[data-theme='light'] {
+  background: #f3f6fb;
+}
+body {
+  font-family: var(--sigh-font, 'Inter Variable', system-ui, sans-serif);
+}

@@ -20,6 +20,9 @@ public static class RouteScopeClassification
         "/api/v1/disciplinary-records/{id:guid}",
         "/api/v1/disciplinary-records/options",
         "/api/v1/disciplinary-records/pending-count",
+        "/api/v1/disciplinary-records/stats",
+        "/api/v1/disciplinary-records/export",
+        "/api/v1/disciplinary-records/overview",
         // Processos (legado, fora do menu) e trilha de auditoria de um processo
         "/api/v1/disciplinary-cases",
         "/api/v1/disciplinary-cases/{id:guid}",
@@ -46,6 +49,7 @@ public static class RouteScopeClassification
         ["/api/v1"] = "informação do sistema",
         ["/api/v1/health"] = "saúde da aplicação",
         ["/api/v1/auth/me"] = "dados do próprio usuário",
+        ["/api/v1/audit-logs/users"] = "seletor de usuários do sistema (nome e e-mail, sem funcionários); exige Audit.View",
         ["/api/v1/users"] = "cadastro de usuários do sistema (não de funcionários); exige Users.View",
         ["/api/v1/users/{id:guid}"] = "cadastro de usuários do sistema; exige Users.View",
         ["/api/v1/users/{id:guid}/access"] = "perfis e gerências de um usuário; exige Users.View",

@@ -23,7 +23,9 @@ public static class DependencyInjection
     {
         var assembly = Assembly.GetExecutingAssembly();
 
-        // Configuração de FluentValidation
+        // Configuração de FluentValidation: mensagens padrão em português (as regras do SIGH já têm as suas).
+        ValidatorOptions.Global.LanguageManager.Culture = new System.Globalization.CultureInfo("pt-BR");
+        ValidatorOptions.Global.DisplayNameResolver = (_, member, _) => member is null ? null : SIGH.Application.Validators.ValidationDisplayNames.Of(member.Name);
         services.AddValidatorsFromAssembly(assembly);
 
         // Bind Options

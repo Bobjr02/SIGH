@@ -10,5 +10,7 @@ public record RefreshTokenResponse(
     string AccessToken,
     string RefreshToken,
     int ExpiresInMinutes,
-    DateTimeOffset RefreshTokenExpiresAt
+    DateTimeOffset RefreshTokenExpiresAt,
+    /// <summary>Herdado do token rotacionado ("Lembrar-me" do login).</summary>
+    bool IsPersistent = true
 );

@@ -32,7 +32,7 @@ describe('session restore on app load', () => {
     expect(await screen.findByTestId('current-user-name')).toHaveTextContent('Maria Gestora');
 
     expect(visited).not.toContain('/login');
-    expect(screen.queryByRole('heading', { name: 'Entrar no SIGH' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Bem-vindo de volta!' })).not.toBeInTheDocument();
     expect(refreshCalls).toBe(1);
     expect(tokenStore.get()).toBe('restored-token');
   });
@@ -42,7 +42,7 @@ describe('session restore on app load', () => {
 
     renderApp('/disciplinary/cases');
 
-    expect(await screen.findByRole('heading', { name: 'Entrar no SIGH' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bem-vindo de volta!' })).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/login');
     expect(tokenStore.get()).toBeNull();
   });
@@ -60,7 +60,7 @@ describe('session restore on app load', () => {
 
     renderApp('/');
 
-    expect(await screen.findByRole('heading', { name: 'Entrar no SIGH' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bem-vindo de volta!' })).toBeInTheDocument();
     await waitFor(() => expect(tokenStore.get()).toBeNull());
   });
 });
