@@ -78,11 +78,11 @@ export const NotificationBadge: React.FC = () => {
         color="inherit"
         onClick={handleClick}
         aria-describedby={id}
-        aria-label="Notificações"
+        aria-label={`Notificações: ${unreadCount} não lidas`}
         sx={{ ml: 1 }}
         data-testid="notification-bell-button"
       >
-        <Badge badgeContent={unreadCount} color="error" aria-label={`${unreadCount} notificações não lidas`}>
+        <Badge badgeContent={unreadCount} color="error">
           <Bell size={20} />
         </Badge>
       </IconButton>

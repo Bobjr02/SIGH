@@ -99,7 +99,8 @@ export const Sidebar: React.FC<{ collapsed: boolean; onNavigate?: () => void }> 
           onClick={(e) => setAnchor(e.currentTarget)}
           aria-haspopup="menu"
           aria-expanded={Boolean(anchor)}
-          aria-label="Menu do usuário"
+          aria-label={collapsed ? `Menu do usuário: ${user?.fullName ?? ''}` : undefined}
+          title="Menu do usuário"
           className={`flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-surface-2 ${collapsed ? 'justify-center' : ''}`}
         >
           <InitialsAvatar name={user?.fullName} size={36} />

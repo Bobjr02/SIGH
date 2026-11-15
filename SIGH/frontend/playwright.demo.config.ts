@@ -42,7 +42,7 @@ export default defineConfig({
     deviceScaleFactor: 1,
     trace: 'retain-on-failure',
     // Codespace com /dev/shm de 64 MB: sem isto o Chromium cai ("Target crashed").
-    launchOptions: { args: ['--disable-dev-shm-usage'] },
+    launchOptions: { args: ['--disable-dev-shm-usage', '--lang=pt-BR'], env: { ...process.env, LANG: 'pt_BR.UTF-8' } },
   },
   projects: [
     { name: 'setup', testMatch: /setup\.spec\.ts/, use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } },
