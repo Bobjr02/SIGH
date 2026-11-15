@@ -443,6 +443,13 @@ sobe a API num banco descartável `SIGH_E2E_<data>` com o seed de demonstração
 (`--sigh-*`) usadas pelo tema do MUI e pelo Tailwind (`src/index.css`). Escuro é o padrão; o claro fica salvo no
 navegador (`localStorage["sigh.theme"]`). Fonte Inter empacotada (`@fontsource-variable/inter`), sem CDN.
 
+**Logo oficial**: `SIGH/docs/design/logo/` (ver `LOGO.md`). Os SVGs ficam em `src/assets/logo/` sem nenhuma alteração
+(nem svgo) e são usados por `<SighLogo variant="horizontal|completo|simbolo" />` como `<img alt="SIGH">`: todos os
+arquivos usam os mesmos ids internos nos degradês, que colidiriam se embutidos na mesma página, e assim não pesam no JS.
+O horizontal e o completo trocam entre as versões para fundo escuro e claro conforme o tema. A cor de destaque do tema
+(`primary`) é o azul do escudo, `#0062FE`. Ícones: `public/favicon.ico`, `sigh-32.png`, `sigh-180.png` e `sigh-512.png`
+(no `manifest.webmanifest`).
+
 O access token fica só em memória; ao recarregar a página a sessão é restaurada com `POST /auth/refresh` (cookie)
 e `GET /auth/me`. As permissões do front (`src/auth/permissions.ts`) espelham `PermissionCodes.All` via
 `src/auth/permission-codes.json`; um teste no backend e outro no front falham se as listas divergirem.

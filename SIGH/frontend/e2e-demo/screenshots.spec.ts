@@ -11,6 +11,8 @@ const OUT = path.resolve(HERE, '../../docs/telas');
 
 test.skip(process.env.SIGH_SCREENSHOTS !== '1', 'capturas só com SIGH_SCREENSHOTS=1');
 
+const REFERENCE_LOGO = path.resolve(HERE, '../../docs/design/logo/referencia-logo-original.png');
+
 const shot = (page: Page, file: string) => page.screenshot({ path: path.join(OUT, `${file}.png`) });
 
 const SCREENS: { file: string; who: string; path?: string; detail?: string; prepare?: (page: Page) => Promise<void> }[] = [
@@ -41,6 +43,16 @@ for (const theme of ['escuro', 'claro'] as const) {
     await shot(page, `01-login-${theme}-celular`);
   });
 
+  test(`menu recolhido (${theme})`, async ({ page }) => {
+    await login(page, profile('juridico'), mode);
+    await page.goto('/painel');
+    await settle(page);
+    await page.getByTestId('menu-toggle').click();
+    await page.waitForTimeout(400);
+    await shot(page, `13-menu-recolhido-${theme}`);
+    await page.getByTestId('menu-toggle').click(); // volta ao padrão (preferência salva no navegador)
+  });
+
   for (const screen of SCREENS) {
     test(`${screen.file} (${theme})`, async ({ page }) => {
       await login(page, profile(screen.who), mode);
@@ -66,3 +78,22 @@ for (const theme of ['escuro', 'claro'] as const) {
     });
   }
 }
+
+// Login lado a lado com a imagem original do logo (conferência do logo oficial).
+test('comparação do logo com o original', async ({ page, browser }) => {
+  const login = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  await login.addInitScript(() => window.localStorage.setItem('sigh.theme', 'dark'));
+  await login.goto('/login');
+  await settle(login);
+  const panel = await login.locator('aside[aria-label="Sobre o SIGH"]').screenshot();
+  await login.close();
+  const fs = await import('node:fs');
+  const original = fs.readFileSync(REFERENCE_LOGO).toString('base64');
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.setContent(`<html><body style="margin:0;background:#0b1324;color:#e8edf7;font-family:sans-serif;display:flex;gap:24px;padding:24px;align-items:flex-start">
+    <figure style="margin:0;flex:1"><figcaption style="margin-bottom:8px">Login do SIGH (tema escuro)</figcaption>
+      <img style="width:100%" src="data:image/png;base64,${panel.toString('base64')}"></figure>
+    <figure style="margin:0;flex:1"><figcaption style="margin-bottom:8px">referencia-logo-original.png</figcaption>
+      <img style="width:100%" src="data:image/png;base64,${original}"></figure></body></html>`);
+  await page.screenshot({ path: path.join(OUT, '00-comparacao-logo.png'), fullPage: true });
+});

@@ -99,8 +99,8 @@ export const LoginPage: React.FC = () => {
         <AbstractBackdrop />
         <div className="relative z-10 flex w-full flex-col justify-between px-14 py-16">
           <div className="mt-[8vh]">
-            <SighLogo variant="full" size={72} className="text-white" />
-            <p className="mt-5 max-w-sm text-lg leading-snug text-[#dbe6ff]">Sistema Inteligente de Gestão de Histórico Disciplinar</p>
+            {/* O subtítulo "Sistema Inteligente de Gestão de Histórico Disciplinar" faz parte do logo completo. */}
+            <SighLogo variant="completo" height={168} background="dark" />
             <p className="mt-14 max-w-sm text-xl leading-snug text-white">Transparência, controle e inteligência na gestão disciplinar.</p>
             <span className="mt-6 block h-[3px] w-14 rounded bg-[#3f8cff]" aria-hidden="true" />
           </div>
@@ -121,7 +121,7 @@ export const LoginPage: React.FC = () => {
       <main className="flex flex-1 flex-col items-center justify-center bg-sidebar px-6 py-10">
         <div className="w-full max-w-[400px]">
           <div className="mb-8 flex justify-center lg:hidden">
-            <SighLogo variant="full" size={48} />
+            <SighLogo variant="horizontal" height={44} />
           </div>
           <h1 className="text-[1.75rem] font-bold leading-tight">Bem-vindo de volta!</h1>
           <p className="mt-1 text-sm text-muted">Faça login para acessar o sistema</p>

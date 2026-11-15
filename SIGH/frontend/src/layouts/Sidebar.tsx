@@ -71,7 +71,7 @@ export const Sidebar: React.FC<{ collapsed: boolean; onNavigate?: () => void }> 
     <div className="flex h-full flex-col bg-sidebar">
       <div className={`flex h-[var(--sigh-topbar-height)] items-center ${collapsed ? 'justify-center' : 'px-5'}`}>
         <RouterLink to="/" aria-label="SIGH — página inicial" className="text-ink" onClick={onNavigate}>
-          <SighLogo variant={collapsed ? 'mark' : 'full'} size={32} />
+          {collapsed ? <SighLogo variant="simbolo" height={34} /> : <SighLogo variant="horizontal" height={32} />}
         </RouterLink>
       </div>
 
