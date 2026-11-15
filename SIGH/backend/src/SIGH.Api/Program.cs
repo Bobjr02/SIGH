@@ -79,7 +79,9 @@ try
     }
 
     // Suporte a ProblemDetails
-    builder.Services.AddProblemDetails();
+    builder.Services.AddProblemDetails(options =>
+        options.CustomizeProblemDetails = context => SIGH.Api.Localization.PortugueseProblemDetails.Customize(context.ProblemDetails));
+    builder.Services.Configure<Microsoft.AspNetCore.Mvc.ApiBehaviorOptions>(SIGH.Api.Localization.PortugueseProblemDetails.Configure);
 
     // Rate Limiting (10 req/min por IP no login)
     builder.Services.AddRateLimiter(options =>
@@ -122,7 +124,8 @@ try
     });
 
     // Controllers e OpenAPI
-    builder.Services.AddControllers();
+    builder.Services.AddControllers(options =>
+        SIGH.Api.Localization.PortugueseProblemDetails.Configure(options.ModelBindingMessageProvider));
     builder.Services.AddSingleton<SecurityStampCache>();
     builder.Services.AddEndpointsApiExplorer();
 
