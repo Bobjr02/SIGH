@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
 import { ProtectedRoute, CHANGE_PASSWORD_PATH } from '../auth/ProtectedRoute';
 import { RequirePermission } from '../auth/RequirePermission';
 import { PERMISSIONS, type PermissionCode } from '../auth/permissions';
@@ -31,26 +31,18 @@ const UsersPage = lazy(() => import('../features/admin/pages/UsersPage'));
 const UserDetailPage = lazy(() => import('../features/admin/pages/UserDetailPage'));
 const ManagementUnitsPage = lazy(() => import('../features/admin/pages/ManagementUnitsPage'));
 const HistoryImportPage = lazy(() => import('../features/admin/pages/HistoryImportPage'));
-const DisciplinaryDashboardPage = lazy(() =>
-  import('../features/disciplinary-reports/pages/DisciplinaryDashboardPage').then((m) => ({ default: m.DisciplinaryDashboardPage })),
-);
-const DisciplinaryCasesReportPage = lazy(() =>
-  import('../features/disciplinary-reports/pages/DisciplinaryCasesReportPage').then((m) => ({ default: m.DisciplinaryCasesReportPage })),
-);
-const DisciplinaryMeasuresReportPage = lazy(() =>
-  import('../features/disciplinary-reports/pages/DisciplinaryMeasuresReportPage').then((m) => ({
-    default: m.DisciplinaryMeasuresReportPage,
-  })),
-);
-const EmployeeDisciplinaryHistoryPage = lazy(() =>
-  import('../features/disciplinary-reports/pages/EmployeeDisciplinaryHistoryPage').then((m) => ({
-    default: m.EmployeeDisciplinaryHistoryPage,
-  })),
-);
+const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
+const ReportsPage = lazy(() => import('../features/reports/ReportsPage'));
 
 const guard = (permission: PermissionCode, element: React.ReactNode) => (
   <RequirePermission permission={permission}>{element}</RequirePermission>
 );
+
+/** O histórico do funcionário agora é uma aba do detalhe. */
+const EmployeeHistoryRedirect: React.FC = () => {
+  const { employeeId } = useParams();
+  return <Navigate to={`/employees/${employeeId}`} replace />;
+};
 
 const AppLayout: React.FC = () => (
   <MainLayout>
@@ -88,26 +80,14 @@ export const AppRoutes: React.FC = () => {
             <Route path="/admin/usuarios/:id" element={guard(PERMISSIONS.USERS_VIEW, <UserDetailPage />)} />
             <Route path="/admin/gerencias" element={guard(PERMISSIONS.MANAGEMENT_UNITS_MANAGE, <ManagementUnitsPage />)} />
             <Route path="/admin/history-import" element={guard(PERMISSIONS.DISCIPLINARY_HISTORY_IMPORT, <HistoryImportPage />)} />
-            <Route
-              path="/disciplinary/reports/dashboard"
-              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_DASHBOARD, <DisciplinaryDashboardPage />)}
-            />
-            <Route
-              path="/disciplinary/reports/cases"
-              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_CASES, <DisciplinaryCasesReportPage />)}
-            />
-            <Route
-              path="/disciplinary/reports/measures"
-              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_MEASURES, <DisciplinaryMeasuresReportPage />)}
-            />
-            <Route
-              path="/disciplinary/reports/employees/:employeeId/history"
-              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY, <EmployeeDisciplinaryHistoryPage />)}
-            />
-            <Route
-              path="/disciplinary/reports/employees/history"
-              element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_EMPLOYEE_HISTORY, <EmployeeDisciplinaryHistoryPage />)}
-            />
+            <Route path="/painel" element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_DASHBOARD, <DashboardPage />)} />
+            <Route path="/relatorios" element={guard(PERMISSIONS.DISCIPLINARY_REPORTS_VIEW_MEASURES, <ReportsPage />)} />
+            {/* Endereços antigos (processo em etapas): o painel e a página única de relatórios os substituem. */}
+            <Route path="/disciplinary/reports/dashboard" element={<Navigate to="/painel" replace />} />
+            <Route path="/disciplinary/reports/cases" element={<Navigate to="/relatorios" replace />} />
+            <Route path="/disciplinary/reports/measures" element={<Navigate to="/relatorios" replace />} />
+            <Route path="/disciplinary/reports/employees/:employeeId/history" element={<EmployeeHistoryRedirect />} />
+            <Route path="/disciplinary/reports/employees/history" element={<Navigate to="/employees" replace />} />
             <Route path="/audit" element={guard(PERMISSIONS.AUDIT_VIEW, <AuditPage />)} />
             <Route path="/employees" element={guard(PERMISSIONS.EMPLOYEES_VIEW, <EmployeesListPage />)} />
             <Route path="/employees/import" element={guard(PERMISSIONS.EMPLOYEES_IMPORT, <EmployeeImportPage />)} />

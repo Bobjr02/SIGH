@@ -31,8 +31,9 @@ import {
   type HistoryPreview,
   type HistoryRow,
 } from '../api/historyImportApi';
+import { formatDateTime } from '../../../utils/formatters';
 
-const formatInstant = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '—');
+const formatInstant = (value?: string | null) => formatDateTime(value);
 
 const period = (r: HistoryRow) =>
   r.periodStart ? `${formatBusinessDate(r.periodStart)} a ${formatBusinessDate(r.periodEnd)}` : r.measureType === 4 ? 'sem período' : '—';

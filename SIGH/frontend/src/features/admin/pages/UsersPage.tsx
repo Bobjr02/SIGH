@@ -3,28 +3,26 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
-  Box,
   Button,
   Checkbox,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControlLabel,
   FormGroup,
-  Link,
-  Pagination,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
+  MenuItem,
   TextField,
   Typography,
 } from '@mui/material';
-import { UserPlus } from 'lucide-react';
+import { Eye, FilterX, Pencil, UserPlus, Users as UsersIcon } from 'lucide-react';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { DataTable } from '../../../components/ui/DataTable';
+import { InitialsAvatar } from '../../../components/ui/InitialsAvatar';
+import { UserStatusChip } from '../../../components/ui/StatusChip';
+import { ActionIcon } from '../../../components/ui/ActionIcon';
+import { label } from '../../../i18n/labels';
+import { formatDateTime } from '../../../utils/formatters';
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS } from '../../../auth/permissions';
 import { recordErrorMessage } from '../../records/api/recordsApi';
@@ -104,69 +102,130 @@ const CreateUserDialog: React.FC<{ open: boolean; onClose: () => void }> = ({ op
   );
 };
 
-/** Administração: lista de usuários, criação (com e-mail de definição de senha) e acesso ao detalhe. */
+/** Administração: lista de usuários (sem CPF: a coluna da referência virou e-mail), criação e acesso ao detalhe. */
 export const UsersPage: React.FC = () => {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
-  const users = useQuery({ queryKey: adminKeys.users(search, page), queryFn: () => adminApi.users(search, page), placeholderData: keepPreviousData });
-  const roles = useQuery({ queryKey: adminKeys.roles, queryFn: adminApi.roles });
-  const labelOf = (name: string) => roles.data?.find((r) => r.name === name)?.label ?? name;
+  const users = useQuery({
+    queryKey: adminKeys.users(search, page, status),
+    queryFn: () => adminApi.users(search, page, status),
+    placeholderData: keepPreviousData,
+  });
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-          Usuários
-        </Typography>
-        {hasPermission(PERMISSIONS.USERS_CREATE) && hasPermission(PERMISSIONS.USERS_MANAGE_ROLES) && (
-          <Button variant="contained" startIcon={<UserPlus size={16} />} onClick={() => setCreating(true)}>
-            Novo usuário
-          </Button>
-        )}
-      </Box>
-      <TextField size="small" label="Buscar por nome ou e-mail" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} sx={{ maxWidth: 360 }} />
-      {users.isError && <Alert severity="error">{recordErrorMessage(users.error, 'Erro ao listar usuários.')}</Alert>}
-      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
-        <Table size="small" aria-label="Usuários">
-          <TableHead>
-            <TableRow>
-              <TableCell>Nome</TableCell>
-              <TableCell>E-mail</TableCell>
-              <TableCell>Perfis</TableCell>
-              <TableCell>Situação</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.data?.items.map((u) => (
-              <TableRow key={u.id} hover data-testid="user-row">
-                <TableCell>
-                  <Link component={RouterLink} to={`/admin/usuarios/${u.id}`}>
-                    {u.fullName}
-                  </Link>
-                </TableCell>
-                <TableCell>{u.email}</TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                    {u.roles.map((r) => (
-                      <Chip key={r} size="small" label={labelOf(r)} />
-                    ))}
-                  </Box>
-                </TableCell>
-                <TableCell>{USER_STATUS_LABELS[u.status] ?? u.status}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {users.data && users.data.totalPages > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
-            <Pagination count={users.data.totalPages} page={page} onChange={(_, p) => setPage(p)} />
-          </Box>
-        )}
-      </Paper>
+    <div>
+      <PageHeader
+        icon={<UsersIcon size={22} />}
+        title="Usuários"
+        subtitle="Gerencie os usuários do sistema"
+        actions={
+          hasPermission(PERMISSIONS.USERS_CREATE) &&
+          hasPermission(PERMISSIONS.USERS_MANAGE_ROLES) && (
+            <Button variant="contained" startIcon={<UserPlus size={16} />} onClick={() => setCreating(true)}>
+              Novo usuário
+            </Button>
+          )
+        }
+      />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <TextField
+          size="small"
+          label="Buscar por nome ou e-mail"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          sx={{ minWidth: 280 }}
+        />
+        <TextField
+          select
+          size="small"
+          label="Situação"
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
+          sx={{ minWidth: 220 }}
+        >
+          <MenuItem value="">Todas as situações</MenuItem>
+          {Object.keys(USER_STATUS_LABELS).map((k) => (
+            <MenuItem key={k} value={k}>
+              {label('UserStatus', k)}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Button
+          variant="outlined"
+          startIcon={<FilterX size={16} />}
+          onClick={() => {
+            setSearch('');
+            setStatus('');
+            setPage(1);
+          }}
+        >
+          Limpar filtros
+        </Button>
+      </div>
+      <DataTable
+        ariaLabel="Usuários"
+        rows={users.data?.items}
+        rowKey={(u) => u.id}
+        rowTestId="user-row"
+        isLoading={users.isLoading}
+        error={users.isError ? recordErrorMessage(users.error, 'Erro ao listar usuários.') : null}
+        onRetry={() => users.refetch()}
+        emptyMessage="Nenhum usuário encontrado."
+        emptyIcon={<UsersIcon size={32} />}
+        columns={[
+          {
+            key: 'name',
+            header: 'Nome',
+            render: (u) => (
+              <span className="flex items-center gap-2.5">
+                <InitialsAvatar name={u.fullName} />
+                <RouterLink to={`/admin/usuarios/${u.id}`} className="font-medium text-ink hover:underline">
+                  {u.fullName}
+                </RouterLink>
+              </span>
+            ),
+          },
+          { key: 'email', header: 'E-mail', render: (u) => u.email, hideOnMobile: true },
+          { key: 'roles', header: 'Perfil', render: (u) => (u.roles.length ? u.roles.map((r) => label('Role', r)).join(', ') : '—') },
+          { key: 'status', header: 'Situação', render: (u) => <UserStatusChip status={u.status} /> },
+          { key: 'last', header: 'Último acesso', render: (u) => formatDateTime(u.lastLoginAt), className: 'whitespace-nowrap', hideOnMobile: true },
+          {
+            key: 'actions',
+            header: 'Ações',
+            align: 'right',
+            render: (u) => (
+              <span className="inline-flex gap-1">
+                <ActionIcon title="Ver usuário" icon={<Eye size={17} />} to={`/admin/usuarios/${u.id}`} />
+                {hasPermission(PERMISSIONS.USERS_MANAGE_ROLES) && (
+                  <ActionIcon title="Editar perfis e gerências" icon={<Pencil size={16} />} to={`/admin/usuarios/${u.id}?aba=perfis`} />
+                )}
+              </span>
+            ),
+          },
+        ]}
+        paging={
+          users.data
+            ? {
+                pageNumber: users.data.pageNumber,
+                pageSize: users.data.pageSize,
+                totalCount: users.data.totalCount,
+                onPageChange: setPage,
+                noun: users.data.totalCount === 1 ? 'usuário' : 'usuários',
+              }
+            : undefined
+        }
+      />
       {creating && <CreateUserDialog open={creating} onClose={() => setCreating(false)} />}
-    </Box>
+    </div>
   );
 };
 

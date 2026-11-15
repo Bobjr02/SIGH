@@ -88,7 +88,7 @@ export const NotificationsPage: React.FC = () => {
       {/* Header da Página */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Bell size={28} color="#2563eb" />
+          <Bell size={28} color="var(--sigh-primary-text)" />
           <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
             Notificações
           </Typography>

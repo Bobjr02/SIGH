@@ -13,7 +13,7 @@ const MAILPIT = process.env.E2E_MAILPIT_URL ?? 'http://localhost:8025';
 export const loginUi = async (page: Page, email = ADMIN_EMAIL, password = adminPassword()) => {
   await page.goto('/login');
   await page.getByLabel('E-mail').fill(email);
-  await page.getByLabel('Senha').fill(password);
+  await page.getByLabel('Senha', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByTestId('current-user-name')).toBeVisible();
 };

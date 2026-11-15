@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Box,
   Button,
   Chip,
-  CircularProgress,
   IconButton,
   MenuItem,
   Paper,
@@ -19,7 +18,17 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { Trash2 } from 'lucide-react';
+import { ScrollText, Trash2 } from 'lucide-react';
+import { DetailNav } from '../../../components/ui/PageHeader';
+import { DetailHeader, DetailTabs, TabPanel } from '../../../components/ui/DetailHeader';
+import { Field, SectionCard } from '../../../components/ui/SectionCard';
+import { EmptyState, ErrorState } from '../../../components/ui/States';
+import { UserStatusChip } from '../../../components/ui/StatusChip';
+import { PaginationBar } from '../../../components/ui/DataTable';
+import { AuditEntryCard } from '../../audit/components/AuditEntryCard';
+import { auditApi, auditKeys } from '../../audit/api/auditApi';
+import { label } from '../../../i18n/labels';
+import { formatBoolean, formatDateTime, formatNumber } from '../../../utils/formatters';
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS } from '../../../auth/permissions';
 import { recordErrorMessage } from '../../records/api/recordsApi';
@@ -27,7 +36,6 @@ import {
   adminApi,
   adminKeys,
   formatValidity,
-  USER_STATUS_LABELS,
   UserStatus,
   VALIDITY_LABELS,
   validityFromDates,
@@ -82,6 +90,35 @@ const AssignRow: React.FC<{
   );
 };
 
+/** Atividades do usuário: registros da auditoria feitos por ele (exige Audit.View). */
+const UserActivities: React.FC<{ userId: string }> = ({ userId }) => {
+  const [page, setPage] = useState(1);
+  const filters = { userId, pageNumber: page, pageSize: 20 };
+  const trail = useQuery({ queryKey: auditKeys.search(filters), queryFn: () => auditApi.search(filters) });
+  if (trail.isLoading) return <div className="h-40 animate-pulse rounded-lg bg-surface-2" aria-busy="true" aria-label="Carregando atividades" />;
+  if (trail.isError) return <ErrorState message={(trail.error as Error).message} onRetry={() => trail.refetch()} />;
+  const data = trail.data!;
+  return (
+    <section aria-label="Atividades" className="flex flex-col gap-3">
+      <h2 className="text-base font-semibold text-ink">Atividades ({formatNumber(data.totalCount)})</h2>
+      {data.items.length === 0 ? (
+        <EmptyState message="Nenhuma atividade registrada para este usuário." icon={<ScrollText size={32} />} />
+      ) : (
+        <>
+          {data.items.map((log) => (
+            <AuditEntryCard key={log.id} log={log} />
+          ))}
+          <div className="overflow-hidden rounded-lg border border-line bg-surface">
+            <PaginationBar pageNumber={data.pageNumber} pageSize={data.pageSize} totalCount={data.totalCount} onPageChange={setPage} noun="registros" />
+          </div>
+        </>
+      )}
+    </section>
+  );
+};
+
+type TabKey = 'informacoes' | 'perfis' | 'atividades';
+
 /**
  * Detalhe do usuário: status (ativar, desativar, desbloquear), perfis e gerências com validade.
  * Ninguém altera o próprio acesso (o servidor recusa; a tela nem mostra os botões).
@@ -91,6 +128,8 @@ export const UserDetailPage: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { user: me, hasPermission } = useAuth();
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<TabKey>(params.get('aba') === 'perfis' ? 'perfis' : 'informacoes');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>((location.state as { created?: boolean } | null)?.created ? 'Usuário criado. O e-mail de definição de senha foi enviado.' : null);
 
@@ -138,51 +177,97 @@ export const UserDetailPage: React.FC = () => {
     onError,
   });
 
-  if (user.isLoading || access.isLoading) return <CircularProgress aria-label="Carregando" />;
-  if (user.isError || !user.data) return <Alert severity="error">{recordErrorMessage(user.error, 'Usuário não encontrado.')}</Alert>;
+  if (user.isLoading || access.isLoading) {
+    return (
+      <div className="flex flex-col gap-4" aria-busy="true" aria-label="Carregando usuário">
+        <div className="h-16 w-1/2 animate-pulse rounded-lg bg-surface-2" />
+        <div className="h-64 animate-pulse rounded-lg bg-surface-2" />
+      </div>
+    );
+  }
+  if (user.isError || !user.data) {
+    return (
+      <div>
+        <DetailNav crumbs={[{ label: 'Usuários', to: '/admin/usuarios' }, { label: 'Detalhes' }]} backTo="/admin/usuarios" />
+        <ErrorState message={recordErrorMessage(user.error, 'Usuário não encontrado.')} />
+      </div>
+    );
+  }
 
   const u = user.data;
   const busy = assignRole.isPending || revokeRole.isPending || assignUnit.isPending || revokeUnit.isPending;
+  const roleText = u.roles.length ? u.roles.map((r) => label('Role', r)).join(', ') : '—';
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: 'informacoes', label: 'Informações' },
+    { key: 'perfis', label: 'Perfis e gerências' },
+    ...(hasPermission(PERMISSIONS.AUDIT_VIEW) ? [{ key: 'atividades' as const, label: 'Atividades' }] : []),
+  ];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-        {u.fullName}
-      </Typography>
-      <Typography color="text.secondary">
-        {u.email} · {USER_STATUS_LABELS[u.status] ?? u.status}
-      </Typography>
-      {self && <Alert severity="info">Este é o seu usuário: perfis, gerências e situação só podem ser alterados por outro administrador.</Alert>}
-      {message && (
-        <Alert severity="success" onClose={() => setMessage(null)}>
-          {message}
-        </Alert>
-      )}
-      {error && (
-        <Alert severity="error" role="alert" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+    <div>
+      <DetailNav crumbs={[{ label: 'Usuários', to: '/admin/usuarios' }, { label: 'Detalhes' }]} backTo="/admin/usuarios" />
+      <DetailHeader
+        name={u.fullName}
+        chip={<UserStatusChip status={u.status} />}
+        subtitle={
+          <>
+            {u.email} · Perfil: {roleText}
+          </>
+        }
+        actions={
+          canChangeStatus && (
+            <>
+              {u.status === 'Inactive' || u.status === 'Suspended' ? (
+                <Button variant="outlined" onClick={() => status.mutate('activate')}>
+                  Ativar
+                </Button>
+              ) : (
+                <Button variant="outlined" color="error" onClick={() => status.mutate('deactivate')}>
+                  Desativar
+                </Button>
+              )}
+              {u.status === 'Locked' && hasPermission(PERMISSIONS.USERS_UNLOCK) && (
+                <Button variant="outlined" onClick={() => status.mutate('unlock')}>
+                  Desbloquear
+                </Button>
+              )}
+            </>
+          )
+        }
+      />
+      <div className="mb-4 flex flex-col gap-2">
+        {self && <Alert severity="info">Este é o seu usuário: perfis, gerências e situação só podem ser alterados por outro administrador.</Alert>}
+        {message && (
+          <Alert severity="success" onClose={() => setMessage(null)}>
+            {message}
+          </Alert>
+        )}
+        {error && (
+          <Alert severity="error" role="alert" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+      </div>
 
-      {canChangeStatus && (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {u.status === 'Inactive' || u.status === 'Suspended' ? (
-            <Button variant="outlined" onClick={() => status.mutate('activate')}>
-              Ativar
-            </Button>
-          ) : (
-            <Button variant="outlined" color="error" onClick={() => status.mutate('deactivate')}>
-              Desativar
-            </Button>
-          )}
-          {u.status === 'Locked' && hasPermission(PERMISSIONS.USERS_UNLOCK) && (
-            <Button variant="outlined" onClick={() => status.mutate('unlock')}>
-              Desbloquear
-            </Button>
-          )}
-        </Box>
-      )}
+      <DetailTabs<TabKey> idPrefix="usuario" value={tab} onChange={setTab} tabs={tabs} />
 
+      <TabPanel active={tab === 'informacoes'} idPrefix="usuario" tabKey="informacoes">
+        <SectionCard title="Dados do usuário">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Nome completo" value={u.fullName} />
+            <Field label="E-mail" value={u.email} />
+            <Field label="Situação" value={label('UserStatus', u.status)} />
+            <Field label="Perfis" value={roleText} />
+            <Field label="Último acesso" value={formatDateTime(u.lastLoginAt)} />
+            <Field label="Cadastrado em" value={formatDateTime(u.createdAt)} />
+            <Field label="Troca de senha obrigatória" value={formatBoolean(u.mustChangePassword)} />
+            <Field label="Tentativas de entrada com falha" value={formatNumber(u.failedLoginAttempts)} />
+            <Field label="Bloqueado até" value={formatDateTime(u.lockoutEnd)} />
+          </dl>
+        </SectionCard>
+      </TabPanel>
+
+      <TabPanel active={tab === 'perfis'} idPrefix="usuario" tabKey="perfis">
       <Paper component="section" aria-label="Perfis" elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider' }}>
         <Typography variant="h6" component="h2" sx={{ fontWeight: 700 }}>
           Perfis
@@ -272,7 +357,14 @@ export const UserDetailPage: React.FC = () => {
           />
         )}
       </Paper>
-    </Box>
+      </TabPanel>
+
+      {hasPermission(PERMISSIONS.AUDIT_VIEW) && (
+        <TabPanel active={tab === 'atividades'} idPrefix="usuario" tabKey="atividades">
+          <UserActivities userId={id} />
+        </TabPanel>
+      )}
+    </div>
   );
 };
 

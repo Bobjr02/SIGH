@@ -12,7 +12,7 @@ describe('forgot password', () => {
     server.use(refreshFails());
     renderApp('/login');
 
-    await userEvent.setup().click(await screen.findByRole('link', { name: 'Esqueci minha senha' }));
+    await userEvent.setup().click(await screen.findByRole('link', { name: 'Esqueceu sua senha?' }));
 
     expect(await screen.findByRole('heading', { name: 'Esqueci minha senha' })).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/forgot-password');

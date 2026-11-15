@@ -78,7 +78,7 @@ describe('administração de perfis', () => {
       }),
     );
 
-    renderApp('/admin/usuarios/u-2');
+    renderApp('/admin/usuarios/u-2?aba=perfis');
     const user = userEvent.setup();
 
     const roles = await screen.findByRole('region', { name: 'Perfis' });
@@ -111,7 +111,7 @@ describe('administração de perfis', () => {
       http.get(`${API}/management-units`, () => ok(UNITS)),
     );
 
-    renderApp('/admin/usuarios/admin-1');
+    renderApp('/admin/usuarios/admin-1?aba=perfis');
 
     expect(await screen.findByText(/só podem ser alterados por outro administrador/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Atribuir' })).not.toBeInTheDocument();
@@ -132,7 +132,7 @@ describe('administração de perfis', () => {
       ),
     );
 
-    renderApp('/admin/usuarios/u-3');
+    renderApp('/admin/usuarios/u-3?aba=perfis');
     const user = userEvent.setup();
     const roles = await screen.findByRole('region', { name: 'Perfis' });
     await user.click(within(roles).getByRole('combobox', { name: 'Perfil' }));

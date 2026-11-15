@@ -60,7 +60,7 @@ export const DisciplinaryCaseTable: React.FC<DisciplinaryCaseTableProps> = ({
           textAlign: 'center',
           border: '1px solid',
           borderColor: 'divider',
-          backgroundColor: '#fafafa',
+          backgroundColor: 'var(--sigh-surface2)',
           borderRadius: 2,
         }}
       >
@@ -78,7 +78,7 @@ export const DisciplinaryCaseTable: React.FC<DisciplinaryCaseTableProps> = ({
     <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <TableContainer>
         <Table sx={{ minWidth: 800 }}>
-          <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+          <TableHead sx={{ backgroundColor: 'var(--sigh-surface2)' }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Número</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Título / Assunto</TableCell>

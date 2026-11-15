@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { FilterX } from 'lucide-react';
 import { NotificationFilters } from '../types';
+import { options } from '../../../i18n/labels';
 
 interface NotificationFiltersPanelProps {
   filters: NotificationFilters;
@@ -52,10 +53,11 @@ export const NotificationFiltersPanel: React.FC<NotificationFiltersPanelProps> =
             onChange={(e) => onChange({ type: e.target.value || null, pageNumber: 1 })}
           >
             <MenuItem value="">Todos os tipos</MenuItem>
-            <MenuItem value="Info">Info</MenuItem>
-            <MenuItem value="Reminder">Reminder (Lembrete)</MenuItem>
-            <MenuItem value="Escalation">Escalation (Escalonamento)</MenuItem>
-            <MenuItem value="Warning">Warning (Alerta)</MenuItem>
+            {options('NotificationType').map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
 
@@ -67,10 +69,11 @@ export const NotificationFiltersPanel: React.FC<NotificationFiltersPanelProps> =
             onChange={(e) => onChange({ priority: e.target.value || null, pageNumber: 1 })}
           >
             <MenuItem value="">Todas as prioridades</MenuItem>
-            <MenuItem value="Low">Baixa</MenuItem>
-            <MenuItem value="Medium">Média</MenuItem>
-            <MenuItem value="High">Alta</MenuItem>
-            <MenuItem value="Critical">Crítica</MenuItem>
+            {options('NotificationPriority').map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
 

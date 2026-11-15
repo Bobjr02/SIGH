@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Box, Button, Typography } from '@mui/material';
-import { PlusCircle } from 'lucide-react';
+import { Button } from '@mui/material';
+import { Gavel, Plus } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS } from '../../../auth/permissions';
+import { PageHeader } from '../../../components/ui/PageHeader';
 import { recordErrorMessage, recordKeys, recordsApi, type RecordFilters as Filters } from '../api/recordsApi';
 import { RecordFilters } from '../components/RecordFilters';
 import { RecordsTable } from '../components/RecordsTable';
 
-/** Lista de medidas com os filtros da Parte A (o servidor aplica o escopo por gerência). */
+/** Lista de medidas com filtros (o servidor aplica o escopo por gerência). */
 export const RecordsListPage: React.FC<{ title?: string; initialFilters?: Filters; highlightRejected?: boolean }> = ({
   title = 'Medidas',
   initialFilters,
@@ -22,17 +23,19 @@ export const RecordsListPage: React.FC<{ title?: string; initialFilters?: Filter
   const list = useQuery({ queryKey: recordKeys.list(filters), queryFn: () => recordsApi.list(filters), placeholderData: keepPreviousData });
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-          {title}
-        </Typography>
-        {hasPermission(PERMISSIONS.DISCIPLINARY_RECORDS_REGISTER) && (
-          <Button variant="contained" startIcon={<PlusCircle size={16} />} onClick={() => navigate('/medidas/registrar')}>
-            Registrar medida
-          </Button>
-        )}
-      </Box>
+    <div>
+      <PageHeader
+        icon={<Gavel size={22} />}
+        title={title}
+        subtitle="Medidas disciplinares registradas no SIGH e o histórico importado"
+        actions={
+          hasPermission(PERMISSIONS.DISCIPLINARY_RECORDS_REGISTER) && (
+            <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => navigate('/medidas/registrar')}>
+              Registrar medida
+            </Button>
+          )
+        }
+      />
       <RecordFilters value={filters} options={options.data} onChange={setFilters} />
       <RecordsTable
         data={list.data}
@@ -41,7 +44,7 @@ export const RecordsListPage: React.FC<{ title?: string; initialFilters?: Filter
         onPageChange={(pageNumber) => setFilters((f) => ({ ...f, pageNumber }))}
         highlightRejected={highlightRejected}
       />
-    </Box>
+    </div>
   );
 };
 

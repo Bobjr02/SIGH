@@ -29,6 +29,8 @@ export interface AuditLogFilters {
   entityId?: string;
   userId?: string;
   action?: string;
+  /** Número da medida (MED-…) ou matrícula. */
+  reference?: string;
   from?: string;
   to?: string;
   pageNumber?: number;
@@ -44,7 +46,14 @@ interface Result<T> {
 const clean = (filters: AuditLogFilters) =>
   Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== undefined && v !== null && v !== ''));
 
+export interface AuditUserOption {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
 export const auditKeys = {
+  users: (search: string) => ['audit-logs', 'users', search] as const,
   all: ['audit-logs'] as const,
   search: (filters: AuditLogFilters) => ['audit-logs', 'search', clean(filters)] as const,
   caseTrail: (caseId: string, page: number) => ['audit-logs', 'case', caseId, page] as const,
@@ -54,6 +63,12 @@ export const auditApi = {
   async search(filters: AuditLogFilters): Promise<AuditPage> {
     const response = await api.get<Result<AuditPage>>('/v1/audit-logs', { params: clean(filters) });
     if (!response.data.success || !response.data.data) throw new Error(response.data.message || 'Erro ao consultar a auditoria.');
+    return response.data.data;
+  },
+
+  async users(search: string): Promise<AuditUserOption[]> {
+    const response = await api.get<Result<AuditUserOption[]>>('/v1/audit-logs/users', { params: { search: search || undefined } });
+    if (!response.data.success || !response.data.data) throw new Error(response.data.message || 'Erro ao buscar usuários.');
     return response.data.data;
   },
 

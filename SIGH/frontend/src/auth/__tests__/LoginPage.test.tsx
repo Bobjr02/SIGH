@@ -9,7 +9,7 @@ import { tokenStore } from '../tokenStore';
 const fillAndSubmit = async (email: string, password: string) => {
   const user = userEvent.setup();
   await user.type(await screen.findByLabelText(/e-mail/i), email);
-  await user.type(screen.getByLabelText(/senha/i), password);
+  await user.type(screen.getByLabelText('Senha', { exact: true }), password);
   await user.click(screen.getByRole('button', { name: /entrar/i }));
 };
 
@@ -28,13 +28,13 @@ describe('LoginPage', () => {
     renderApp('/');
 
     // Sem sessão: vai para o login.
-    expect(await screen.findByRole('heading', { name: 'Entrar no SIGH' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Bem-vindo de volta!' })).toBeInTheDocument();
 
     await fillAndSubmit('maria@sigh.com.br', 'Senha@123');
 
     expect(await screen.findByTestId('current-user-name')).toHaveTextContent('Maria Gestora');
     expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
-    expect(loginBody).toEqual({ email: 'maria@sigh.com.br', password: 'Senha@123' });
+    expect(loginBody).toEqual({ email: 'maria@sigh.com.br', password: 'Senha@123', rememberMe: false });
     expect(tokenStore.get()).toBe('login-token');
     // Nada de tokens ou permissões em localStorage.
     expect(localStorage.length).toBe(0);

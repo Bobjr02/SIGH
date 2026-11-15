@@ -67,7 +67,7 @@ export const InfractionTypeTable: React.FC<InfractionTypeTableProps> = ({
           textAlign: 'center',
           border: '1px solid',
           borderColor: 'divider',
-          backgroundColor: '#fafafa',
+          backgroundColor: 'var(--sigh-surface2)',
           borderRadius: 2,
         }}
       >
@@ -85,7 +85,7 @@ export const InfractionTypeTable: React.FC<InfractionTypeTableProps> = ({
     <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <TableContainer>
         <Table sx={{ minWidth: 700 }}>
-          <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+          <TableHead sx={{ backgroundColor: 'var(--sigh-surface2)' }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Código</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Nome</TableCell>

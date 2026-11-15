@@ -15,7 +15,7 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
   /** Autentica e carrega o usuário de GET /auth/me. */
-  login: (email: string, password: string) => Promise<CurrentUser>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<CurrentUser>;
   /** Troca a senha, passa a usar o novo access token e recarrega o usuário. */
   changePassword: (currentPassword: string, newPassword: string) => Promise<CurrentUser>;
   logout: () => Promise<void>;
@@ -84,8 +84,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      const result = await authApi.login(email, password);
+    async (email: string, password: string, rememberMe = true) => {
+      const result = await authApi.login(email, password, rememberMe);
       tokenStore.set(result.accessToken);
       try {
         return await loadUser();

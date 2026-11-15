@@ -17,7 +17,9 @@ public record UserSummaryDto(
     string Status,
     bool MustChangePassword,
     List<string> Roles,
-    DateTimeOffset CreatedAt
+    DateTimeOffset CreatedAt,
+    /// <summary>Último acesso (coluna da tabela de usuários).</summary>
+    DateTimeOffset? LastLoginAt = null
 );
 
 public record PagedList<T>(

@@ -1,4 +1,5 @@
 import { api } from '../../../services/api';
+import { LABELS } from '../../../i18n/labels';
 
 interface Result<T> {
   success: boolean;
@@ -20,13 +21,8 @@ export enum UserStatus {
   Suspended = 5,
 }
 
-export const USER_STATUS_LABELS: Record<string, string> = {
-  Active: 'Ativo',
-  Inactive: 'Inativo',
-  Locked: 'Bloqueado',
-  PendingFirstAccess: 'Primeiro acesso pendente',
-  Suspended: 'Suspenso',
-};
+/** Rótulos do mapa central (i18n/labels.ts). */
+export const USER_STATUS_LABELS = LABELS.UserStatus as Record<string, string>;
 
 /** Espelha ValidityState. */
 export enum ValidityState {
@@ -44,6 +40,7 @@ export interface UserSummary {
   mustChangePassword: boolean;
   roles: string[];
   createdAt: string;
+  lastLoginAt?: string | null;
 }
 
 export interface UserDetail extends UserSummary {
@@ -116,7 +113,7 @@ export interface Validity {
 }
 
 export const adminKeys = {
-  users: (search: string, page: number) => ['admin', 'users', search, page] as const,
+  users: (search: string, page: number, status = '') => ['admin', 'users', search, page, status] as const,
   user: (id: string) => ['admin', 'user', id] as const,
   access: (id: string) => ['admin', 'access', id] as const,
   roles: ['admin', 'roles'] as const,
@@ -124,9 +121,9 @@ export const adminKeys = {
 };
 
 export const adminApi = {
-  async users(searchTerm: string, pageNumber: number): Promise<PagedList<UserSummary>> {
+  async users(searchTerm: string, pageNumber: number, status = ''): Promise<PagedList<UserSummary>> {
     const response = await api.get<Result<PagedList<UserSummary>>>('/v1/users', {
-      params: { searchTerm: searchTerm || undefined, pageNumber, pageSize: 20 },
+      params: { searchTerm: searchTerm || undefined, pageNumber, pageSize: 20, status: status || undefined },
     });
     return unwrap(response.data, 'Erro ao listar usuários.');
   },

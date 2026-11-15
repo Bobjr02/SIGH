@@ -79,3 +79,19 @@ export const renderApp = (initialPath = '/', children?: React.ReactNode) => {
 
   return { ...utils, visited, queryClient };
 };
+
+/** Painel vazio (GET /disciplinary-records/overview). */
+export const EMPTY_OVERVIEW = {
+  period: 1,
+  from: '2026-10-17',
+  to: '2026-11-15',
+  previousFrom: '2026-09-17',
+  previousTo: '2026-10-16',
+  measures: { current: 0, previous: 0 },
+  pendingApproval: 0,
+  suspensions: { current: 0, previous: 0 },
+  suspensionDays: { current: 0, previous: 0 },
+  employees: { current: 0, previous: 0 },
+  byMonth: [],
+  recentActivities: [],
+};

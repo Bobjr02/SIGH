@@ -97,7 +97,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
     <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6" component="h2" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FileText size={20} color="#16a34a" /> Evidências ({evidences.length})
+          <FileText size={20} color="var(--sigh-success)" /> Evidências ({evidences.length})
         </Typography>
         {canAdd && !closed && (
           <Button size="small" variant="outlined" startIcon={<Plus size={16} />} onClick={onRegisterClick}>
@@ -119,7 +119,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
 
       {evidences.length > 0 ? (
         <Table size="small" aria-label="Evidências">
-          <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+          <TableHead sx={{ backgroundColor: 'var(--sigh-surface2)' }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Evidência</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Arquivo</TableCell>

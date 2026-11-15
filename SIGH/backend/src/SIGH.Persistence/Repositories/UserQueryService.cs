@@ -58,7 +58,8 @@ public class UserQueryService : IUserQueryService
                 .Select(ur => ur.Role.Name)
                 .Distinct()
                 .ToList(),
-            u.CreatedAt
+            u.CreatedAt,
+            u.LastLoginAt
         )).ToList();
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);

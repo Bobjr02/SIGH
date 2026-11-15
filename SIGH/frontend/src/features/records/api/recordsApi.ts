@@ -1,5 +1,7 @@
 import { isAxiosError } from 'axios';
 import { api } from '../../../services/api';
+import { label } from '../../../i18n/labels';
+import { formatDate } from '../../../utils/formatters';
 import type { PagedResult } from '../../employees/api/employeesApi';
 
 interface Result<T> {
@@ -17,12 +19,12 @@ export enum MeasureType {
   JustCauseTermination = 7,
 }
 
-export const MEASURE_TYPE_LABELS: Record<number, string> = {
-  [MeasureType.VerbalWarning]: 'Advertência verbal',
-  [MeasureType.WrittenWarning]: 'Advertência escrita',
-  [MeasureType.Suspension]: 'Suspensão',
-  [MeasureType.JustCauseTermination]: 'Demissão por justa causa',
-};
+export const MEASURE_TYPE_LABELS: Record<number, string> = Object.fromEntries(
+  [MeasureType.VerbalWarning, MeasureType.WrittenWarning, MeasureType.Suspension, MeasureType.JustCauseTermination].map((t) => [
+    t,
+    label('DisciplinaryMeasureType', t),
+  ]),
+);
 
 /** Espelha RecordStatus. */
 export enum RecordStatus {
@@ -41,17 +43,14 @@ export enum RecordOrigin {
 }
 
 export const ORIGIN_LABELS: Record<RecordOrigin, string> = {
-  [RecordOrigin.Sigh]: 'SIGH',
-  [RecordOrigin.Historical]: 'Histórico',
+  [RecordOrigin.Sigh]: label('RecordOrigin', RecordOrigin.Sigh),
+  [RecordOrigin.Historical]: label('RecordOrigin', RecordOrigin.Historical),
 };
 
-export const RECORD_STATUS_LABELS: Record<RecordStatus, string> = {
-  [RecordStatus.PendingApproval]: 'Aguardando aprovação',
-  [RecordStatus.Rejected]: 'Rejeitada',
-  [RecordStatus.Approved]: 'Aprovada',
-  [RecordStatus.Cancelled]: 'Cancelada',
-  [RecordStatus.Historical]: 'Histórico importado',
-};
+/** Rótulos vindos do mapa central (i18n/labels.ts). */
+export const RECORD_STATUS_LABELS: Record<RecordStatus, string> = Object.fromEntries(
+  [1, 2, 3, 4, 5].map((v) => [v, label('RecordStatus', v)]),
+) as Record<RecordStatus, string>;
 
 export interface RecordSummary {
   id: string;
@@ -80,6 +79,13 @@ export interface RecordSummary {
   importedAt?: string | null;
   /** Suspensão com dias "não informado" (fora da soma de dias). */
   suspensionDaysUnknown?: boolean;
+  /** "Aplicado por": quem aprovou (nulo no histórico e nas não aprovadas). */
+  appliedByName?: string | null;
+  approvedAt?: string | null;
+  daysToApproval?: number | null;
+  /** Vigência: só suspensões. */
+  suspensionStart?: string | null;
+  suspensionEnd?: string | null;
 }
 
 export interface RecordEvidence {
@@ -186,6 +192,69 @@ export interface RecordFilters {
   employee?: string;
   mine?: boolean;
   origin?: RecordOrigin | '';
+  employeeId?: string;
+}
+
+export interface CountItem {
+  value: number;
+  label: string;
+  count: number;
+  percentage: number;
+}
+
+export interface RecordStats {
+  total: number;
+  byStatus: CountItem[];
+  byType: CountItem[];
+  employees: number;
+  suspensionDays: number;
+  averageDaysToApproval?: number | null;
+}
+
+/** Espelha OverviewPeriod. */
+export enum OverviewPeriod {
+  Last30Days = 1,
+  Last90Days = 2,
+  Last12Months = 3,
+  CurrentYear = 4,
+}
+
+/** Espelha RecordActivityKind. */
+export enum RecordActivityKind {
+  Registered = 1,
+  Approved = 2,
+  Rejected = 3,
+}
+
+export interface Kpi {
+  current: number;
+  previous: number;
+}
+
+export interface RecordActivity {
+  kind: RecordActivityKind;
+  recordId: string;
+  caseNumber: string;
+  employeeName: string;
+  measureType: MeasureType;
+  measureTypeLabel: string;
+  actorName?: string | null;
+  at: string;
+}
+
+export interface RecordOverview {
+  period: OverviewPeriod;
+  from: string;
+  to: string;
+  previousFrom: string;
+  previousTo: string;
+  measures: Kpi;
+  pendingApproval: number;
+  suspensions: Kpi;
+  suspensionDays: Kpi;
+  employees: Kpi;
+  byMonth: { year: number; month: number; count: number }[];
+  recentActivities: RecordActivity[];
 }
 
 /** Aviso de possível duplicidade (409 POSSIBLE_DUPLICATE): exige confirmação. */
@@ -231,6 +300,8 @@ export const recordKeys = {
   detail: (id: string) => ['records', 'detail', id] as const,
   options: ['records', 'options'] as const,
   pendingCount: ['records', 'pending-count'] as const,
+  stats: (filters: RecordFilters) => ['records', 'stats', clean(filters)] as const,
+  overview: (period: OverviewPeriod) => ['records', 'overview', period] as const,
 };
 
 export const recordsApi = {
@@ -247,6 +318,33 @@ export const recordsApi = {
   async options(): Promise<RecordOptions> {
     const response = await api.get<Result<RecordOptions>>('/v1/disciplinary-records/options');
     return unwrap(response.data, 'Erro ao carregar as opções.');
+  },
+
+  async stats(filters: RecordFilters): Promise<RecordStats> {
+    const { pageNumber: _p, pageSize: _s, ...rest } = filters;
+    const response = await api.get<Result<RecordStats>>('/v1/disciplinary-records/stats', { params: clean(rest) });
+    return unwrap(response.data, 'Erro ao carregar o resumo.');
+  },
+
+  async overview(period: OverviewPeriod): Promise<RecordOverview> {
+    const response = await api.get<Result<RecordOverview>>('/v1/disciplinary-records/overview', { params: { period } });
+    return unwrap(response.data, 'Erro ao carregar o painel.');
+  },
+
+  /** Baixa o CSV das medidas filtradas (cabeçalhos em português). */
+  async exportCsv(filters: RecordFilters): Promise<void> {
+    const { pageNumber: _p, pageSize: _s, ...rest } = filters;
+    const response = await api.get<Blob>('/v1/disciplinary-records/export', { params: clean(rest), responseType: 'blob' });
+    const url = URL.createObjectURL(response.data);
+    const a = document.createElement('a');
+    a.href = url;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    a.download = `medidas-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   },
 
   async pendingCount(): Promise<number> {
@@ -285,11 +383,7 @@ export const recordsApi = {
 };
 
 /** "2026-11-13" → "13/11/2026" (datas de negócio, sem fuso). */
-export const formatBusinessDate = (value?: string | null): string => {
-  if (!value) return '—';
-  const [y, m, d] = value.slice(0, 10).split('-');
-  return `${d}/${m}/${y}`;
-};
+export const formatBusinessDate = (value?: string | null): string => formatDate(value ? value.slice(0, 10) : value);
 
 /** Hoje no calendário local, "yyyy-MM-dd". */
 export const todayIso = (): string => {
@@ -299,12 +393,8 @@ export const todayIso = (): string => {
 };
 
 /** "Histórico importado — lote de dd/MM/yyyy". */
-export const historySealOf = (importedAt?: string | null): string => {
-  if (!importedAt) return 'Histórico importado';
-  const d = new Date(importedAt);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `Histórico importado — lote de ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-};
+export const historySealOf = (importedAt?: string | null): string =>
+  importedAt ? `Histórico importado — lote de ${formatDate(importedAt)}` : 'Histórico importado';
 
 /** Dias de suspensão, contando os dois extremos. */
 export const suspensionDays = (start?: string | null, end?: string | null): number | null => {

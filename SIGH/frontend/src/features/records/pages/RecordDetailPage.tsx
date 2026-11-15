@@ -1,48 +1,33 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Paper,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import { Check, Pencil, X, XCircle } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS } from '../../../auth/permissions';
 import { CaseAuditTimeline } from '../../audit/components/CaseAuditTimeline';
-import { formatBusinessDate, historySealOf, recordErrorMessage, recordKeys, recordsApi, RecordOrigin } from '../api/recordsApi';
+import { DetailNav } from '../../../components/ui/PageHeader';
+import { DetailHeader, DetailTabs, TabPanel } from '../../../components/ui/DetailHeader';
+import { Field, SectionCard } from '../../../components/ui/SectionCard';
+import { ErrorState } from '../../../components/ui/States';
+import { RecordStatusChip } from '../../../components/ui/StatusChip';
+import { label } from '../../../i18n/labels';
+import { formatDateTime, formatDays } from '../../../utils/formatters';
+import { formatBusinessDate, historySealOf, MeasureType, recordErrorMessage, recordKeys, recordsApi, RecordOrigin, RecordStatus } from '../api/recordsApi';
 import { AttachmentsPanel } from '../components/AttachmentsPanel';
-import { RecordStatusChip } from '../components/RecordStatusChip';
-
-const Field: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => (
-  <Box>
-    <Typography variant="caption" color="text.secondary">
-      {label}
-    </Typography>
-    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-      {value ?? '—'}
-    </Typography>
-  </Box>
-);
-
-const formatInstant = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '—');
+import { appliedByOf } from '../components/RecordsTable';
 
 type ReasonAction = 'reject' | 'cancel';
+type TabKey = 'dados' | 'anexos' | 'historico';
 
-/** Detalhe da medida: dados, anexos, linha do tempo (com Audit.View) e só os botões que o usuário pode usar. */
+/** Detalhe da medida: abas Dados | Anexos | Histórico (auditoria, com Audit.View); só os botões que o usuário pode usar. */
 export const RecordDetailPage: React.FC = () => {
   const { id = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
+  const [tab, setTab] = useState<TabKey>('dados');
   const [reasonFor, setReasonFor] = useState<ReasonAction | null>(null);
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState<string | null>((location.state as { saved?: string } | null)?.saved ?? null);
@@ -73,108 +58,139 @@ export const RecordDetailPage: React.FC = () => {
     onError: (e) => setError(recordErrorMessage(e, 'Não foi possível concluir a ação.')),
   });
 
-  if (detail.isLoading) return <CircularProgress aria-label="Carregando" />;
+  if (detail.isLoading) {
+    return (
+      <div className="flex flex-col gap-4" aria-busy="true" aria-label="Carregando medida">
+        <div className="h-16 w-1/2 animate-pulse rounded-lg bg-surface-2" />
+        <div className="h-64 animate-pulse rounded-lg bg-surface-2" />
+      </div>
+    );
+  }
   if (detail.isError || !detail.data) {
     return (
-      <Alert severity="error" data-testid="record-not-found">
-        {recordErrorMessage(detail.error, 'Medida não encontrada.')}
-      </Alert>
+      <div data-testid="record-not-found">
+        <DetailNav crumbs={[{ label: 'Medidas', to: '/medidas' }, { label: 'Detalhes' }]} backTo="/medidas" />
+        <ErrorState message={recordErrorMessage(detail.error, 'Medida não encontrada.')} />
+      </div>
     );
   }
 
   const record = detail.data;
   const s = record.summary;
   const a = record.actions;
+  const historical = s.origin === RecordOrigin.Historical;
+  const canSeeHistory = hasPermission(PERMISSIONS.AUDIT_VIEW);
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: 'dados', label: 'Dados' },
+    { key: 'anexos', label: `Anexos (${record.evidences.length})` },
+    ...(canSeeHistory ? [{ key: 'historico' as const, label: 'Histórico' }] : []),
+  ];
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-          {s.measureTypeLabel} — {s.caseNumber}
-        </Typography>
-        <RecordStatusChip status={s.status} />
-      </Box>
+    <div>
+      <DetailNav crumbs={[{ label: 'Medidas', to: '/medidas' }, { label: s.caseNumber }]} backTo="/medidas" />
+      <DetailHeader
+        name={`${label('DisciplinaryMeasureType', s.measureType)} — ${s.caseNumber}`}
+        avatarName={s.employeeName}
+        chip={<RecordStatusChip status={s.status} />}
+        subtitle={
+          <>
+            <RouterLink to={`/employees/${s.employeeId}`} className="font-medium text-primary-text hover:underline">
+              {s.employeeName}
+            </RouterLink>{' '}
+            · Matrícula {s.employeeNumber} · {s.managementUnitCode ?? '—'}
+          </>
+        }
+        actions={
+          <>
+            {a.canApprove && (
+              <Button variant="contained" color="success" startIcon={<Check size={16} />} disabled={approve.isPending} onClick={() => approve.mutate()}>
+                Aprovar
+              </Button>
+            )}
+            {a.canReject && (
+              <Button variant="outlined" color="error" startIcon={<X size={16} />} onClick={() => setReasonFor('reject')}>
+                Rejeitar
+              </Button>
+            )}
+            {a.canCorrect && (
+              <Button variant="contained" startIcon={<Pencil size={16} />} onClick={() => navigate(`/medidas/${id}/corrigir`)}>
+                Corrigir e reenviar
+              </Button>
+            )}
+            {a.canCancel && (
+              <Button variant="outlined" startIcon={<XCircle size={16} />} onClick={() => setReasonFor('cancel')}>
+                Cancelar medida
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      {message && (
-        <Alert severity="success" onClose={() => setMessage(null)}>
-          {message}
-        </Alert>
-      )}
-      {error && (
-        <Alert severity="error" role="alert" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-      {s.origin === RecordOrigin.Historical && (
-        <Alert severity="info" data-testid="history-seal">
-          {historySealOf(s.importedAt)}. Medida aplicada antes do SIGH, sem decisão nem aprovação registradas aqui; somente leitura
-          (anexos, como a carta assinada antiga, ainda podem ser incluídos).
-        </Alert>
-      )}
-      {record.lastRejectionReason && s.status !== 3 && (
-        <Alert severity="warning" data-testid="rejection-reason">
-          Rejeitada por {record.lastRejectedByName ?? 'aprovador'} em {formatInstant(record.lastRejectedAt)}: {record.lastRejectionReason}
-        </Alert>
-      )}
+      <div className="mb-4 flex flex-col gap-2">
+        {message && (
+          <Alert severity="success" onClose={() => setMessage(null)}>
+            {message}
+          </Alert>
+        )}
+        {error && (
+          <Alert severity="error" role="alert" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+        {historical && (
+          <Alert severity="info" data-testid="history-seal">
+            {historySealOf(s.importedAt)}. Medida aplicada antes do SIGH, sem decisão nem aprovação registradas aqui; somente leitura (anexos, como a
+            carta assinada antiga, ainda podem ser incluídos).
+          </Alert>
+        )}
+        {record.lastRejectionReason && s.status !== RecordStatus.Approved && (
+          <Alert severity="warning" data-testid="rejection-reason">
+            Rejeitada por {record.lastRejectedByName ?? 'aprovador'} em {formatDateTime(record.lastRejectedAt)}: {record.lastRejectionReason}
+          </Alert>
+        )}
+      </div>
 
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {a.canApprove && (
-          <Button variant="contained" color="success" disabled={approve.isPending} onClick={() => approve.mutate()}>
-            Aprovar
-          </Button>
-        )}
-        {a.canReject && (
-          <Button variant="outlined" color="error" onClick={() => setReasonFor('reject')}>
-            Rejeitar
-          </Button>
-        )}
-        {a.canCorrect && (
-          <Button variant="contained" onClick={() => navigate(`/medidas/${id}/corrigir`)}>
-            Corrigir e reenviar
-          </Button>
-        )}
-        {a.canCancel && (
-          <Button variant="outlined" color="inherit" onClick={() => setReasonFor('cancel')}>
-            Cancelar medida
-          </Button>
-        )}
-      </Box>
+      <DetailTabs<TabKey> idPrefix="medida" value={tab} onChange={setTab} tabs={tabs} />
 
-      <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
-        <Field label="Funcionário" value={`${s.employeeNumber} – ${s.employeeName}`} />
-        <Field label="Gerência (hoje)" value={s.managementUnitCode ? `${s.managementUnitCode} – ${s.managementUnitName}` : null} />
-        <Field label="Gerência na época" value={record.managementUnitCodeAtTime} />
-        <Field label="Setor" value={s.departmentName} />
-        <Field label="Motivo" value={s.infractionTypeName} />
-        <Field label="Data da medida" value={formatBusinessDate(s.measureDate)} />
-        <Field label="Ocorrência(s)" value={record.occurrenceDates.map(formatBusinessDate).join(', ')} />
-        {s.suspensionDaysUnknown && <Field label="Suspensão" value="Dias: não informado" />}
-        {record.suspensionStart && (
-          <Field
-            label="Suspensão"
-            value={`${formatBusinessDate(record.suspensionStart)} a ${formatBusinessDate(record.suspensionEnd)} (${s.suspensionDays} dia${(s.suspensionDays ?? 0) > 1 ? 's' : ''})`}
-          />
-        )}
-        <Field
-          label={s.origin === RecordOrigin.Historical ? 'Importada por' : 'Registrada por'}
-          value={`${s.registeredByName ?? '—'} em ${formatInstant(s.registeredAt)}`}
-        />
-        {record.approvedAt && <Field label="Aprovada por" value={`${record.approvedByName ?? '—'} em ${formatInstant(record.approvedAt)}`} />}
-        {record.cancelledAt && <Field label="Cancelada" value={`${formatInstant(record.cancelledAt)}: ${record.cancellationReason}`} />}
-        <Box sx={{ gridColumn: '1 / -1' }}>
-          <Field label="Descrição / observação" value={record.description} />
-        </Box>
-      </Paper>
+      <TabPanel active={tab === 'dados'} idPrefix="medida" tabKey="dados">
+        <SectionCard title="Dados da medida">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Field label="Funcionário" value={`${s.employeeNumber} – ${s.employeeName}`} />
+            <Field label="Gerência (hoje)" value={s.managementUnitCode ? `${s.managementUnitCode} – ${s.managementUnitName}` : null} />
+            <Field label="Gerência na época" value={record.managementUnitCodeAtTime} />
+            <Field label="Setor" value={s.departmentName} />
+            <Field label="Medida" value={label('DisciplinaryMeasureType', s.measureType)} />
+            <Field label="Motivo" value={s.infractionTypeName} />
+            <Field label="Data da medida" value={formatBusinessDate(s.measureDate)} />
+            <Field label="Ocorrência(s)" value={record.occurrenceDates.map(formatBusinessDate).join(', ')} />
+            <Field
+              label="Vigência"
+              value={
+                s.measureType === MeasureType.Suspension && record.suspensionStart
+                  ? `${formatBusinessDate(record.suspensionStart)} a ${formatBusinessDate(record.suspensionEnd)} (${formatDays(s.suspensionDays)})`
+                  : s.suspensionDaysUnknown
+                    ? 'Dias: não informado'
+                    : '—'
+              }
+            />
+            <Field label={historical ? 'Importada por' : 'Registrada por'} value={`${s.registeredByName ?? '—'} em ${formatDateTime(s.registeredAt)}`} />
+            <Field label="Aplicado por" value={<span data-testid="applied-by">{appliedByOf(s)}</span>} />
+            {record.approvedAt && <Field label="Aprovada em" value={formatDateTime(record.approvedAt)} />}
+            {record.cancelledAt && <Field label="Cancelada" value={`${formatDateTime(record.cancelledAt)}: ${record.cancellationReason ?? '—'}`} />}
+            <Field label="Descrição / observação" value={record.description} className="sm:col-span-2 lg:col-span-3" />
+          </dl>
+        </SectionCard>
+      </TabPanel>
 
-      <AttachmentsPanel recordId={id} evidences={record.evidences} canAttach={a.canAttach} canRemove={a.canRemoveEvidence} />
+      <TabPanel active={tab === 'anexos'} idPrefix="medida" tabKey="anexos">
+        <AttachmentsPanel recordId={id} evidences={record.evidences} canAttach={a.canAttach} canRemove={a.canRemoveEvidence} />
+      </TabPanel>
 
-      {hasPermission(PERMISSIONS.AUDIT_VIEW) && (
-        <Paper component="section" aria-label="Linha do tempo" elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h6" component="h2" sx={{ fontWeight: 700, mb: 1 }}>
-            Linha do tempo
-          </Typography>
+      {canSeeHistory && (
+        <TabPanel active={tab === 'historico'} idPrefix="medida" tabKey="historico">
           <CaseAuditTimeline caseId={id} />
-        </Paper>
+        </TabPanel>
       )}
 
       <Dialog open={reasonFor !== null} onClose={() => setReasonFor(null)} aria-labelledby="reason-title" fullWidth maxWidth="sm">
@@ -203,7 +219,7 @@ export const RecordDetailPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 };
 

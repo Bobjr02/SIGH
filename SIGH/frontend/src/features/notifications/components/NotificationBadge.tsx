@@ -22,6 +22,8 @@ import {
   useMarkAllNotificationsAsRead,
 } from '../hooks/useNotifications';
 import { NotificationDto } from '../types';
+import { label } from '../../../i18n/labels';
+import { formatDateTime } from '../../../utils/formatters';
 
 export const NotificationBadge: React.FC = () => {
   const navigate = useNavigate();
@@ -76,10 +78,11 @@ export const NotificationBadge: React.FC = () => {
         color="inherit"
         onClick={handleClick}
         aria-describedby={id}
+        aria-label="Notificações"
         sx={{ ml: 1 }}
         data-testid="notification-bell-button"
       >
-        <Badge badgeContent={unreadCount} color="error">
+        <Badge badgeContent={unreadCount} color="error" aria-label={`${unreadCount} notificações não lidas`}>
           <Bell size={20} />
         </Badge>
       </IconButton>
@@ -103,7 +106,7 @@ export const NotificationBadge: React.FC = () => {
           },
         }}
       >
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'var(--sigh-surface2)', color: 'var(--sigh-text)', borderBottom: '1px solid var(--sigh-border)' }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
             Notificações ({unreadCount})
           </Typography>
@@ -150,13 +153,13 @@ export const NotificationBadge: React.FC = () => {
                   >
                     <Box sx={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                       <Chip
-                        label={item.type}
+                        label={label('NotificationType', item.type)}
                         size="small"
                         color={getTypeColor(item.type) as any}
                         sx={{ height: 20, fontSize: '0.65rem' }}
                       />
                       <Typography variant="caption" color="text.secondary">
-                        {new Date(item.createdAt).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        {formatDateTime(item.createdAt)}
                       </Typography>
                     </Box>
 

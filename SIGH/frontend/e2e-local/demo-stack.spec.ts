@@ -12,7 +12,7 @@ const login = async (page: Page, login: string) => {
   await page.goto('/login');
   await expect(page.getByTestId('demo-banner')).toHaveText(/AMBIENTE DE DEMONSTRAÇÃO/);
   await page.getByLabel('E-mail').fill(`${login}@demo.local`);
-  await page.getByLabel('Senha').fill(password());
+  await page.getByLabel('Senha', { exact: true }).fill(password());
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByTestId('current-user-name')).toBeVisible();
   await expect(page).not.toHaveURL(/change-password/);

@@ -56,6 +56,62 @@
     "Rejected": 4,
     "Invalidated": 5
   },
+  "DecisionType": {
+    "Undefined": 0,
+    "NoViolation": 1,
+    "InformalGuidance": 2,
+    "FormalWarning": 3,
+    "Suspension": 4,
+    "TerminationRecommendation": 5,
+    "Other": 6,
+    "JustCauseTermination": 7
+  },
+  "DisciplinaryCaseKind": {
+    "Process": 1,
+    "Record": 2,
+    "Historical": 3
+  },
+  "DisciplinaryCasePriority": {
+    "Undefined": 0,
+    "Low": 1,
+    "Normal": 2,
+    "High": 3,
+    "Critical": 4
+  },
+  "ConfidentialityLevel": {
+    "Undefined": 0,
+    "Public": 1,
+    "Internal": 2,
+    "Restricted": 3,
+    "Confidential": 4
+  },
+  "InfractionSeverity": {
+    "Undefined": 0,
+    "Low": 1,
+    "Moderate": 2,
+    "High": 3,
+    "Critical": 4
+  },
+  "CaseEmployeeRole": {
+    "Undefined": 0,
+    "Accused": 1,
+    "Victim": 2,
+    "Witness": 3,
+    "Reporter": 4,
+    "Other": 5
+  },
+  "EvidenceStatus": {
+    "Undefined": 0,
+    "PendingVerification": 1,
+    "Verified": 2,
+    "Rejected": 3
+  },
+  "OccurrenceStatus": {
+    "Undefined": 0,
+    "Reported": 1,
+    "Validated": 2,
+    "Rejected": 3
+  },
   "EvidenceType": {
     "Undefined": 0,
     "Document": 1,

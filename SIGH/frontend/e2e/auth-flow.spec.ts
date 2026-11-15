@@ -29,7 +29,7 @@ test('admin: login, mandatory password change, cases list, reload keeps the sess
   await page.goto('/');
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel('E-mail').fill(ADMIN_EMAIL);
-  await page.getByLabel('Senha').fill(ADMIN_PASSWORD);
+  await page.getByLabel('Senha', { exact: true }).fill(ADMIN_PASSWORD);
   await page.getByRole('button', { name: 'Entrar' }).click();
 
   // 2. Troca obrigatória de senha: qualquer outra rota volta para /change-password
