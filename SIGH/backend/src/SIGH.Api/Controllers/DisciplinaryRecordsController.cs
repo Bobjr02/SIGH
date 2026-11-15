@@ -39,6 +39,27 @@ public class DisciplinaryRecordsController : BaseController
     public async Task<ActionResult<Result<RecordOptionsDto>>> GetOptions(CancellationToken cancellationToken) =>
         OkResult(await _queries.GetOptionsAsync(cancellationToken));
 
+    /// <summary>Distribuição por situação e por tipo das medidas filtradas (mesmos filtros da lista).</summary>
+    [HttpGet("stats")]
+    [Permission(PermissionCodes.DisciplinaryReports.ViewMeasures)]
+    public async Task<ActionResult<Result<RecordStatsDto>>> GetStats([FromQuery] GetRecordsQuery query, CancellationToken cancellationToken) =>
+        OkResult(await _queries.GetStatsAsync(query, cancellationToken));
+
+    /// <summary>CSV das medidas filtradas (cabeçalhos em português; até 10.000 linhas).</summary>
+    [HttpGet("export")]
+    [Permission(PermissionCodes.DisciplinaryReports.Export)]
+    public async Task<IActionResult> Export([FromQuery] GetRecordsQuery query, CancellationToken cancellationToken)
+    {
+        var bytes = await _queries.ExportCsvAsync(query, cancellationToken);
+        return File(bytes, "text/csv; charset=utf-8", $"medidas-{DateTime.UtcNow:yyyyMMdd-HHmm}.csv");
+    }
+
+    /// <summary>Painel: indicadores do período, evolução mensal e atividades recentes (com escopo).</summary>
+    [HttpGet("overview")]
+    [Permission(PermissionCodes.DisciplinaryReports.ViewDashboard)]
+    public async Task<ActionResult<Result<RecordOverviewDto>>> GetOverview([FromQuery] OverviewPeriod period = OverviewPeriod.Last30Days, CancellationToken cancellationToken = default) =>
+        OkResult(await _queries.GetOverviewAsync(Enum.IsDefined(period) ? period : OverviewPeriod.Last30Days, cancellationToken));
+
     /// <summary>Quantas medidas o usuário pode aprovar agora (contador do menu).</summary>
     [HttpGet("pending-count")]
     [Permission(PermissionCodes.DisciplinaryRecords.Approve)]

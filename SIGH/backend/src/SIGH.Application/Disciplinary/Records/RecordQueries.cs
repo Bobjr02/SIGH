@@ -19,23 +19,34 @@ public interface IRecordQueries
 
     /// <summary>Medidas aguardando aprovação que o usuário pode aprovar (contador do menu).</summary>
     Task<int> CountPendingForApprovalAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Distribuição por situação e por tipo das medidas filtradas (página Relatórios).</summary>
+    Task<RecordStatsDto> GetStatsAsync(GetRecordsQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>CSV (UTF-8 com BOM, separador ";") das medidas filtradas, com cabeçalhos em português.</summary>
+    Task<byte[]> ExportCsvAsync(GetRecordsQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>Painel: indicadores do período comparados ao período anterior, evolução mensal e atividades recentes.</summary>
+    Task<RecordOverviewDto> GetOverviewAsync(OverviewPeriod period, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// Leitura das medidas (processos do tipo Record). Escopo aplicado no banco: o gestor só vê medidas de
 /// funcionários que pertencem HOJE às gerências dele; a paginação é feita no SQL.
 /// </summary>
-public sealed class RecordQueries : IRecordQueries
+public sealed partial class RecordQueries : IRecordQueries
 {
     private readonly IApplicationDbContext _db;
     private readonly IAccessScope _scope;
     private readonly ICurrentUserService _currentUser;
+    private readonly IDateTimeProvider _clock;
 
-    public RecordQueries(IApplicationDbContext db, IAccessScope scope, ICurrentUserService currentUser)
+    public RecordQueries(IApplicationDbContext db, IAccessScope scope, ICurrentUserService currentUser, IDateTimeProvider clock)
     {
         _db = db;
         _scope = scope;
         _currentUser = currentUser;
+        _clock = clock;
     }
 
     /// <summary>Projeção com inicializador de membros (o EF compõe filtros e ordenação sobre ela no SQL).</summary>
@@ -68,6 +79,8 @@ public sealed class RecordQueries : IRecordQueries
         public DateTimeOffset? MeasureEffectiveUntil { get; init; }
         public int? MeasureSuspensionDays { get; init; }
         public DateTimeOffset? ImportedAt { get; init; }
+        public DateTimeOffset? ApprovedAt { get; init; }
+        public string? AppliedByName { get; init; }
     }
 
     /// <summary>Medidas visíveis, já com o escopo.</summary>
@@ -122,9 +135,13 @@ public sealed class RecordQueries : IRecordQueries
             MeasureEffectiveUntil = m.EffectiveUntil,
             MeasureSuspensionDays = m.SuspensionDays,
             ImportedAt = _db.DisciplinaryHistoryImportBatches.Where(b => b.Id == c.HistoryImportBatchId).Select(b => b.AppliedAt).FirstOrDefault(),
+            ApprovedAt = c.Decisions.Where(x => x.Status == DecisionStatus.Approved).Select(x => x.ApprovedAt).FirstOrDefault(),
+            // "Aplicado por": quem aprovou (a aprovação aplica a medida e grava AppliedByUserId).
+            AppliedByName = _db.Users.IgnoreQueryFilters().Where(u => u.Id == m!.AppliedByUserId).Select(u => u.FullName).FirstOrDefault(),
         };
 
-    public async Task<PagedResult<RecordSummaryDto>> GetPagedAsync(GetRecordsQuery query, CancellationToken cancellationToken = default)
+    /// <summary>Medidas visíveis com todos os filtros da lista (reaproveitado por lista, estatísticas e CSV).</summary>
+    private async Task<IQueryable<Row>> FilteredAsync(GetRecordsQuery query, CancellationToken cancellationToken)
     {
         var cases = await VisibleRecordsAsync(cancellationToken);
 
@@ -144,6 +161,9 @@ public sealed class RecordQueries : IRecordQueries
             RecordOrigin.Historical => cases.Where(c => c.Kind == DisciplinaryCaseKind.Historical),
             _ => cases
         };
+
+        if (query.EmployeeId is { } employeeId)
+            cases = cases.Where(c => c.Employees.Any(e => e.Role == CaseEmployeeRole.Accused && e.EmployeeId == employeeId));
 
         if (query.Mine && _currentUser.UserId is { } me)
             cases = cases.Where(c => c.OpenedByUserId == me);
@@ -176,6 +196,12 @@ public sealed class RecordQueries : IRecordQueries
             rows = rows.Where(r => r.EmployeeNumber.StartsWith(term) || r.EmployeeName.Contains(term));
         }
 
+        return rows;
+    }
+
+    public async Task<PagedResult<RecordSummaryDto>> GetPagedAsync(GetRecordsQuery query, CancellationToken cancellationToken = default)
+    {
+        var rows = await FilteredAsync(query, cancellationToken);
         var pageSize = Math.Clamp(query.PageSize, 1, 100);
         var pageNumber = Math.Max(1, query.PageNumber);
         var total = await rows.CountAsync(cancellationToken);
@@ -330,8 +356,17 @@ public sealed class RecordQueries : IRecordQueries
             historical ? RecordOrigin.Historical : RecordOrigin.Sigh,
             historical ? "Histórico" : "SIGH",
             historical ? row.ImportedAt : null,
-            type == DisciplinaryMeasureType.Suspension && days is null);
+            type == DisciplinaryMeasureType.Suspension && days is null,
+            row.AppliedByName,
+            row.ApprovedAt,
+            DaysToApproval(row),
+            type == DisciplinaryMeasureType.Suspension ? start : null,
+            type == DisciplinaryMeasureType.Suspension ? end : null);
     }
+
+    /// <summary>Dias corridos entre o registro e a aprovação (calendário de Maceió).</summary>
+    private static int? DaysToApproval(Row row) =>
+        row.ApprovedAt is { } approved ? BusinessCalendar.DateOf(approved).DayNumber - BusinessCalendar.DateOf(row.OpenedAt).DayNumber : null;
 
     /// <summary>Período da suspensão: da decisão (SIGH) ou da própria medida (histórico, quando houver).</summary>
     private static (DateOnly? Start, DateOnly? End) PeriodOf(Row row)

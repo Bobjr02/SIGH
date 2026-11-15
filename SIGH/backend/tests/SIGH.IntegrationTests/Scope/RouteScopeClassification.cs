@@ -20,6 +20,9 @@ public static class RouteScopeClassification
         "/api/v1/disciplinary-records/{id:guid}",
         "/api/v1/disciplinary-records/options",
         "/api/v1/disciplinary-records/pending-count",
+        "/api/v1/disciplinary-records/stats",
+        "/api/v1/disciplinary-records/export",
+        "/api/v1/disciplinary-records/overview",
         // Processos (legado, fora do menu) e trilha de auditoria de um processo
         "/api/v1/disciplinary-cases",
         "/api/v1/disciplinary-cases/{id:guid}",

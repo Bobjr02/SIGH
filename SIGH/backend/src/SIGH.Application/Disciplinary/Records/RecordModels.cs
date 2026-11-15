@@ -131,7 +131,15 @@ public sealed record RecordSummaryDto(
     /// <summary>Histórico: data do lote que importou o registro ("Histórico importado — lote de dd/MM/yyyy").</summary>
     DateTimeOffset? ImportedAt = null,
     /// <summary>Suspensão com dias desconhecidos ("não informado"; fora da soma de dias).</summary>
-    bool SuspensionDaysUnknown = false);
+    bool SuspensionDaysUnknown = false,
+    /// <summary>"Aplicado por": quem aprovou a medida no SIGH. Nulo no histórico e nas não aprovadas.</summary>
+    string? AppliedByName = null,
+    DateTimeOffset? ApprovedAt = null,
+    /// <summary>Dias corridos entre o registro e a aprovação.</summary>
+    int? DaysToApproval = null,
+    /// <summary>Vigência: só suspensões têm período (início a fim).</summary>
+    DateOnly? SuspensionStart = null,
+    DateOnly? SuspensionEnd = null);
 
 public sealed record RecordEvidenceDto(
     Guid Id, string Title, string? Description, string EvidenceType, bool HasFile, string? OriginalFileName,
@@ -177,7 +185,9 @@ public sealed record GetRecordsQuery(
     /// <summary>Só as medidas registradas pelo usuário (página inicial do registrante).</summary>
     bool Mine = false,
     /// <summary>Origem: SIGH ou Histórico (vazio = todas).</summary>
-    RecordOrigin? Origin = null);
+    RecordOrigin? Origin = null,
+    /// <summary>Só as medidas deste funcionário (aba "Histórico disciplinar").</summary>
+    Guid? EmployeeId = null);
 
 public sealed record OptionDto(Guid Id, string? Code, string Name);
 
@@ -189,3 +199,65 @@ public sealed record RecordOptionsDto(
     IReadOnlyList<OptionDto> InfractionTypes,
     IReadOnlyList<OptionDto> ManagementUnits,
     IReadOnlyList<OptionDto> Departments);
+
+/// <summary>Quantidade de um grupo (situação ou tipo) com o percentual sobre o total.</summary>
+public sealed record CountItemDto(int Value, string Label, int Count, decimal Percentage);
+
+/// <summary>Resumo das medidas filtradas (página Relatórios).</summary>
+public sealed record RecordStatsDto(
+    int Total,
+    IReadOnlyList<CountItemDto> ByStatus,
+    IReadOnlyList<CountItemDto> ByType,
+    int Employees,
+    int SuspensionDays,
+    /// <summary>Média de dias entre o registro e a aprovação (só medidas aprovadas no SIGH).</summary>
+    decimal? AverageDaysToApproval);
+
+/// <summary>Período do painel.</summary>
+public enum OverviewPeriod
+{
+    Last30Days = 1,
+    Last90Days = 2,
+    Last12Months = 3,
+    CurrentYear = 4
+}
+
+/// <summary>Tipo de atividade recente do painel.</summary>
+public enum RecordActivityKind
+{
+    Registered = 1,
+    Approved = 2,
+    Rejected = 3
+}
+
+/// <summary>Indicador no período escolhido e no período anterior de mesmo tamanho.</summary>
+public sealed record OverviewKpiDto(int Current, int Previous);
+
+public sealed record MonthPointDto(int Year, int Month, int Count);
+
+public sealed record RecordActivityDto(
+    RecordActivityKind Kind,
+    Guid RecordId,
+    string CaseNumber,
+    string EmployeeName,
+    DisciplinaryMeasureType MeasureType,
+    string MeasureTypeLabel,
+    string? ActorName,
+    DateTimeOffset At);
+
+public sealed record RecordOverviewDto(
+    OverviewPeriod Period,
+    DateOnly From,
+    DateOnly To,
+    DateOnly PreviousFrom,
+    DateOnly PreviousTo,
+    /// <summary>Medidas no período (todas, menos as canceladas).</summary>
+    OverviewKpiDto Measures,
+    /// <summary>Aguardando aprovação agora (fotografia, sem comparação).</summary>
+    int PendingApproval,
+    OverviewKpiDto Suspensions,
+    OverviewKpiDto SuspensionDays,
+    /// <summary>Funcionários distintos com medida no período.</summary>
+    OverviewKpiDto Employees,
+    IReadOnlyList<MonthPointDto> ByMonth,
+    IReadOnlyList<RecordActivityDto> RecentActivities);
