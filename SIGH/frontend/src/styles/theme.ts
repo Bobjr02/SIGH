@@ -121,11 +121,12 @@ export const createSighTheme = (mode: ThemeMode): Theme => {
       MuiLink: { styleOverrides: { root: { color: 'var(--sigh-primary-text)', textDecorationColor: 'currentColor' } } },
       MuiAlert: {
         styleOverrides: {
-          root: { borderRadius: radii.md, border: '1px solid var(--sigh-border)' },
-          standardSuccess: { backgroundColor: 'var(--sigh-success-soft)', color: 'var(--sigh-success)' },
-          standardError: { backgroundColor: 'var(--sigh-danger-soft)', color: 'var(--sigh-danger)' },
-          standardWarning: { backgroundColor: 'var(--sigh-warning-soft)', color: 'var(--sigh-warning)' },
-          standardInfo: { backgroundColor: 'var(--sigh-info-soft)', color: 'var(--sigh-info)' },
+          root: ({ ownerState }) => {
+            const tone = { success: 'success', error: 'danger', warning: 'warning', info: 'info' }[ownerState.severity ?? 'info'] ?? 'info';
+            return ownerState.variant === 'standard' || !ownerState.variant
+              ? { borderRadius: radii.md, border: '1px solid var(--sigh-border)', backgroundColor: `var(--sigh-${tone}-soft)`, color: `var(--sigh-${tone})` }
+              : { borderRadius: radii.md };
+          },
         },
       },
       MuiDialog: { styleOverrides: { paper: { borderRadius: radii.lg, border: '1px solid var(--sigh-border)' } } },
