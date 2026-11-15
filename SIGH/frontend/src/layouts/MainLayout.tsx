@@ -73,13 +73,17 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           <Sidebar collapsed={false} onNavigate={() => setDrawerOpen(false)} />
         </Drawer>
       ) : (
-        <aside className="sticky top-0 h-screen shrink-0 border-r border-line transition-[width] duration-200" style={{ width }} data-testid="sidebar">
+        <aside
+          className="sticky shrink-0 border-r border-line transition-[width] duration-200"
+          style={{ width, top: 'var(--sigh-banner-height, 0px)', height: 'calc(100vh - var(--sigh-banner-height, 0px))' }}
+          data-testid="sidebar"
+        >
           <Sidebar collapsed={collapsed} />
         </aside>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-[var(--sigh-topbar-height)] items-center gap-3 border-b border-line bg-sidebar px-3 sm:px-6">
+        <header style={{ top: 'var(--sigh-banner-height, 0px)' }} className="sticky z-30 flex h-[var(--sigh-topbar-height)] items-center gap-3 border-b border-line bg-sidebar px-3 sm:px-6">
           <Tooltip title={mobile ? 'Abrir menu' : collapsed ? 'Expandir menu' : 'Recolher menu'}>
             <IconButton onClick={toggleMenu} aria-label={mobile ? 'Abrir menu' : collapsed ? 'Expandir menu' : 'Recolher menu'} data-testid="menu-toggle">
               <MenuIcon size={22} />

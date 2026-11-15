@@ -54,19 +54,18 @@ test('encarregado (RH – Aprovador): home with the pending queue and the counte
   await expect(page.getByTestId('home-mine')).toHaveCount(0);
 });
 
-test('juridico: home with the general list (every management unit)', async ({ page }) => {
+test('juridico: home is the dashboard; the list shows every management unit', async ({ page }) => {
   await login(page, 'juridico');
-  const all = page.getByTestId('home-all');
-  await expect(all.getByRole('heading', { name: 'Medidas', exact: true })).toBeVisible();
-  const units = new Set(await unitsOf(page, all));
+  await expect(page.getByTestId('dashboard')).toBeVisible();
+  await expect(page.getByTestId('kpi-measures-value')).toBeVisible();
+  await page.goto('/medidas');
+  const units = new Set(await unitsOf(page));
   expect(units.size).toBeGreaterThan(2);
 });
 
 test('gestor.industrial: only USGA131, never USGA137/USGA141', async ({ page }) => {
   await login(page, 'gestor.industrial');
-  const all = page.getByTestId('home-all');
-  await expect(all.getByRole('heading', { name: 'Medidas das suas gerências' })).toBeVisible();
-  expect(new Set(await unitsOf(page, all))).toEqual(new Set(['USGA131']));
+  await expect(page.getByTestId('dashboard')).toBeVisible();
 
   await page.goto('/medidas');
   const units = await unitsOf(page);
@@ -82,9 +81,9 @@ test('gestor.industrial: only USGA131, never USGA137/USGA141', async ({ page }) 
 
 test('gestor.agricola: USGA137 and USGA141 only', async ({ page }) => {
   await login(page, 'gestor.agricola');
-  const all = page.getByTestId('home-all');
-  await expect(all.getByRole('heading', { name: 'Medidas das suas gerências' })).toBeVisible();
-  const units = await unitsOf(page, all);
+  await expect(page.getByTestId('dashboard')).toBeVisible();
+  await page.goto('/medidas');
+  const units = await unitsOf(page);
   expect(units.every((u) => u === 'USGA137' || u === 'USGA141')).toBeTruthy();
 });
 
@@ -102,14 +101,15 @@ test('demo history: the manager sees the imported history of his unit and the de
   await page.getByRole('option', { name: 'Histórico' }).click();
   const units = await unitsOf(page);
   expect(units.every((u) => u === 'USGA131')).toBeTruthy();
-  await expect(page.getByTestId('history-seal').first()).toContainText('Histórico importado — lote de');
+  await expect(page.getByTestId('history-seal').first()).toContainText('Lote de');
 
   await page.getByRole('button', { name: 'Sair' }).click();
   await login(page, 'gestor.agricola');
   await page.goto('/employees');
   await page.getByLabel('Nome ou matrícula').fill('50090007');
   await page.getByRole('button', { name: 'Filtrar' }).click();
-  await page.getByTestId('employee-row-50090007').click();
+  await page.getByTestId('employee-row-50090007').getByRole('link', { name: 'Ver funcionário' }).click();
+  await page.getByRole('tab', { name: 'Apoio à decisão' }).click();
   const origins = page.getByRole('region', { name: 'Apoio à decisão' }).getByRole('list', { name: 'Medidas por origem' });
   await expect(origins).toContainText('1 advertências — 1 histórica, 0 no SIGH');
   await expect(origins).toContainText('2 suspensões — 2 históricas, 0 no SIGH');

@@ -13,7 +13,9 @@ const actionTone = (action: string): Tone => {
 
 /** Um registro da trilha, legível; os IDs técnicos ficam num detalhe expansível. */
 export const AuditEntryCard: React.FC<{ log: AuditLogDto }> = ({ log }) => {
-  const changes = describeChanges(log);
+  const all = describeChanges(log);
+  const changes = all.filter((c) => !c.technical);
+  const technical = all.filter((c) => c.technical);
   return (
     <article className="rounded-lg border border-line bg-surface p-4 shadow-card" data-testid="audit-entry">
       <div className="flex flex-wrap items-center gap-2">
@@ -58,6 +60,12 @@ export const AuditEntryCard: React.FC<{ log: AuditLogDto }> = ({ log }) => {
             <dt className="inline font-semibold">Correlação: </dt>
             <dd className="inline break-all">{log.correlationId ?? '—'}</dd>
           </div>
+          {technical.map((c) => (
+            <div key={c.key}>
+              <dt className="inline font-semibold">{c.field}: </dt>
+              <dd className="inline break-all">{c.before !== undefined && c.after !== undefined ? `${c.before} → ${c.after}` : (c.after ?? c.before)}</dd>
+            </div>
+          ))}
         </dl>
       </details>
     </article>

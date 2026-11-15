@@ -171,6 +171,6 @@ test('records: register, reject, correct, approve, manager scope, admin cannot a
   await expect(admin.getByText('Situação do usuário atualizada.')).toBeVisible();
   // TTL do cache do SecurityStamp no e2e: Auth__SecurityStampCacheSeconds=2 (playwright.config).
   await gestor131.waitForTimeout(3_000);
-  await gestor131.getByRole('navigation', { name: 'Menu principal' }).getByRole('button', { name: 'Funcionários' }).click();
+  await gestor131.getByRole('navigation', { name: 'Menu principal' }).getByRole('link', { name: 'Funcionários' }).click();
   await expect(gestor131).toHaveURL(/\/login$/);
 });

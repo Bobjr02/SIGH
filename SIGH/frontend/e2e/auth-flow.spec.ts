@@ -46,7 +46,7 @@ test('admin: login, mandatory password change, cases list, reload keeps the sess
 
   // 3. Lista de medidas (a chamada à API tem que funcionar com o token novo)
   const listResponse = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/disciplinary-records');
-  await page.getByRole('navigation', { name: 'Menu principal' }).getByRole('button', { name: 'Medidas', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Menu principal' }).getByRole('link', { name: 'Medidas', exact: true }).click();
   await expect(page).toHaveURL(/\/medidas$/);
   expect((await listResponse).status()).toBe(200);
   await expect(page.getByRole('heading', { name: /403/ })).toHaveCount(0);

@@ -7,6 +7,7 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { AppRoutes } from '../routes';
 import type { CurrentUser } from '../auth/authApi';
 import { PERMISSIONS } from '../auth/permissions';
+import { ThemeContextProvider } from '../contexts/ThemeContext';
 
 export const API = '/api/v1';
 
@@ -67,12 +68,14 @@ export const renderApp = (initialPath = '/', children?: React.ReactNode) => {
   const utils = render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[initialPath]}>
-          <AuthProvider>
-            {children ?? <AppRoutes />}
-            <LocationProbe visited={visited} />
-          </AuthProvider>
-        </MemoryRouter>
+        <ThemeContextProvider>
+          <MemoryRouter initialEntries={[initialPath]}>
+            <AuthProvider>
+              {children ?? <AppRoutes />}
+              <LocationProbe visited={visited} />
+            </AuthProvider>
+          </MemoryRouter>
+        </ThemeContextProvider>
       </QueryClientProvider>
     </StrictMode>,
   );

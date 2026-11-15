@@ -21,7 +21,7 @@ import {
   Tabs,
   Typography,
 } from '@mui/material';
-import { Archive, FileUp, Lock } from 'lucide-react';
+import { Archive, FileUp, Lock, History } from 'lucide-react';
 import { formatBusinessDate } from '../../records/api/recordsApi';
 import {
   historyErrorMessage,
@@ -32,6 +32,7 @@ import {
   type HistoryRow,
 } from '../api/historyImportApi';
 import { formatDateTime } from '../../../utils/formatters';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 const formatInstant = (value?: string | null) => formatDateTime(value);
 
@@ -246,9 +247,7 @@ export const HistoryImportPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-        Importar histórico disciplinar
-      </Typography>
+      <PageHeader icon={<History size={22} />} title="Importar histórico disciplinar" />
       <Typography color="text.secondary">
         Planilha de penalidades anterior ao SIGH. Pode ser importada mais de uma vez até o go-live; depois, encerre a importação.
         Importe antes a base de funcionários do SAP: o histórico só se liga a funcionários que já existem.

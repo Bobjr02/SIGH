@@ -201,8 +201,26 @@ const parse = (json?: string | null): Record<string, unknown> => {
   }
 };
 
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isTechnical = (value: unknown) => typeof value === 'string' && GUID.test(value);
+
+/** Técnico: pelo menos um lado é GUID e o outro é GUID, vazio ou ausente. */
+const isTechnicalChange = (before: Record<string, unknown>, after: Record<string, unknown>, field: string) => {
+  const values = [before[field], after[field]].filter((v) => v !== undefined && v !== null);
+  return values.length > 0 && values.every(isTechnical);
+};
+
+export interface ChangeLine {
+  key: string;
+  field: string;
+  before?: string;
+  after?: string;
+  /** Identificador técnico (GUID): vai para o detalhe expansível, não para o corpo do registro. */
+  technical: boolean;
+}
+
 /** Linhas "campo: antigo → novo" (ou só o valor, em criações e eventos), já em português. */
-export const describeChanges = (log: AuditLogDto): { key: string; field: string; before?: string; after?: string }[] => {
+export const describeChanges = (log: AuditLogDto): ChangeLine[] => {
   const before = parse(log.oldValues);
   const after = parse(log.newValues);
   const fields = Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
@@ -211,6 +229,7 @@ export const describeChanges = (log: AuditLogDto): { key: string; field: string;
     field: fieldLabel(field),
     before: field in before ? formatAuditValue(before[field], field, log.entity) : undefined,
     after: field in after ? formatAuditValue(after[field], field, log.entity) : undefined,
+    technical: isTechnicalChange(before, after, field),
   }));
 };
 

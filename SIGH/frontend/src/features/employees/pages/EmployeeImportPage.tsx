@@ -22,6 +22,7 @@ import {
 import { FileSpreadsheet } from 'lucide-react';
 import { employeeKeys, employeesApi, type ImportChange, type ImportIssue, type ImportPreview, type ImportResult } from '../api/employeesApi';
 import { formatDateTime, formatPercent } from '../../../utils/formatters';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 const MAX_BYTES = 25 * 1024 * 1024;
 
@@ -168,9 +169,7 @@ export const EmployeeImportPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <FileSpreadsheet size={28} /> Importar funcionários (SAP)
-      </Typography>
+      <PageHeader icon={<FileSpreadsheet size={22} />} title="Importar funcionários (SAP)" />
 
       <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         <Typography variant="body2" color="text.secondary">

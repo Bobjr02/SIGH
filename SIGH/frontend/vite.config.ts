@@ -6,7 +6,8 @@ import pkg from './package.json' with { type: 'json' };
 
 // Em desenvolvimento o front chama "/api" na própria origem e o Vite repassa para a API .NET.
 // Assim o cookie HttpOnly do refresh token (Path=/api/v1/auth) é de mesma origem e não há CORS.
-const API_TARGET = 'http://localhost:5000';
+// SIGH_API_TARGET=http://localhost:8080 usa a stack local em contêineres (o nginx repassa /api para a API).
+const API_TARGET = process.env.SIGH_API_TARGET ?? 'http://localhost:5000';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

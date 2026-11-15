@@ -5,6 +5,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { PERMISSIONS } from '../../../auth/permissions';
 import { recordErrorMessage } from '../../records/api/recordsApi';
 import { adminApi, adminKeys, type ManagementUnit } from '../api/adminApi';
+import { Building2 } from 'lucide-react';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 const UnitRow: React.FC<{ unit: ManagementUnit; canEdit: boolean }> = ({ unit, canEdit }) => {
   const queryClient = useQueryClient();
@@ -47,9 +49,7 @@ export const ManagementUnitsPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-        Gerências
-      </Typography>
+      <PageHeader icon={<Building2 size={22} />} title="Gerências" subtitle="As 9 gerências da usina e o nome exibido de cada uma" />
       {units.isError && <Alert severity="error">{recordErrorMessage(units.error, 'Erro ao carregar as gerências.')}</Alert>}
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
         <Table size="small" aria-label="Gerências">

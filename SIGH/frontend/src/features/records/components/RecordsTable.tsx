@@ -8,7 +8,7 @@ import { InitialsAvatar } from '../../../components/ui/InitialsAvatar';
 import { RecordStatusChip } from '../../../components/ui/StatusChip';
 import { ActionIcon } from '../../../components/ui/ActionIcon';
 import { label } from '../../../i18n/labels';
-import { formatDays } from '../../../utils/formatters';
+import { formatDate, formatDays } from '../../../utils/formatters';
 
 interface RecordsTableProps {
   data?: PagedResult<RecordSummary>;
@@ -100,8 +100,8 @@ export const RecordsTable: React.FC<RecordsTableProps> = ({
         <span className="flex flex-col items-start gap-1">
           <RecordStatusChip status={r.status} />
           {r.origin === RecordOrigin.Historical && (
-            <span className="text-xs text-muted" data-testid="history-seal">
-              {historySealOf(r.importedAt)}
+            <span className="text-xs text-muted" data-testid="history-seal" title={historySealOf(r.importedAt)}>
+              {r.importedAt ? `Lote de ${formatDate(r.importedAt)}` : 'Planilha de penalidades'}
             </span>
           )}
         </span>

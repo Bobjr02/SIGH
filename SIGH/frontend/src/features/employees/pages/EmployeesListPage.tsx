@@ -138,7 +138,7 @@ export const EmployeesListPage: React.FC = () => {
               </span>
             ),
           },
-          { key: 'cpf', header: 'CPF', render: (e) => <span className="font-mono text-xs">{maskCpf(e.cpfMasked)}</span>, hideOnMobile: true },
+          { key: 'cpf', header: 'CPF', render: (e) => <span className="whitespace-nowrap font-mono text-xs">{maskCpf(e.cpfMasked)}</span>, hideOnMobile: true },
           { key: 'status', header: 'Situação', render: (e) => <EmployeeStatusChip status={e.status} /> },
           { key: 'group', header: 'Grupo', render: (e) => (e.group ? label('EmployeeGroup', e.group) : '—'), hideOnMobile: true },
           { key: 'unit', header: 'Gerência', render: (e) => e.managementUnitName ?? '—', hideOnMobile: true },

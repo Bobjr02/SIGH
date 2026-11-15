@@ -182,7 +182,7 @@ describe('histórico nas telas de consulta', () => {
       </MemoryRouter>,
     );
     expect(screen.getByTestId('record-status')).toHaveTextContent('Histórico importado');
-    expect(screen.getByTestId('history-seal')).toHaveTextContent('Histórico importado — lote de 14/11/2026');
+    expect(screen.getByTestId('history-seal')).toHaveTextContent('Lote de 14/11/2026');
     expect(screen.getByText(/dias: não informado/)).toBeInTheDocument();
   });
 });
