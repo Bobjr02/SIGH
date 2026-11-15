@@ -114,6 +114,9 @@ public class ChangePasswordService : IChangePasswordService
         // Revoga todos os refresh tokens anteriores: sessões abertas com a senha antiga
         // (inclusive as emitidas com a claim pwd_change_required) não podem mais ser renovadas.
         var activeRefreshTokens = await _userRepository.GetActiveRefreshTokensByUserIdAsync(user.Id, cancellationToken);
+        // "Lembrar-me": o token novo herda a escolha do token desta sessão (sem cookie: persistente, como antes).
+        var currentHash = string.IsNullOrWhiteSpace(request.CurrentRefreshToken) ? null : _tokenHasher.HashToken(request.CurrentRefreshToken);
+        var isPersistent = activeRefreshTokens.FirstOrDefault(t => t.TokenHash == currentHash)?.IsPersistent ?? true;
         foreach (var activeToken in activeRefreshTokens)
         {
             activeToken.RevokedAt = now;
@@ -136,7 +139,8 @@ public class ChangePasswordService : IChangePasswordService
             TokenHash = _tokenHasher.HashToken(rawRefreshToken),
             ExpiresAt = refreshTokenExpiresAt,
             IpAddress = request.IpAddress,
-            UserAgent = request.UserAgent
+            UserAgent = request.UserAgent,
+            IsPersistent = isPersistent
         }, cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -150,6 +154,7 @@ public class ChangePasswordService : IChangePasswordService
             accessToken,
             rawRefreshToken,
             _jwtOptions.ExpiryInMinutes > 0 ? _jwtOptions.ExpiryInMinutes : 60,
-            refreshTokenExpiresAt);
+            refreshTokenExpiresAt,
+            isPersistent);
     }
 }

@@ -7,7 +7,9 @@ public record LoginRequest(
     string? Browser = null,
     string? OperatingSystem = null,
     string? IpAddress = null,
-    string? UserAgent = null
+    string? UserAgent = null,
+    /// <summary>"Lembrar-me". Nulo (clientes antigos) = true, o comportamento de antes.</summary>
+    bool? RememberMe = null
 );
 
 public record UserDto(
@@ -30,5 +32,7 @@ public record LoginResponse(
     int ExpiresInMinutes,
     bool MustChangePassword,
     UserDto User,
-    DateTimeOffset RefreshTokenExpiresAt
+    DateTimeOffset RefreshTokenExpiresAt,
+    /// <summary>Falso: a camada HTTP grava o cookie do refresh token como cookie de sessão.</summary>
+    bool IsPersistent = true
 );

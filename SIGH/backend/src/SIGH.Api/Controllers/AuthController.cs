@@ -61,7 +61,7 @@ public class AuthController : BaseController
         };
 
         var result = await _loginService.LoginAsync(updatedRequest, cancellationToken);
-        RefreshTokenCookie.Append(Response, result.RefreshToken, result.RefreshTokenExpiresAt);
+        RefreshTokenCookie.Append(Response, result.RefreshToken, result.RefreshTokenExpiresAt, result.IsPersistent);
         return OkResult(LoginHttpResponse.From(result), "Autenticação realizada com sucesso.");
     }
 
@@ -117,7 +117,7 @@ public class AuthController : BaseController
             throw;
         }
 
-        RefreshTokenCookie.Append(Response, result.RefreshToken, result.RefreshTokenExpiresAt);
+        RefreshTokenCookie.Append(Response, result.RefreshToken, result.RefreshTokenExpiresAt, result.IsPersistent);
         return OkResult(RefreshHttpResponse.From(result), "Token renovado com sucesso.");
     }
 
@@ -172,9 +172,9 @@ public class AuthController : BaseController
     {
         // Devolve um novo access token sem a claim pwd_change_required e grava o novo refresh token
         // no cookie; os refresh tokens anteriores são revogados.
-        var updatedRequest = request.ToApplicationRequest(GetUserId(), GetClientIpAddress(), Request.Headers.UserAgent.ToString());
+        var updatedRequest = request.ToApplicationRequest(GetUserId(), GetClientIpAddress(), Request.Headers.UserAgent.ToString(), RefreshTokenCookie.Read(Request));
         var result = await _changePasswordService.ChangePasswordAsync(updatedRequest, cancellationToken);
-        RefreshTokenCookie.Append(Response, result.RefreshToken, result.RefreshTokenExpiresAt);
+        RefreshTokenCookie.Append(Response, result.RefreshToken, result.RefreshTokenExpiresAt, result.IsPersistent);
         return OkResult(ChangePasswordHttpResponse.From(result), "Senha alterada com sucesso.");
     }
 

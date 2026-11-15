@@ -1572,6 +1572,9 @@ namespace SIGH.Persistence.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("IsPersistent")
+                        .HasColumnType("bit");
+
                     b.Property<string>("ReasonRevoked")
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
