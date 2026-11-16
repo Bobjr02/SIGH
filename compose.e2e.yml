@@ -1,0 +1,37 @@
+# Sobreposição do compose.app.yml para a suíte e2e (SIGH/frontend/e2e), localmente e no CI:
+#   scripts/e2e-stack.sh      (gera os segredos, sobe, roda o Playwright e desmonta tudo)
+#
+# Diferenças em relação à stack de demonstração:
+#   - projeto próprio (sigh-e2e), imagens próprias (sigh-*:e2e) e portas próprias: convive com a sigh-local;
+#   - SEM volumes: o banco fica na camada do container e as evidências num tmpfs; tudo some no "down";
+#   - banco SIGH_E2E_<timestamp> SEM dados de demonstração: os specs criam os próprios dados sintéticos;
+#   - limites e tempos de cache curtos para a suíte não esperar (mesmos valores do playwright.config.ts).
+# Requer Docker Compose >= 2.24 (tag !reset).
+
+services:
+  sqlserver:
+    restart: "no"
+    # Sem volume: os dados ficam na camada do container (o SQL Server não aceita tmpfs).
+    volumes: !reset []
+
+  mailpit:
+    restart: "no"
+
+  api:
+    image: sigh-api:e2e
+    restart: "no"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=${SIGH_E2E_DB_NAME:?Defina SIGH_E2E_DB_NAME};User Id=sa;Password=${SIGH_SA_PASSWORD};TrustServerCertificate=True;"
+      Seed__DemoData: "false"
+      RateLimits__Login__PermitLimit: "100"
+      # Perda de acesso: cache do SecurityStamp em 2 s (records.spec).
+      Auth__SecurityStampCacheSeconds: "2"
+      # E-mails (troca de senha, convites) saem em ~3 s, como em Development.
+      Email__Outbox__PollIntervalSeconds: "3"
+    volumes: !reset []
+    tmpfs:
+      - /var/lib/sigh/evidences:uid=1654,gid=1654,mode=0750
+
+  web:
+    image: sigh-web:e2e
+    restart: "no"

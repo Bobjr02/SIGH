@@ -55,6 +55,13 @@ if ! "${COMPOSE[@]}" up -d --build --wait --wait-timeout 1200; then
 fi
 elapsed=$(( $(date +%s) - start ))
 
+# As imagens já estão prontas: o cache de build (centenas de MB a alguns GB) só ocupa disco.
+# Não toca em volumes nem nas imagens em uso. Próximos builds ficam um pouco mais lentos.
+if [ "${SIGH_KEEP_BUILD_CACHE:-}" != "1" ]; then
+  docker builder prune -af >/dev/null 2>&1 || true
+  docker image prune -f >/dev/null 2>&1 || true
+fi
+
 demo_status="$("${COMPOSE[@]}" logs api 2>/dev/null | grep -E 'Demo: (dados de demonstração prontos|falha)' | tail -1 || true)"
 
 web_port="$(value SIGH_WEB_PORT)"; web_port="${web_port:-8080}"

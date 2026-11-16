@@ -133,7 +133,10 @@ test('SAP import (initial + update), employee with decision support, and a JPG p
   await expect(box.getByText('3 dia(s) no total')).toBeVisible();
   await expect(box.getByRole('list', { name: 'Medidas por motivo' })).toContainText('Falta não justificada (E2E): 1');
   await page.getByRole('tab', { name: 'Histórico disciplinar' }).click();
-  await expect(page.getByTestId('timeline-item').first()).toBeVisible();
+  // Desde o PR #10 o histórico é uma tabela (antes, uma linha do tempo com data-testid="timeline-item").
+  await expect(
+    page.getByRole('table', { name: 'Histórico disciplinar' }).getByRole('row').filter({ hasText: 'Falta não justificada (E2E)' }),
+  ).toContainText('Aprovada');
 
   // 4. Foto JPG do documento assinado anexada à medida aprovada (pelo auxiliar, que pode anexar).
   await logoutUi(page);

@@ -66,14 +66,19 @@ test('records: register, reject, correct, approve, manager scope, admin cannot a
   await createByAdmin(admin, request, people.auxiliar);
   await createByAdmin(admin, request, people.encarregado);
   const gestor131Id = await createByAdmin(admin, request, people.gestor131);
+  // Desde o PR #10 os detalhes do usuário são divididos em abas; as gerências ficam em "Perfis e gerências".
   await admin.goto(`/admin/usuarios/${gestor131Id}`);
-  await expect(admin.getByTestId('unit-row')).toContainText('USGA131');
+  await admin.getByRole('tab', { name: 'Perfis e gerências' }).click();
+  await expect(admin.getByRole('region', { name: 'Gerências' }).getByRole('row', { name: /USGA131/ })).toBeVisible();
 
   // b. O auxiliar registra uma advertência para o Davi (USGA131).
   const auxiliar = await newPage(browser);
   await loginUi(auxiliar, people.auxiliar.email, PASSWORD);
   await auxiliar.getByRole('button', { name: 'Registrar medida' }).first().click();
-  await auxiliar.getByRole('combobox', { name: /funcionário/i }).fill('60090004');
+  // Desde o PR #10 o topo tem a busca global "Buscar funcionário por nome ou matrícula": o campo do
+  // funcionário é procurado dentro do formulário, com o nome exato.
+  const form = auxiliar.getByRole('form', { name: 'Registrar medida' });
+  await form.getByRole('combobox', { name: 'Funcionário', exact: true }).fill('60090004');
   await auxiliar.getByRole('option', { name: /60090004/ }).click();
   await expect(auxiliar.getByRole('region', { name: 'Apoio à decisão' })).toBeVisible();
   await choose(auxiliar, /motivo/i, 'Atraso reiterado (E2E)');
@@ -81,7 +86,7 @@ test('records: register, reject, correct, approve, manager scope, admin cannot a
   await auxiliar.getByLabel('Ocorrência 1').fill(isoDay(-3));
   await auxiliar.getByLabel(/data da medida/i).fill(isoDay(0));
   await auxiliar.getByLabel(/descrição/i).fill('Chegou atrasado três vezes na semana.');
-  await auxiliar.getByRole('form', { name: 'Registrar medida' }).getByRole('button', { name: 'Registrar medida' }).click();
+  await form.getByRole('button', { name: 'Registrar medida' }).click();
   await expect(auxiliar.getByText('Medida registrada. Aguardando aprovação.')).toBeVisible();
   await expect(auxiliar.getByTestId('record-status')).toHaveText('Aguardando aprovação');
   const recordId = auxiliar.url().split('/').pop()!;
@@ -91,8 +96,9 @@ test('records: register, reject, correct, approve, manager scope, admin cannot a
   await loginUi(encarregado, people.encarregado.email, PASSWORD);
   // O contador do menu conta as pendências que ele pode aprovar (outros specs podem ter deixado alguma).
   await expect(encarregado.getByTestId('pending-approvals-count')).toContainText(/[1-9]/);
-  await encarregado.getByRole('button', { name: /aprovações pendentes/i }).click();
-  await encarregado.getByTestId('record-row').filter({ hasText: '60090004' }).getByRole('link').click();
+  // Desde o PR #10 as aprovações são um item do menu lateral ("Aprovações", com o contador), não um botão no topo.
+  await encarregado.getByRole('navigation', { name: 'Menu principal' }).getByRole('link', { name: /^Aprovações/ }).click();
+  await encarregado.getByTestId('record-row').filter({ hasText: '60090004' }).getByRole('link', { name: 'Ver medida' }).click();
   await expect(encarregado).toHaveURL(new RegExp(`/medidas/${recordId}$`));
   await encarregado.getByRole('button', { name: 'Rejeitar' }).click();
   await encarregado.getByLabel('Motivo da rejeição').fill('A ocorrência foi na sexta-feira, não na quinta.');
@@ -131,7 +137,8 @@ test('records: register, reject, correct, approve, manager scope, admin cannot a
   await gestor132.goto('/medidas');
   await expect(gestor132.getByTestId('records-empty')).toBeVisible();
   await gestor132.goto(`/medidas/${recordId}`);
-  await expect(gestor132.getByTestId('record-not-found')).toHaveText('Medida não encontrada.');
+  // Desde o PR #10 o bloco "não encontrada" traz também a trilha e o "Voltar": confere a mensagem em si.
+  await expect(gestor132.getByTestId('record-not-found').getByText('Medida não encontrada.', { exact: true })).toBeVisible();
   expect((await request.get(`/api/v1/disciplinary-records/${recordId}`, { headers: authed(gestor132User.token) })).status()).toBe(404);
 
   // e. O administrador não vê o botão de aprovar, e a API recusa se ele tentar.

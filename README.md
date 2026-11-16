@@ -426,8 +426,16 @@ npm ci
 npm run dev        # http://localhost:3000, com proxy de /api para a API em http://localhost:5000
 ```
 Outros comandos: `npm run typecheck`, `npm test` (Vitest + Testing Library + msw), `npm run build`,
-`npm run check:bundle` (falha se o chunk de entrada passar de 500 kB) e `npm run e2e` (Playwright, local; veja
+`npm run check:bundle` (falha se o chunk de entrada passar de 500 kB) e `npm run e2e` (Playwright; veja
 `SIGH/frontend/e2e/README.md`).
+
+**E2E contra a stack em contêineres** (o mesmo que o CI roda no workflow `SIGH E2E` a cada PR para a `main`):
+```bash
+scripts/e2e-stack.sh                       # sobe compose.app.yml + compose.e2e.yml, roda a suíte e desmonta tudo
+scripts/e2e-stack.sh e2e/records.spec.ts   # só um spec (as dependências entre projetos do Playwright rodam antes)
+```
+Projeto `sigh-e2e`, portas 18080/18025, segredos aleatórios só na memória do script e nenhum volume: não interfere
+na stack de demonstração (`sigh-local`) nem no `.env.local`.
 
 `SIGH_API_TARGET=http://localhost:8080 npm run dev` usa a stack em contêineres como API (o nginx repassa `/api`).
 
@@ -453,6 +461,26 @@ O horizontal e o completo trocam entre as versões para fundo escuro e claro con
 O access token fica só em memória; ao recarregar a página a sessão é restaurada com `POST /auth/refresh` (cookie)
 e `GET /auth/me`. As permissões do front (`src/auth/permissions.ts`) espelham `PermissionCodes.All` via
 `src/auth/permission-codes.json`; um teste no backend e outro no front falham se as listas divergirem.
+
+### Pouco espaço no Codespace
+O Codespace tem 32 GB e as imagens do SQL Server e do SDK do .NET, o cache de build do Docker e os caches de pacotes
+enchem o disco rápido. Para ver e liberar espaço:
+```bash
+df -h /workspaces
+scripts/limpar-espaco.sh
+```
+O script mostra o espaço livre antes e depois e apaga **só o que se recria sozinho**: cache de build do Docker,
+imagens órfãs, containers parados, bancos `SIGH_E2E_*` que sobraram, caches do npm, do NuGet e do Playwright, e as
+pastas `bin/`/`obj/`. **Nunca** apaga volumes Docker (o banco de dev e o da demonstração continuam lá), o `.env`/
+`.env.local` nem arquivos versionados. Pode rodar quantas vezes quiser.
+
+- O `.devcontainer` já roda `scripts/limpar-espaco.sh --silencioso` a cada início do Codespace (`postStartCommand`).
+- `scripts/local-up` apaga o cache de build depois de compilar as imagens (`SIGH_KEEP_BUILD_CACHE=1` mantém).
+- `scripts/e2e-stack.sh` remove no final os containers e as imagens `sigh-*:e2e` que criou.
+- Depois da limpeza, se for usar: `cd SIGH/backend && dotnet tool restore` (dotnet-ef) e
+  `cd SIGH/frontend && npx playwright install chromium` (e2e).
+- Ainda sem espaço? `docker system df -v` mostra o que ocupa mais. Volumes que você não usa mais só saem com
+  `docker volume rm <nome>`, de propósito, um por um.
 
 ---
 

@@ -63,7 +63,10 @@ test('import employees and history, decision support of 50090007 with history, t
   await expect(origins).toContainText('1 advertências — 1 histórica, 0 no SIGH');
   await expect(origins).toContainText('2 suspensões — 2 históricas, 0 no SIGH');
   await page.getByRole('tab', { name: 'Histórico disciplinar' }).click();
-  await expect(page.getByTestId('history-seal').filter({ hasText: 'Histórico importado — lote de' }).first()).toBeVisible();
+  // Desde o PR #10 o histórico é uma tabela: a linha importada mostra "Histórico importado" e o selo "Lote de dd/mm/aaaa".
+  await expect(
+    page.getByRole('table', { name: 'Histórico disciplinar' }).getByRole('row', { name: /Histórico importado.*Lote de \d{2}\/\d{2}\/\d{4}/ }).first(),
+  ).toBeVisible();
 
   // 4. Nova medida para ela no fluxo do sprint 6: o auxiliar registra, o encarregado aprova.
   const registrar = await createUserApi(request, admin, { fullName: 'Auxiliar Histórico E2E', email: `aux.hist.${stamp}@sigh.local`, cpf: syntheticCpf('404000001'), roles: ['HrRegistrar'] });
@@ -72,7 +75,9 @@ test('import employees and history, decision support of 50090007 with history, t
   await logoutUi(page);
   await loginUi(page, registrar.email, registrar.password);
   await page.goto('/medidas/registrar');
-  await page.getByRole('combobox', { name: /funcionário/i }).fill('50090007');
+  // O campo do formulário, não a busca global do topo (PR #10).
+  const form = page.getByRole('form', { name: 'Registrar medida' });
+  await form.getByRole('combobox', { name: 'Funcionário', exact: true }).fill('50090007');
   await page.getByRole('option', { name: /50090007/ }).click();
   // O quadro do registro já mostra o histórico.
   await expect(page.getByRole('region', { name: 'Apoio à decisão' }).getByRole('list', { name: 'Medidas por origem' })).toContainText('histórica');
@@ -83,7 +88,7 @@ test('import employees and history, decision support of 50090007 with history, t
   await page.getByLabel('Ocorrência 1').fill(isoDay(-2));
   await page.getByLabel(/data da medida/i).fill(isoDay(0));
   await page.getByLabel(/descrição/i).fill('Faltou de novo, sem justificativa.');
-  await page.getByRole('form', { name: 'Registrar medida' }).getByRole('button', { name: 'Registrar medida' }).click();
+  await form.getByRole('button', { name: 'Registrar medida' }).click();
   await expect(page.getByText('Medida registrada. Aguardando aprovação.')).toBeVisible();
   const recordId = page.url().split('/').pop()!;
   const approved = await request.post(`/api/v1/disciplinary-records/${recordId}/approve`, { headers: authed(approver.token) });
