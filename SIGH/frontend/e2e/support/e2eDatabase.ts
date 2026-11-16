@@ -49,11 +49,23 @@ export const dropE2EDatabase = (database: string, connectionString = baseConnect
     `IF DB_ID(N'${database}') IS NOT NULL BEGIN ` +
     `ALTER DATABASE [${database}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [${database}]; END`;
   // Senha via variável de ambiente do processo (SQLCMDPASSWORD), não na linha de comando.
-  execFileSync('docker', ['exec', '-e', 'SQLCMDPASSWORD', container, '/opt/mssql-tools18/bin/sqlcmd', '-S', 'localhost', '-U', user, '-C', '-b', '-Q', sql], {
-    env: { ...process.env, SQLCMDPASSWORD: password },
-    stdio: 'pipe',
-  });
-  return true;
+  // Até 3 tentativas: a API ainda de pé pode reabrir uma conexão no meio do SINGLE_USER e derrubar o DROP.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      execFileSync('docker', ['exec', '-e', 'SQLCMDPASSWORD', container, '/opt/mssql-tools18/bin/sqlcmd', '-S', 'localhost', '-U', user, '-C', '-b', '-Q', sql], {
+        env: { ...process.env, SQLCMDPASSWORD: password },
+        stdio: 'pipe',
+      });
+      return true;
+    } catch (error) {
+      if (attempt >= 3) {
+        // O sqlcmd escreve os erros no stdout.
+        const output = (error as { stdout?: Buffer }).stdout?.toString().trim();
+        throw new Error(`DROP de ${database} falhou após ${attempt} tentativas${output ? `: ${output}` : ''}`);
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
+    }
+  }
 };
 
 export const listE2EDatabases = (connectionString = baseConnectionString()): string[] => {

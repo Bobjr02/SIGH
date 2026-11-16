@@ -93,6 +93,13 @@ if ($LASTEXITCODE -ne 0) {
 $watch.Stop()
 $elapsed = [int]$watch.Elapsed.TotalSeconds
 
+# As imagens ja estao prontas: o cache de build (centenas de MB a alguns GB) so ocupa disco.
+# Nao toca em volumes nem nas imagens em uso. Proximos builds ficam um pouco mais lentos.
+if ($env:SIGH_KEEP_BUILD_CACHE -ne '1') {
+  & docker builder prune -af *> $null
+  & docker image prune -f *> $null
+}
+
 $demoStatus = (& docker compose -p $Project -f compose.app.yml --env-file $envFile logs api 2>$null) |
   Select-String -Pattern 'Demo: (dados de demonstra|falha)' | Select-Object -Last 1
 

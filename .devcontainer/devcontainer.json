@@ -20,6 +20,7 @@
     "PATH": "${containerEnv:PATH}:/home/vscode/.local/bin"
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash scripts/limpar-espaco.sh --silencioso || true",
   "customizations": {
     "vscode": {
       "extensions": ["ms-dotnettools.csdevkit", "dbaeumer.vscode-eslint", "ms-playwright.playwright"]

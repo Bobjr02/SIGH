@@ -109,7 +109,8 @@ test('SAP import (initial + update), employee with decision support, and a JPG p
 
   // Eva: zero à esquerda do CPF preservado; lista mostra CPF mascarado.
   await page.goto('/employees');
-  await page.getByLabel('Nome ou matrícula').fill('60090005');
+  // Nome exato: a busca global do topo (PR #10), "Buscar funcionário por nome ou matrícula", também casaria.
+  await page.getByRole('textbox', { name: 'Nome ou matrícula', exact: true }).fill('60090005');
   await page.getByRole('button', { name: 'Filtrar' }).click();
   const evaRow = page.getByTestId('employee-row-60090005');
   await expect(evaRow).toContainText(`***.${cpfs.eva.slice(3, 6)}.${cpfs.eva.slice(6, 9)}-**`);
@@ -133,7 +134,10 @@ test('SAP import (initial + update), employee with decision support, and a JPG p
   await expect(box.getByText('3 dia(s) no total')).toBeVisible();
   await expect(box.getByRole('list', { name: 'Medidas por motivo' })).toContainText('Falta não justificada (E2E): 1');
   await page.getByRole('tab', { name: 'Histórico disciplinar' }).click();
-  await expect(page.getByTestId('timeline-item').first()).toBeVisible();
+  // Desde o PR #10 o histórico é uma tabela (antes, uma linha do tempo com data-testid="timeline-item").
+  await expect(
+    page.getByRole('table', { name: 'Histórico disciplinar' }).getByRole('row').filter({ hasText: 'Falta não justificada (E2E)' }),
+  ).toContainText('Aprovada');
 
   // 4. Foto JPG do documento assinado anexada à medida aprovada (pelo auxiliar, que pode anexar).
   await logoutUi(page);
