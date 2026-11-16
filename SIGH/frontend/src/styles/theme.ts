@@ -1,10 +1,15 @@
 import { createTheme, type Theme } from '@mui/material/styles';
+import { ptBR } from '@mui/material/locale';
 import { colors, radii, typography, type ThemeMode } from './tokens';
 
 /**
  * Tema do MUI a partir dos tokens (styles/tokens.ts). A paleta recebe os valores (o MUI calcula
  * contrastes e hovers com eles) e os componentes usam var(--sigh-*), as mesmas variáveis do Tailwind:
  * todas as telas, MUI ou Tailwind, parecem o mesmo sistema.
+ *
+ * O segundo argumento é a localização pt-BR do MUI: textos padrão dos componentes (botão "Fechar" do
+ * Alert, "Limpar"/"Abrir"/"Fechar"/"Sem opções" do Autocomplete, "Linhas por página" e "1–10 de 20" da
+ * paginação, aria-labels de "próxima/anterior página"...). Nenhum outro pacote do MUI é usado.
  */
 export const createSighTheme = (mode: ThemeMode): Theme => {
   const c = colors[mode];
@@ -144,7 +149,7 @@ export const createSighTheme = (mode: ThemeMode): Theme => {
       MuiDivider: { styleOverrides: { root: { borderColor: 'var(--sigh-border)' } } },
       MuiSkeleton: { styleOverrides: { root: { backgroundColor: 'var(--sigh-surface3)' } } },
     },
-  });
+  }, ptBR);
 };
 
 /** Compatibilidade com testes e imports antigos: o tema escuro padrão. */

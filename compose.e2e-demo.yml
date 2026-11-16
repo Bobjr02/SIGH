@@ -1,0 +1,15 @@
+# Terceira camada (compose.app.yml + compose.e2e.yml + este) para as telas com DADOS DE DEMONSTRAÇÃO
+# (SIGH/frontend/e2e-demo: nenhum termo em inglês, acessibilidade e capturas):
+#   scripts/e2e-stack.sh --demo
+# Mesma stack descartável do e2e (sem volumes), mas com o seed de demonstração ligado.
+
+services:
+  api:
+    environment:
+      Seed__DemoData: "true"
+      Seed__DemoDataPath: /demo-data
+      # Sete perfis entram várias vezes do mesmo IP (cada página, cada tema).
+      RateLimits__Login__PermitLimit: "1000"
+    volumes:
+      # Arquivos FICTÍCIOS do pacote de referência, só leitura (não é um volume Docker).
+      - ./SIGH/docs/referencias:/demo-data:ro

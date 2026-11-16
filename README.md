@@ -439,13 +439,18 @@ na stack de demonstração (`sigh-local`) nem no `.env.local`.
 
 `SIGH_API_TARGET=http://localhost:8080 npm run dev` usa a stack em contêineres como API (o nginx repassa `/api`).
 
-**Telas com os dados de demonstração** (`SIGH/frontend/e2e-demo`): `npx playwright test -c playwright.demo.config.ts`
-sobe a API num banco descartável `SIGH_E2E_<data>` com o seed de demonstração e o apaga no final. Roda:
+**Telas com os dados de demonstração** (`SIGH/frontend/e2e-demo`): `scripts/e2e-stack.sh --demo` (stack em contêineres,
+sem user-secrets; `compose.e2e-demo.yml` liga o seed de demonstração) ou `npx playwright test -c playwright.demo.config.ts`
+(API com `dotnet run`). Os dois usam um banco descartável `SIGH_E2E_<data>`. Roda:
 - `no-english.spec`: percorre todas as páginas do menu, os detalhes e as abas com cada perfil (administrador e os 6
   usuários de demonstração) e falha se achar um termo em inglês (os nomes de todos os enums e palavras como Pending,
-  Loading, Save, Not found…; palavra inteira, sem diferenciar maiúsculas);
+  Loading, Save, Not found… e os textos padrão do MUI: Close, Rows per page, of, Open, Clear, Previous, Next, Go to page;
+  palavra inteira, sem diferenciar maiúsculas). Confere o texto visível **e** os atributos acessíveis (`aria-label`,
+  `title`, `alt`, `placeholder`), inclusive no alerta "Usuário criado", nos diálogos, na paginação e no Autocomplete.
+  Os textos padrão dos componentes vêm da localização `ptBR` do MUI, aplicada no tema (`src/styles/theme.ts`);
 - `accessibility.spec`: axe-core (WCAG 2.1 AA) nas telas principais, nos temas escuro e claro;
-- `screenshots.spec`: com `SIGH_SCREENSHOTS=1`, grava as capturas em `SIGH/docs/telas/`.
+- `screenshots.spec`: com `SIGH_SCREENSHOTS=1`, grava as capturas em `SIGH/docs/telas/`
+  (`SIGH_SCREENSHOTS=1 scripts/e2e-stack.sh --demo e2e-demo/screenshots.spec.ts`, sozinho).
 
 **Tema**: os tokens (cores, tipografia, raios, sombras) estão em `src/styles/tokens.ts` e viram variáveis CSS
 (`--sigh-*`) usadas pelo tema do MUI e pelo Tailwind (`src/index.css`). Escuro é o padrão; o claro fica salvo no
@@ -467,17 +472,25 @@ O Codespace tem 32 GB e as imagens do SQL Server e do SDK do .NET, o cache de bu
 enchem o disco rápido. Para ver e liberar espaço:
 ```bash
 df -h /workspaces
-scripts/limpar-espaco.sh
+scripts/limpar-espaco.sh              # leve; a pesada só entra se o disco estiver cheio
+scripts/limpar-espaco.sh --completo   # leve + pesada, sempre
 ```
-O script mostra o espaço livre antes e depois e apaga **só o que se recria sozinho**: cache de build do Docker,
-imagens órfãs, containers parados, bancos `SIGH_E2E_*` que sobraram, caches do npm, do NuGet e do Playwright, e as
-pastas `bin/`/`obj/`. **Nunca** apaga volumes Docker (o banco de dev e o da demonstração continuam lá), o `.env`/
-`.env.local` nem arquivos versionados. Pode rodar quantas vezes quiser.
+O script mostra o espaço livre antes e depois e apaga **só o que se recria sozinho**, em duas etapas:
 
-- O `.devcontainer` já roda `scripts/limpar-espaco.sh --silencioso` a cada início do Codespace (`postStartCommand`).
+| Etapa | Quando | O que apaga |
+| --- | --- | --- |
+| Leve | sempre | cache de build do Docker, imagens órfãs, containers parados e bancos `SIGH_E2E_*` que sobraram |
+| Pesada | com `--completo`, ou quando o espaço livre em `/workspaces` está abaixo de `LIMPEZA_LIMITE_GB` (padrão **6**) | caches do npm, do NuGet e dos navegadores do Playwright, e as pastas `bin/`/`obj/` |
+
+**Nunca** apaga volumes Docker (o banco de dev e o da demonstração continuam lá), o `.env`/`.env.local` nem arquivos
+versionados. Pode rodar quantas vezes quiser. Outro limite: `LIMPEZA_LIMITE_GB=10 scripts/limpar-espaco.sh`.
+
+- O `.devcontainer` roda `scripts/limpar-espaco.sh --silencioso` a cada início do Codespace (`postStartCommand`):
+  a leve sempre; a pesada só com menos de 6 GB livres. Para mudar o limite do início, defina `LIMPEZA_LIMITE_GB`
+  nos secrets/variáveis do Codespace.
 - `scripts/local-up` apaga o cache de build depois de compilar as imagens (`SIGH_KEEP_BUILD_CACHE=1` mantém).
 - `scripts/e2e-stack.sh` remove no final os containers e as imagens `sigh-*:e2e` que criou.
-- Depois da limpeza, se for usar: `cd SIGH/backend && dotnet tool restore` (dotnet-ef) e
+- Depois de uma limpeza pesada, se for usar: `cd SIGH/backend && dotnet tool restore` (dotnet-ef) e
   `cd SIGH/frontend && npx playwright install chromium` (e2e).
 - Ainda sem espaço? `docker system df -v` mostra o que ocupa mais. Volumes que você não usa mais só saem com
   `docker volume rm <nome>`, de propósito, um por um.

@@ -69,6 +69,15 @@ export const FORBIDDEN_TERMS: string[] = Array.from(
     'Unauthorized',
     'Forbidden',
     'Dashboard',
+    // Textos padrão dos componentes do MUI sem a localização pt-BR (botões de fechar, Autocomplete, paginação).
+    'Close',
+    'Rows per page',
+    'of',
+    'Open',
+    'Clear',
+    'Previous',
+    'Next',
+    'Go to page',
   ]),
 ).filter((t) => !PORTUGUESE_TOO.has(t));
 

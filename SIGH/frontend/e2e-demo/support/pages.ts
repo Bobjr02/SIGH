@@ -23,16 +23,39 @@ export const DETAILS: Visit[] = [
   { name: 'detalhe de usuário', path: '/admin/usuarios', openFirst: 'a[aria-label="Ver usuário"]' },
 ];
 
-/** Abre cada aba visível da página e devolve o texto visível de todas. */
+/** Atributos lidos por leitores de tela ou mostrados ao passar o mouse (inclui botões só com ícone). */
+const ACCESSIBLE_ATTRIBUTES = ['aria-label', 'title', 'alt', 'placeholder', 'aria-valuetext', 'aria-roledescription'];
+
+/**
+ * Texto que a pessoa vê OU ouve: o texto visível do body mais os atributos acessíveis de todos os
+ * elementos do documento (também os de portais: diálogos, menus, listas do Autocomplete, tooltips).
+ * Ex.: o botão de fechar do Alert do MUI não tem texto, só aria-label/title ("Close" sem o ptBR).
+ */
+export const screenText = async (page: Page): Promise<string> => {
+  const visible = await page.locator('body').innerText();
+  const attributes = await page.evaluate((names) => {
+    const values: string[] = [];
+    for (const el of Array.from(document.querySelectorAll('*'))) {
+      for (const name of names) {
+        const value = el.getAttribute(name);
+        if (value) values.push(value);
+      }
+    }
+    return values;
+  }, ACCESSIBLE_ATTRIBUTES);
+  return `${visible}\n${attributes.join('\n')}`;
+};
+
+/** Abre cada aba visível da página e devolve o texto (visível + acessível) de todas. */
 export const visibleTextWithTabs = async (page: Page): Promise<string> => {
   await settle(page);
-  let text = await page.locator('body').innerText();
+  let text = await screenText(page);
   const tabs = page.getByRole('tab');
   const count = await tabs.count();
   for (let i = 0; i < count; i++) {
     await tabs.nth(i).click();
     await settle(page);
-    text += '\n' + (await page.locator('body').innerText());
+    text += '\n' + (await screenText(page));
   }
   return text;
 };

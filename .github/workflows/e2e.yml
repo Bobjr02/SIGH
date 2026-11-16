@@ -3,6 +3,7 @@ name: SIGH E2E
 # Suíte e2e (SIGH/frontend/e2e, Playwright + Chromium) contra a stack EM CONTAINERS
 # (compose.app.yml + compose.e2e.yml), com segredos gerados no próprio job (scripts/e2e-stack.sh).
 on:
+  # Na main, só quando muda algo que a suíte exercita (o PR já rodou o e2e antes do merge).
   push:
     branches: [ main ]
     paths:
@@ -11,14 +12,10 @@ on:
       - 'compose.e2e.yml'
       - 'scripts/e2e-stack.sh'
       - '.github/workflows/e2e.yml'
+  # Em TODO PR para a main, sem filtro de caminhos: o check "E2E (Playwright, Chromium)" sempre aparece e pode ser
+  # obrigatório na proteção da branch (com filtro, um PR só de docs ficaria esperando um check que nunca roda).
   pull_request:
     branches: [ main ]
-    paths:
-      - 'SIGH/**'
-      - 'compose.app.yml'
-      - 'compose.e2e.yml'
-      - 'scripts/e2e-stack.sh'
-      - '.github/workflows/e2e.yml'
   workflow_dispatch:
 
 permissions:

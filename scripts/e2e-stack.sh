@@ -3,6 +3,8 @@
 # É o mesmo caminho do CI (.github/workflows/e2e.yml).
 #   scripts/e2e-stack.sh                       # suíte inteira
 #   scripts/e2e-stack.sh e2e/records.spec.ts   # argumentos vão para o "playwright test"
+#   scripts/e2e-stack.sh --demo                # telas com dados de demonstração (SIGH/frontend/e2e-demo:
+#                                              # nenhum termo em inglês, acessibilidade; capturas com SIGH_SCREENSHOTS=1)
 #
 # - Segredos aleatórios gerados AQUI, só em variáveis de ambiente (nenhum arquivo; o .env.local não é lido nem tocado).
 # - Projeto compose próprio (sigh-e2e), imagens sigh-api:e2e / sigh-web:e2e e portas 18080/18025:
@@ -18,15 +20,22 @@ cd "$(dirname "$0")/.."
 ROOT="$PWD"
 PROJECT="${SIGH_E2E_PROJECT:-sigh-e2e}"
 COMPOSE=(docker compose -p "$PROJECT" --project-directory "$ROOT" -f "$ROOT/compose.app.yml" -f "$ROOT/compose.e2e.yml")
+PW_CONFIG=()
+if [ "${1:-}" = "--demo" ]; then
+  shift
+  COMPOSE+=(-f "$ROOT/compose.e2e-demo.yml")
+  PW_CONFIG=(-c playwright.demo.config.ts)
+fi
 
 random_secret() { printf '%s-Aa9' "$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c "$1" || true)"; }
 
 export SIGH_LOCAL_PROJECT="$PROJECT"
 export SIGH_SA_PASSWORD="$(random_secret 24)"
 export SIGH_JWT_SECRET="$(LC_ALL=C tr -dc 'a-f0-9' </dev/urandom 2>/dev/null | head -c 64 || true)"
-export SIGH_ADMIN_EMAIL="admin@e2e.local"
+# Com --demo, o e-mail padrão do seed (o mesmo das capturas em SIGH/docs/telas).
+if [ "${#PW_CONFIG[@]}" -gt 0 ]; then export SIGH_ADMIN_EMAIL="admin@sigh.com.br"; else export SIGH_ADMIN_EMAIL="admin@e2e.local"; fi
 export SIGH_ADMIN_PASSWORD="$(random_secret 16)"
-export SIGH_DEMO_PASSWORD="$(random_secret 12)"   # exigida pelo compose.app.yml; sem dados de demonstração no e2e
+export SIGH_DEMO_PASSWORD="$(random_secret 12)"   # exigida pelo compose.app.yml; usada só com --demo
 export SIGH_WEB_PORT="${SIGH_E2E_WEB_PORT:-18080}"
 export SIGH_MAILPIT_PORT="${SIGH_E2E_MAILPIT_PORT:-18025}"
 export SIGH_E2E_DB_NAME="SIGH_E2E_$(date -u +%Y%m%d%H%M%S)"
@@ -89,5 +98,5 @@ E2E_ADMIN_PASSWORD="$SIGH_ADMIN_PASSWORD" \
 E2E_DB_NAME="$SIGH_E2E_DB_NAME" \
 E2E_SQL_CONTAINER="$SQL_CONTAINER" \
 E2E_BASE_CONNECTION_STRING="Server=localhost;User Id=sa;Password=$SIGH_SA_PASSWORD;TrustServerCertificate=True;" \
-  npx playwright test "$@"
+  npx playwright test "${PW_CONFIG[@]}" "$@"
 echo "Suíte e2e concluída em $(( $(date +%s) - start ))s."
