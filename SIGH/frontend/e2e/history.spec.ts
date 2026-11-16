@@ -56,11 +56,13 @@ test('import employees and history, decision support of 50090007 with history, t
   const employees = await (await request.get('/api/v1/employees?searchTerm=50090007', { headers: authed(admin) })).json();
   const employee = employees.data.items[0];
   await page.goto(`/employees/${employee.id}`);
+  await page.getByRole('tab', { name: 'Apoio à decisão' }).click();
   const support = page.getByRole('region', { name: 'Apoio à decisão' });
   await expect(support.getByText('4 dia(s) no total')).toBeVisible();
   const origins = support.getByRole('list', { name: 'Medidas por origem' });
   await expect(origins).toContainText('1 advertências — 1 histórica, 0 no SIGH');
   await expect(origins).toContainText('2 suspensões — 2 históricas, 0 no SIGH');
+  await page.getByRole('tab', { name: 'Histórico disciplinar' }).click();
   await expect(page.getByTestId('history-seal').filter({ hasText: 'Histórico importado — lote de' }).first()).toBeVisible();
 
   // 4. Nova medida para ela no fluxo do sprint 6: o auxiliar registra, o encarregado aprova.
@@ -91,6 +93,7 @@ test('import employees and history, decision support of 50090007 with history, t
   await logoutUi(page);
   await loginUi(page);
   await page.goto(`/employees/${employee.id}`);
+  await page.getByRole('tab', { name: 'Apoio à decisão' }).click();
   const after = page.getByRole('region', { name: 'Apoio à decisão' }).getByRole('list', { name: 'Medidas por origem' });
   await expect(after).toContainText('2 advertências — 1 histórica, 1 no SIGH');
   await expect(after).toContainText('2 suspensões — 2 históricas, 0 no SIGH');

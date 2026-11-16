@@ -75,9 +75,13 @@ describe('importação do histórico (/admin/history-import)', () => {
     renderApp('/admin/history-import');
     const user = userEvent.setup();
     const file = new File(['x'], 'base_disciplinar_ficticia.xlsx');
+    expect(await screen.findByRole('listitem', { current: 'step' })).toHaveAccessibleName('Passo 1: Selecionar arquivo (atual)');
     await user.upload(await screen.findByLabelText('Planilha de penalidades'), file);
+    expect(screen.getByTestId('file-picker-name')).toHaveTextContent('base_disciplinar_ficticia.xlsx');
+    expect(screen.getByRole('listitem', { current: 'step' })).toHaveAccessibleName('Passo 2: Pré-visualizar (atual)');
     await user.click(screen.getByRole('button', { name: 'Pré-visualizar' }));
 
+    expect(await screen.findByRole('listitem', { current: 'step' })).toHaveAccessibleName('Passo 3: Confirmar importação (atual)');
     expect(await screen.findByTestId('history-summary')).toHaveTextContent('16 linhas com dados: 14 a importar');
     expect(preview).toHaveBeenCalledWith(file);
     const tabs = screen.getByRole('tablist', { name: 'Pré-visualização do histórico' });
@@ -94,6 +98,18 @@ describe('importação do histórico (/admin/history-import)', () => {
     await user.click(screen.getByRole('button', { name: 'Confirmar importação' }));
     expect(await screen.findByText(/14 registro\(s\) novo\(s\)/)).toBeInTheDocument();
     expect(confirm).toHaveBeenCalledWith('batch-1', file);
+    expect(screen.getByRole('listitem', { name: 'Passo 3: Confirmar importação (concluído)' })).toBeInTheDocument();
+  });
+
+  it('rejects a non-xlsx file on the client, in pt-BR', async () => {
+    server.use(...baseHandlers());
+    const preview = vi.spyOn(historyImportApi, 'preview');
+    renderApp('/admin/history-import');
+    const user = userEvent.setup({ applyAccept: false });
+    await user.upload(await screen.findByLabelText('Planilha de penalidades'), new File(['x'], 'penalidades.csv'));
+    expect(screen.getByRole('alert')).toHaveTextContent('Formato não aceito. Envie a planilha de penalidades no formato .xlsx.');
+    expect(screen.getByRole('button', { name: 'Pré-visualizar' })).toBeDisabled();
+    expect(preview).not.toHaveBeenCalled();
   });
 
   it('closing requires an explicit confirmation; afterwards the upload disappears', async () => {

@@ -221,8 +221,12 @@ describe('/employees/import', () => {
     const user = userEvent.setup();
 
     renderApp('/employees/import');
+    // Indicador de etapas: 1 selecionar → 2 pré-visualizar → 3 confirmar.
+    expect(await screen.findByRole('listitem', { current: 'step' })).toHaveAccessibleName('Passo 1: Selecionar arquivo (atual)');
     await user.upload(await screen.findByLabelText('Planilha do SAP'), xlsx());
+    expect(screen.getByRole('listitem', { current: 'step' })).toHaveAccessibleName('Passo 2: Pré-visualizar (atual)');
     await user.click(screen.getByRole('button', { name: 'Pré-visualizar' }));
+    expect(await screen.findByRole('listitem', { name: 'Passo 3: Confirmar importação (atual)' })).toHaveAttribute('aria-current', 'step');
 
     // Com erros, abre direto na aba de erros.
     expect(await screen.findByRole('tab', { name: 'Erros (1)', selected: true })).toBeInTheDocument();
@@ -249,6 +253,7 @@ describe('/employees/import', () => {
 
     await waitFor(() => expect(confirm).toHaveBeenCalledWith('batch-1', expect.any(File), true));
     expect(await screen.findByText(/Importação aplicada: 1 novo\(s\)/)).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: 'Passo 3: Confirmar importação (concluído)' })).toBeInTheDocument();
   });
 
   it('shows file-level warnings (missing optional column) at the top of the preview', async () => {

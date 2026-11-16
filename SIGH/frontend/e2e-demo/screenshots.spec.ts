@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { test, type Page } from '@playwright/test';
 import { login, profile, settle } from './support/demo';
 import { DETAILS, openDetail } from './support/pages';
+import { attachableRecord, EMPLOYEES_FILE, HISTORY_FILE } from './support/files';
 
 // Capturas para o dono do produto (SIGH/docs/telas), deviceScaleFactor 1, temas escuro e claro;
 // login e painel também em largura de celular (390 px). Só roda com SIGH_SCREENSHOTS=1.
@@ -28,6 +29,23 @@ const SCREENS: { file: string; who: string; path?: string; detail?: string; prep
   { file: '10-auditoria', who: 'juridico', path: '/audit' },
   { file: '11-usuarios', who: 'admin', path: '/admin/usuarios' },
   { file: '12-detalhe-de-usuario', who: 'admin', detail: 'detalhe de usuário' },
+  // Seletor de arquivo (FilePicker) e indicador de etapas: a tela vazia e com o arquivo escolhido.
+  { file: '14-importar-funcionarios', who: 'admin', path: '/employees/import' },
+  {
+    file: '14-importar-funcionarios-arquivo',
+    who: 'admin',
+    path: '/employees/import',
+    prepare: (page) => page.getByLabel('Planilha do SAP').setInputFiles(EMPLOYEES_FILE),
+  },
+  { file: '15-importar-historico', who: 'admin', path: '/admin/history-import' },
+  {
+    file: '15-importar-historico-arquivo',
+    who: 'admin',
+    path: '/admin/history-import',
+    prepare: (page) => page.getByLabel('Planilha de penalidades').setInputFiles(HISTORY_FILE),
+  },
+  // Anexos da medida: o auxiliar numa medida aprovada (pode anexar a carta assinada).
+  { file: '16-anexos-da-medida', who: 'auxiliar', prepare: attachableRecord },
 ];
 
 for (const theme of ['escuro', 'claro'] as const) {
@@ -65,10 +83,14 @@ for (const theme of ['escuro', 'claro'] as const) {
         await page.locator('[data-testid="record-row"] a[href^="/medidas/"]').first().click();
       } else if (screen.detail) {
         await openDetail(page, DETAILS.find((d) => d.name === screen.detail)!);
-      } else {
-        await page.goto(screen.path!);
+      } else if (screen.path) {
+        await page.goto(screen.path);
       }
       await settle(page);
+      if (screen.prepare) {
+        await screen.prepare(page);
+        await settle(page);
+      }
       await shot(page, `${screen.file}-${theme}`);
       if (screen.file === '02-painel') {
         await page.setViewportSize({ width: 390, height: 844 });

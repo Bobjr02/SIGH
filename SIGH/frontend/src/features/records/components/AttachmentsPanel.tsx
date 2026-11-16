@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, IconButton, List, ListItem, ListItemText, Paper, TextField, Tooltip, Typography } from '@mui/material';
 import { Download, Paperclip, Trash2 } from 'lucide-react';
+import { FilePicker } from '../../../components/ui/FilePicker';
 import { evidenceApi } from '../../disciplinary/evidence/evidenceApi';
 import { EVIDENCE_FILE_ACCEPT, EVIDENCE_FILE_EXTENSIONS, formatBytes, MAX_EVIDENCE_FILE_BYTES } from '../../disciplinary/evidence/evidenceFiles';
 import { recordErrorMessage, recordKeys, recordsApi, type RecordEvidence } from '../api/recordsApi';
@@ -19,25 +20,18 @@ interface AttachmentsPanelProps {
  */
 export const AttachmentsPanel: React.FC<AttachmentsPanelProps> = ({ recordId, evidences, canAttach, canRemove }) => {
   const queryClient = useQueryClient();
-  const input = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('Carta assinada');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: recordKeys.detail(recordId) });
 
-  const upload = async (file: File) => {
+  const upload = async () => {
+    if (!file) return;
     setError(null);
-    const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const evidenceType = EVIDENCE_FILE_EXTENSIONS[extension];
-    if (!evidenceType) {
-      setError('Formato não aceito. Use PDF, imagem (JPG, PNG, WEBP), DOCX ou XLSX.');
-      return;
-    }
-    if (file.size > MAX_EVIDENCE_FILE_BYTES) {
-      setError('O arquivo excede o tamanho máximo permitido.');
-      return;
-    }
+    const evidenceType = EVIDENCE_FILE_EXTENSIONS[file.name.split('.').pop()?.toLowerCase() ?? ''];
+    if (!evidenceType) return; // o FilePicker já recusou a extensão
     setBusy(true);
     try {
       const evidenceId = await recordsApi.createAttachment(recordId, evidenceType, title.trim() || file.name);
@@ -48,6 +42,7 @@ export const AttachmentsPanel: React.FC<AttachmentsPanelProps> = ({ recordId, ev
       // O anexo pode ter sido criado sem o arquivo (recusado pelo servidor): a lista mostra "Sem arquivo".
       await refresh();
     } finally {
+      setFile(null);
       setBusy(false);
     }
   };
@@ -102,23 +97,28 @@ export const AttachmentsPanel: React.FC<AttachmentsPanelProps> = ({ recordId, ev
         ))}
       </List>
       {canAttach && (
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1, flexWrap: 'wrap' }}>
-          <TextField size="small" label="Título do anexo" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <input
-            ref={input}
-            type="file"
-            hidden
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 1 }}>
+          <TextField size="small" label="Título do anexo" value={title} onChange={(e) => setTitle(e.target.value)} sx={{ maxWidth: 360 }} />
+          <FilePicker
+            label="Arquivo do anexo"
+            buttonText="Selecionar arquivo"
+            extensions={Object.keys(EVIDENCE_FILE_EXTENSIONS)}
             accept={EVIDENCE_FILE_ACCEPT}
-            data-testid="attachment-input"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = '';
-              if (file) void upload(file);
+            validate={(f) => (f.size > MAX_EVIDENCE_FILE_BYTES ? 'O arquivo excede o tamanho máximo permitido.' : null)}
+            hint={`Formatos: ${Object.keys(EVIDENCE_FILE_EXTENSIONS).join(', ')}; até ${formatBytes(MAX_EVIDENCE_FILE_BYTES)}.`}
+            file={file}
+            onChange={(f) => {
+              setError(null);
+              setFile(f);
             }}
+            disabled={busy}
+            inputTestId="attachment-input"
           />
-          <Button variant="outlined" startIcon={<Paperclip size={16} />} disabled={busy} onClick={() => input.current?.click()}>
-            {busy ? 'Enviando…' : 'Anexar arquivo'}
-          </Button>
+          <Box>
+            <Button variant="contained" startIcon={<Paperclip size={16} />} disabled={!file || busy} onClick={() => void upload()}>
+              {busy ? 'Enviando…' : 'Anexar arquivo'}
+            </Button>
+          </Box>
         </Box>
       )}
       {error && (

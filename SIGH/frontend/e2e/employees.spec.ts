@@ -114,7 +114,7 @@ test('SAP import (initial + update), employee with decision support, and a JPG p
   const evaRow = page.getByTestId('employee-row-60090005');
   await expect(evaRow).toContainText(`***.${cpfs.eva.slice(3, 6)}.${cpfs.eva.slice(6, 9)}-**`);
   await expect(page.getByText(cpfs.eva)).toHaveCount(0);
-  await evaRow.click();
+  await evaRow.getByRole('link', { name: 'Ver funcionário' }).click();
   await expect(page.getByTestId('employee-cpf')).toHaveText(
     `${cpfs.eva.slice(0, 3)}.${cpfs.eva.slice(3, 6)}.${cpfs.eva.slice(6, 9)}-${cpfs.eva.slice(9)}`,
   );
@@ -127,19 +127,23 @@ test('SAP import (initial + update), employee with decision support, and a JPG p
   const { recordId, registrar } = await arrangeSuspension(request, ana.id);
 
   await page.goto(`/employees/${ana.id}`);
+  await page.getByRole('tab', { name: 'Apoio à decisão' }).click();
   const box = page.getByRole('region', { name: 'Apoio à decisão' });
   await expect(box).toBeVisible();
   await expect(box.getByText('3 dia(s) no total')).toBeVisible();
   await expect(box.getByRole('list', { name: 'Medidas por motivo' })).toContainText('Falta não justificada (E2E): 1');
+  await page.getByRole('tab', { name: 'Histórico disciplinar' }).click();
   await expect(page.getByTestId('timeline-item').first()).toBeVisible();
 
   // 4. Foto JPG do documento assinado anexada à medida aprovada (pelo auxiliar, que pode anexar).
   await logoutUi(page);
   await loginUi(page, registrar.email, registrar.password);
   await page.goto(`/medidas/${recordId}`);
+  await page.getByRole('tab', { name: /^Anexos/ }).click();
   const attachments = page.getByRole('region', { name: 'Anexos' });
   await attachments.getByLabel('Título do anexo').fill('Atestado fotografado');
   await attachments.getByTestId('attachment-input').setInputFiles({ name: 'atestado.jpg', mimeType: 'image/jpeg', buffer: jpeg() });
+  await attachments.getByRole('button', { name: 'Anexar arquivo' }).click();
   await expect(attachments.getByTestId('attachment').filter({ hasText: 'atestado.jpg' })).toBeVisible();
 
   // Resultado da importação para o relatório.

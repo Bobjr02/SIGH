@@ -27,12 +27,14 @@ import { disciplinaryQueryKeys } from '../api/disciplinaryQueryKeys';
 import { evidenceApi } from '../evidence/evidenceApi';
 import {
   EVIDENCE_FILE_ACCEPT,
+  EVIDENCE_FILE_EXTENSIONS,
   EVIDENCE_TYPE_LABELS,
   formatBytes,
   shortHash,
   validateEvidenceFile,
   evidenceTypeAcceptsFile,
 } from '../evidence/evidenceFiles';
+import { FilePicker } from '../../../components/ui/FilePicker';
 import { DisciplinaryCaseStatus, EvidenceType, type EvidenceDto } from '../types';
 
 export const errorMessageOf = (error: unknown, fallback: string): string => {
@@ -219,14 +221,14 @@ interface UploadDialogProps {
 }
 
 export const UploadEvidenceFileDialog: React.FC<UploadDialogProps> = ({ caseId, evidence, onClose, onUploaded }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
+  // O FilePicker confere extensão, tamanho e tipo (validateEvidenceFile) e mostra a mensagem; aqui ficam os erros do servidor.
   const choose = (selected: File | null) => {
     setFile(selected);
-    setError(selected ? validateEvidenceFile(selected, evidence.evidenceType) : null);
+    setError(null);
   };
 
   const upload = async () => {
@@ -251,19 +253,17 @@ export const UploadEvidenceFileDialog: React.FC<UploadDialogProps> = ({ caseId, 
           Formatos: pdf, jpg/jpeg, png, webp, mp4, mp3, m4a, docx e xlsx, até 25 MB. Depois de enviado, o arquivo não pode ser
           substituído.
         </Typography>
-        <input
-          ref={inputRef}
-          type="file"
+        <FilePicker
+          label="Arquivo da evidência"
+          buttonText="Selecionar arquivo"
+          extensions={Object.keys(EVIDENCE_FILE_EXTENSIONS)}
           accept={EVIDENCE_FILE_ACCEPT}
-          aria-label="Arquivo da evidência"
+          extensionMessage={`Formato não permitido. Envie: ${Object.keys(EVIDENCE_FILE_EXTENSIONS).join(', ')}.`}
+          validate={(f) => validateEvidenceFile(f, evidence.evidenceType)}
+          file={file}
+          onChange={choose}
           disabled={uploading}
-          onChange={(e) => choose(e.target.files?.[0] ?? null)}
         />
-        {file && !error && (
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            {file.name} ({formatBytes(file.size)})
-          </Typography>
-        )}
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
             {error}
