@@ -40,7 +40,7 @@ test('admin: login, mandatory password change, cases list, reload keeps the sess
   await page.getByLabel('Senha atual').fill(ADMIN_PASSWORD);
   await page.getByLabel('Nova senha', { exact: true }).fill(NEW_PASSWORD);
   await page.getByLabel('Confirmar nova senha').fill(NEW_PASSWORD);
-  await page.getByRole('button', { name: 'Salvar nova senha' }).click();
+  await page.getByRole('button', { name: 'Salvar nova senha QUEBRADO DE PROPOSITO' }).click();
   await expect(page).not.toHaveURL(/\/change-password$/);
   await expect(page.getByTestId('current-user-name')).toBeVisible();
 
