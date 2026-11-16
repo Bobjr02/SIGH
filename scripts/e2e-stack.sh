@@ -19,11 +19,11 @@ ROOT="$PWD"
 PROJECT="${SIGH_E2E_PROJECT:-sigh-e2e}"
 COMPOSE=(docker compose -p "$PROJECT" --project-directory "$ROOT" -f "$ROOT/compose.app.yml" -f "$ROOT/compose.e2e.yml")
 
-random_secret() { printf '%s-Aa9' "$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$1" || true)"; }
+random_secret() { printf '%s-Aa9' "$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c "$1" || true)"; }
 
 export SIGH_LOCAL_PROJECT="$PROJECT"
 export SIGH_SA_PASSWORD="$(random_secret 24)"
-export SIGH_JWT_SECRET="$(LC_ALL=C tr -dc 'a-f0-9' </dev/urandom | head -c 64 || true)"
+export SIGH_JWT_SECRET="$(LC_ALL=C tr -dc 'a-f0-9' </dev/urandom 2>/dev/null | head -c 64 || true)"
 export SIGH_ADMIN_EMAIL="admin@e2e.local"
 export SIGH_ADMIN_PASSWORD="$(random_secret 16)"
 export SIGH_DEMO_PASSWORD="$(random_secret 12)"   # exigida pelo compose.app.yml; sem dados de demonstração no e2e

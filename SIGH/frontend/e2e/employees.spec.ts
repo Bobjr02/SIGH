@@ -109,7 +109,8 @@ test('SAP import (initial + update), employee with decision support, and a JPG p
 
   // Eva: zero à esquerda do CPF preservado; lista mostra CPF mascarado.
   await page.goto('/employees');
-  await page.getByLabel('Nome ou matrícula').fill('60090005');
+  // Nome exato: a busca global do topo (PR #10), "Buscar funcionário por nome ou matrícula", também casaria.
+  await page.getByRole('textbox', { name: 'Nome ou matrícula', exact: true }).fill('60090005');
   await page.getByRole('button', { name: 'Filtrar' }).click();
   const evaRow = page.getByTestId('employee-row-60090005');
   await expect(evaRow).toContainText(`***.${cpfs.eva.slice(3, 6)}.${cpfs.eva.slice(6, 9)}-**`);
