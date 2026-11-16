@@ -7,6 +7,8 @@ import { attachableRecord, EMPLOYEES_FILE, HISTORY_FILE } from './support/files'
 
 // Capturas para o dono do produto (SIGH/docs/telas), deviceScaleFactor 1, temas escuro e claro;
 // login e painel também em largura de celular (390 px). Só roda com SIGH_SCREENSHOTS=1.
+// Rode SÓ este spec (o no-english cria um usuário fictício que apareceria na lista de usuários):
+//   SIGH_SCREENSHOTS=1 scripts/e2e-stack.sh --demo e2e-demo/screenshots.spec.ts
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.resolve(HERE, '../../docs/telas');
 

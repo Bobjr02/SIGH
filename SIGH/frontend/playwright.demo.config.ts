@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices, type PlaywrightTestConfig } from '@playwright/test';
 import { baseConnectionString, userSecret, withDatabase } from './e2e/support/e2eDatabase';
 
 // Telas com os DADOS DE DEMONSTRAÇÃO num banco descartável SIGH_E2E_<timestamp> (como o e2e):
@@ -12,7 +12,10 @@ import { baseConnectionString, userSecret, withDatabase } from './e2e/support/e2
 //   - no-english.spec: nenhum termo em inglês na tela, com cada perfil;
 //   - accessibility.spec: axe-core (WCAG 2 AA, contraste) nos dois temas;
 //   - screenshots.spec: capturas em SIGH/docs/telas (SIGH_SCREENSHOTS=1).
+// Com E2E_TARGET=stack (scripts/e2e-stack.sh --demo), usa a stack em containers com o seed de
+// demonstração (compose.e2e-demo.yml) em vez de "dotnet run" + Vite; nada de user-secrets.
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+const STACK = process.env.E2E_TARGET === 'stack';
 
 if (!process.env.E2E_DB_NAME) {
   const stamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
@@ -22,7 +25,33 @@ process.env.E2E_ADMIN_PASSWORD ??= userSecret('Seed:AdminPassword');
 process.env.E2E_NEW_PASSWORD ??= `Demo#${randomBytes(6).toString('hex')}Aa1`;
 process.env.SIGH_DEMO_PASSWORD ??= `Demo#${randomBytes(6).toString('hex')}Bb2`;
 
-const apiConnectionString = withDatabase(baseConnectionString(), process.env.E2E_DB_NAME);
+const apiConnectionString = STACK ? '' : withDatabase(baseConnectionString(), process.env.E2E_DB_NAME);
+
+const devServers: PlaywrightTestConfig['webServer'] = [
+  {
+    command: 'dotnet run --project ../backend/src/SIGH.Api --launch-profile http',
+    url: 'http://localhost:5000/api/v1/health',
+    reuseExistingServer: false,
+    timeout: 300_000,
+    env: {
+      ConnectionStrings__DefaultConnection: apiConnectionString,
+      ASPNETCORE_ENVIRONMENT: 'Development',
+      Seed__DemoData: 'true',
+      Seed__DemoPassword: process.env.SIGH_DEMO_PASSWORD!,
+      Seed__DemoDataPath: path.resolve(HERE, '../docs/referencias'),
+      Seed__DefaultCompanyName: 'Usina Serra Grande S.A. (DEMONSTRAÇÃO)',
+      RateLimits__Login__PermitLimit: '1000',
+    },
+    stdout: 'ignore',
+    stderr: 'pipe',
+  },
+  {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: false,
+    timeout: 60_000,
+  },
+];
 
 export default defineConfig({
   testDir: './e2e-demo',
@@ -33,7 +62,7 @@ export default defineConfig({
   timeout: 180_000,
   globalTeardown: './e2e/support/globalTeardown.ts',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
     headless: true,
     // Navegador brasileiro: datas nativas em dd/mm/aaaa e horário de Maceió.
     locale: 'pt-BR',
@@ -53,29 +82,5 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
     },
   ],
-  webServer: [
-    {
-      command: 'dotnet run --project ../backend/src/SIGH.Api --launch-profile http',
-      url: 'http://localhost:5000/api/v1/health',
-      reuseExistingServer: false,
-      timeout: 300_000,
-      env: {
-        ConnectionStrings__DefaultConnection: apiConnectionString,
-        ASPNETCORE_ENVIRONMENT: 'Development',
-        Seed__DemoData: 'true',
-        Seed__DemoPassword: process.env.SIGH_DEMO_PASSWORD!,
-        Seed__DemoDataPath: path.resolve(HERE, '../docs/referencias'),
-        Seed__DefaultCompanyName: 'Usina Serra Grande S.A. (DEMONSTRAÇÃO)',
-        RateLimits__Login__PermitLimit: '1000',
-      },
-      stdout: 'ignore',
-      stderr: 'pipe',
-    },
-    {
-      command: 'npm run dev',
-      url: 'http://localhost:3000',
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-  ],
+  webServer: STACK ? undefined : devServers,
 });

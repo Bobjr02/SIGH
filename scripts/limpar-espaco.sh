@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Libera espaço em disco no Codespace/máquina de dev. Seguro e idempotente: pode rodar quantas vezes quiser.
-#   scripts/limpar-espaco.sh               # mostra o que faz e o espaço livre antes/depois
+#   scripts/limpar-espaco.sh               # limpeza leve (+ pesada só se o disco estiver cheio); mostra antes/depois
+#   scripts/limpar-espaco.sh --completo    # tudo, leve e pesada, independentemente do espaço livre
 #   scripts/limpar-espaco.sh --silencioso  # só uma linha de resumo (usado no postStartCommand do .devcontainer)
+#   (as opções podem ser combinadas: --completo --silencioso)
 #
-# Apaga:
+# Limpeza leve (SEMPRE):
 #   - Docker: cache de build, imagens órfãs (dangling) e containers parados;
-#   - bancos SIGH_E2E_* que sobraram nos SQL Servers em execução (só esse padrão de nome);
+#   - bancos SIGH_E2E_* que sobraram nos SQL Servers em execução (só esse padrão de nome).
+# Limpeza pesada (com --completo, OU quando o espaço livre em /workspaces estiver abaixo de
+# LIMPEZA_LIMITE_GB, padrão 6):
 #   - caches do npm, do NuGet e dos navegadores do Playwright;
 #   - pastas bin/ e obj/ do backend que NÃO estão no git.
 # NUNCA apaga: volumes Docker, imagens em uso ou com nome, o .env/.env.local, nem arquivos versionados.
@@ -16,17 +20,32 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 QUIET=0
-[ "${1:-}" = "--silencioso" ] && QUIET=1
+FULL=0
+for arg in "$@"; do
+  case "$arg" in
+    --silencioso) QUIET=1 ;;
+    --completo) FULL=1 ;;
+    *) echo "Opção desconhecida: $arg (use --completo e/ou --silencioso)" >&2; exit 2 ;;
+  esac
+done
+LIMIT_GB="${LIMPEZA_LIMITE_GB:-6}"
+if ! [[ "$LIMIT_GB" =~ ^[0-9]+$ ]]; then
+  echo "LIMPEZA_LIMITE_GB deve ser um número inteiro de GB (recebido: $LIMIT_GB)." >&2
+  exit 2
+fi
+# Espaço medido em /workspaces (Codespace); fora dele, no disco do repositório.
+DISK="/workspaces"
+[ -d "$DISK" ] || DISK="$ROOT"
 
 say() { [ "$QUIET" = 1 ] || echo "$@"; }
 run() { if [ "$QUIET" = 1 ]; then "$@" >/dev/null 2>&1; else "$@"; fi; }
-free_kb() { df -Pk "$ROOT" | awk 'NR==2 {print $4}'; }
+free_kb() { df -Pk "$DISK" | awk 'NR==2 {print $4}'; }
 human() { awk -v kb="$1" 'BEGIN { printf "%.1f GB", kb / 1024 / 1024 }'; }
 
 before=$(free_kb)
 if [ "$QUIET" = 0 ]; then
   echo "== Espaço ANTES =="
-  df -h "$ROOT" /tmp 2>/dev/null
+  df -h "$DISK" /tmp 2>/dev/null
   echo
 fi
 
@@ -57,31 +76,47 @@ else
   say "Docker indisponível: etapa do Docker pulada."
 fi
 
-if command -v npm >/dev/null 2>&1; then
-  say "Cache do npm..."
-  run npm cache clean --force
+limit_kb=$(( LIMIT_GB * 1024 * 1024 ))
+now_kb=$(free_kb)
+if [ "$FULL" = 1 ]; then
+  heavy=1; reason="--completo"
+elif [ "$now_kb" -lt "$limit_kb" ]; then
+  heavy=1; reason="livre $(human "$now_kb") < limite ${LIMIT_GB} GB"
+else
+  heavy=0; reason="livre $(human "$now_kb") >= limite ${LIMIT_GB} GB"
 fi
-if command -v dotnet >/dev/null 2>&1; then
-  say "Cache do NuGet..."
-  run dotnet nuget locals all --clear
-fi
-say "Navegadores do Playwright (~/.cache/ms-playwright)..."
-rm -rf "${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
 
-say "Pastas bin/ e obj/ do backend (só as que não estão no git)..."
-while IFS= read -r -d '' dir; do
-  if [ -z "$(git -C "$ROOT" ls-files -- "$dir" | head -1)" ]; then
-    rm -rf "$dir"
-  else
-    say "  mantida (tem arquivos versionados): $dir"
+if [ "$heavy" = 1 ]; then
+  say "Limpeza pesada ($reason)."
+  if command -v npm >/dev/null 2>&1; then
+    say "Cache do npm..."
+    run npm cache clean --force
   fi
-done < <(find "$ROOT/SIGH" -type d -name node_modules -prune -o -type d \( -name bin -o -name obj \) -print0 -prune)
+  if command -v dotnet >/dev/null 2>&1; then
+    say "Cache do NuGet..."
+    run dotnet nuget locals all --clear
+  fi
+  say "Navegadores do Playwright (~/.cache/ms-playwright)..."
+  rm -rf "${PLAYWRIGHT_BROWSERS_PATH:-$HOME/.cache/ms-playwright}"
+
+  say "Pastas bin/ e obj/ do backend (só as que não estão no git)..."
+  while IFS= read -r -d '' dir; do
+    if [ -z "$(git -C "$ROOT" ls-files -- "$dir" | head -1)" ]; then
+      rm -rf "$dir"
+    else
+      say "  mantida (tem arquivos versionados): $dir"
+    fi
+  done < <(find "$ROOT/SIGH" -type d -name node_modules -prune -o -type d \( -name bin -o -name obj \) -print0 -prune)
+else
+  say "Limpeza pesada pulada ($reason): caches do npm/NuGet/Playwright e bin/obj mantidos. Use --completo para forçar."
+fi
 
 after=$(free_kb)
 if [ "$QUIET" = 0 ]; then
   echo
   echo "== Espaço DEPOIS =="
-  df -h "$ROOT" /tmp 2>/dev/null
+  df -h "$DISK" /tmp 2>/dev/null
   echo
 fi
-echo "limpar-espaco: livre antes $(human "$before"), depois $(human "$after") (liberado $(human $(( after > before ? after - before : 0 ))))."
+mode=$([ "$heavy" = 1 ] && echo "leve + pesada" || echo "leve")
+echo "limpar-espaco ($mode; $reason): livre antes $(human "$before"), depois $(human "$after") (liberado $(human $(( after > before ? after - before : 0 ))))."
