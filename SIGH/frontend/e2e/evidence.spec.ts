@@ -38,17 +38,20 @@ test('attach a real PDF to a measure, reject a renamed .exe, download with match
 
   await loginUi(page, registrar.email, registrar.password);
   await page.goto(`/medidas/${recordId}`);
+  await page.getByRole('tab', { name: /^Anexos/ }).click();
   const attachments = page.getByRole('region', { name: 'Anexos' });
 
   // Upload do PDF real pela tela.
   await attachments.getByLabel('Título do anexo').fill('Carta assinada');
   await attachments.getByTestId('attachment-input').setInputFiles({ name: 'carta.pdf', mimeType: 'application/pdf', buffer: pdfBytes() });
+  await attachments.getByRole('button', { name: 'Anexar arquivo' }).click();
   const pdfRow = attachments.getByTestId('attachment').filter({ hasText: 'carta.pdf' });
   await expect(pdfRow).toBeVisible();
 
   // .exe renomeado para .pdf: o cliente aceita a extensão, o servidor recusa pela assinatura.
   await attachments.getByLabel('Título do anexo').fill('Contrato suspeito');
   await attachments.getByTestId('attachment-input').setInputFiles({ name: 'contrato.pdf', mimeType: 'application/pdf', buffer: exeBytes() });
+  await attachments.getByRole('button', { name: 'Anexar arquivo' }).click();
   await expect(attachments.getByText(/não corresponde a nenhum formato permitido/i)).toBeVisible();
   await expect(attachments.getByTestId('attachment').filter({ hasText: 'Contrato suspeito' })).toContainText('Sem arquivo');
 

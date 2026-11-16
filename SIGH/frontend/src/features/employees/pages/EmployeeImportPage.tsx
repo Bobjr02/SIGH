@@ -23,6 +23,9 @@ import { FileSpreadsheet } from 'lucide-react';
 import { employeeKeys, employeesApi, type ImportChange, type ImportIssue, type ImportPreview, type ImportResult } from '../api/employeesApi';
 import { formatDateTime, formatPercent } from '../../../utils/formatters';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { FilePicker } from '../../../components/ui/FilePicker';
+import { ImportSteps } from '../../../components/ui/ImportSteps';
+import { formatBytes } from '../../disciplinary/evidence/evidenceFiles';
 
 const MAX_BYTES = 25 * 1024 * 1024;
 
@@ -110,18 +113,10 @@ export const EmployeeImportPage: React.FC = () => {
     setResult(null);
     setMassConfirmed(false);
     setError(null);
-    if (selected && !selected.name.toLowerCase().endsWith('.xlsx')) {
-      setFile(null);
-      setError('Envie a planilha exportada do SAP no formato .xlsx.');
-      return;
-    }
-    if (selected && selected.size > MAX_BYTES) {
-      setFile(null);
-      setError('A planilha passa do limite de 25 MB.');
-      return;
-    }
     setFile(selected);
   };
+
+  const validate = (selected: File) => (selected.size > MAX_BYTES ? `A planilha passa do limite de ${formatBytes(MAX_BYTES)}.` : null);
 
   const runPreview = async () => {
     if (!file) return;
@@ -165,23 +160,32 @@ export const EmployeeImportPage: React.FC = () => {
       ]
     : [];
 
+  // Passo 1 escolher, 2 pré-visualizar, 3 confirmar; aplicada, os três ficam concluídos.
+  const step = result ? 3 : preview ? 2 : file ? 1 : 0;
+
   const blockedByMass = !!preview?.requiresMassTerminationConfirmation && !massConfirmed;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       <PageHeader icon={<FileSpreadsheet size={22} />} title="Importar funcionários (SAP)" />
 
-      <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <Paper component="section" aria-label="Enviar planilha" elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <ImportSteps active={step} />
         <Typography variant="body2" color="text.secondary">
           Envie a exportação .xlsx do SAP. A pré-visualização não grava nada; confira as abas e depois confirme. Funcionários ausentes
           do arquivo são desligados com a data de hoje (nunca apagados).
         </Typography>
-        <input
-          type="file"
+        <FilePicker
+          label="Planilha do SAP"
+          buttonText="Selecionar arquivo .xlsx"
+          extensions={['xlsx']}
           accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          aria-label="Planilha do SAP"
+          extensionMessage="Formato não aceito. Envie a planilha exportada do SAP no formato .xlsx."
+          validate={validate}
+          hint="Exportação do SAP em .xlsx, até 25 MB."
+          file={file}
+          onChange={choose}
           disabled={!!busy}
-          onChange={(e) => choose(e.target.files?.[0] ?? null)}
         />
         <Box>
           <Button variant="contained" onClick={runPreview} disabled={!file || !!busy}>

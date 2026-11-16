@@ -21,7 +21,7 @@ import {
   Tabs,
   Typography,
 } from '@mui/material';
-import { Archive, FileUp, Lock, History } from 'lucide-react';
+import { Archive, Lock, History } from 'lucide-react';
 import { formatBusinessDate } from '../../records/api/recordsApi';
 import {
   historyErrorMessage,
@@ -33,6 +33,8 @@ import {
 } from '../api/historyImportApi';
 import { formatDateTime } from '../../../utils/formatters';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { FilePicker } from '../../../components/ui/FilePicker';
+import { ImportSteps } from '../../../components/ui/ImportSteps';
 
 const formatInstant = (value?: string | null) => formatDateTime(value);
 
@@ -204,6 +206,7 @@ export const HistoryImportPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const [closeConfirmed, setCloseConfirmed] = useState(false);
+  const [applied, setApplied] = useState(false);
 
   const status = useQuery({ queryKey: historyKeys.status, queryFn: historyImportApi.status });
   const batches = useQuery({ queryKey: historyKeys.batches, queryFn: historyImportApi.batches });
@@ -225,6 +228,7 @@ export const HistoryImportPage: React.FC = () => {
     onSuccess: async (r) => {
       setPreview(null);
       setFile(null);
+      setApplied(true);
       setError(null);
       setMessage(`Histórico importado: ${r.imported} registro(s) novo(s), ${r.updated} corrigido(s), ${r.infractionTypesCreated} motivo(s) criado(s).`);
       await refresh();
@@ -244,6 +248,8 @@ export const HistoryImportPage: React.FC = () => {
   });
 
   const closed = status.data?.isClosed === true;
+  // Passo 1 escolher, 2 pré-visualizar, 3 confirmar; aplicada, os três ficam concluídos.
+  const step = applied ? 3 : preview ? 2 : file ? 1 : 0;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -270,29 +276,31 @@ export const HistoryImportPage: React.FC = () => {
       )}
 
       {!closed && (
-        <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Button component="label" variant="outlined" startIcon={<FileUp size={16} />}>
-            Escolher planilha (.xlsx)
-            <input
-              hidden
-              type="file"
-              accept=".xlsx"
-              aria-label="Planilha de penalidades"
-              onChange={(e) => {
-                setFile(e.target.files?.[0] ?? null);
-                setPreview(null);
-                e.target.value = '';
-              }}
-            />
-          </Button>
-          <Typography variant="body2">{file?.name ?? 'Nenhum arquivo escolhido'}</Typography>
-          <Button variant="contained" disabled={!file || doPreview.isPending} onClick={() => file && doPreview.mutate(file)}>
-            Pré-visualizar
-          </Button>
-          <Box sx={{ flexGrow: 1 }} />
-          <Button color="error" variant="outlined" startIcon={<Archive size={16} />} onClick={() => { setCloseConfirmed(false); setClosing(true); }}>
-            Encerrar importação de histórico
-          </Button>
+        <Paper component="section" aria-label="Enviar planilha" elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <ImportSteps active={step} />
+          <FilePicker
+            label="Planilha de penalidades"
+            buttonText="Selecionar planilha .xlsx"
+            extensions={['xlsx']}
+            extensionMessage="Formato não aceito. Envie a planilha de penalidades no formato .xlsx."
+            hint="Planilha de penalidades em .xlsx, com as mesmas colunas do modelo."
+            file={file}
+            onChange={(f) => {
+              setFile(f);
+              setPreview(null);
+              setApplied(false);
+            }}
+            disabled={doPreview.isPending || doConfirm.isPending}
+          />
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Button variant="contained" disabled={!file || doPreview.isPending} onClick={() => file && doPreview.mutate(file)}>
+              Pré-visualizar
+            </Button>
+            <Box sx={{ flexGrow: 1 }} />
+            <Button color="error" variant="outlined" startIcon={<Archive size={16} />} onClick={() => { setCloseConfirmed(false); setClosing(true); }}>
+              Encerrar importação de histórico
+            </Button>
+          </Box>
         </Paper>
       )}
 
